@@ -3,13 +3,17 @@ import Cocoa
 @main
 class AppDelegate: NSObject, NSApplicationDelegate {
 
-    var windowController: MainWindowController?
+    var windowController: MainWindowController!
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create and show the main window
         windowController = MainWindowController()
-        windowController?.showWindow(self)
-        windowController?.window?.makeKeyAndOrderFront(self)
+
+        // Load the window to trigger windowDidLoad
+        windowController.window?.makeKeyAndOrderFront(nil)
+
+        // Ensure it's visible
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
