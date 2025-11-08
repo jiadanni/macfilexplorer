@@ -12,30 +12,20 @@ class TabBarController: NSViewController {
     }
 
     private func setupUI() {
-        // Create tab view
-        tabView = NSTabView()
-        tabView.tabViewType = .noTabsNoBorder
-        tabView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(tabView)
-
-        NSLayoutConstraint.activate([
-            tabView.topAnchor.constraint(equalTo: view.topAnchor),
-            tabView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tabView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tabView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-
-        // Create tab bar (custom implementation using stack view)
-        setupTabBar()
-    }
-
-    private func setupTabBar() {
+        // Create tab bar container first
         let tabBarContainer = NSView()
         tabBarContainer.translatesAutoresizingMaskIntoConstraints = false
         tabBarContainer.wantsLayer = true
         tabBarContainer.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
         view.addSubview(tabBarContainer)
 
+        // Create tab view
+        tabView = NSTabView()
+        tabView.tabViewType = .noTabsNoBorder
+        tabView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(tabView)
+
+        // Constrain tab bar to top
         NSLayoutConstraint.activate([
             tabBarContainer.topAnchor.constraint(equalTo: view.topAnchor),
             tabBarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -43,8 +33,13 @@ class TabBarController: NSViewController {
             tabBarContainer.heightAnchor.constraint(equalToConstant: 30)
         ])
 
-        // Update tab view constraints
-        tabView.topAnchor.constraint(equalTo: tabBarContainer.bottomAnchor).isActive = true
+        // Constrain tab view below tab bar
+        NSLayoutConstraint.activate([
+            tabView.topAnchor.constraint(equalTo: tabBarContainer.bottomAnchor),
+            tabView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tabView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tabView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
     }
 
     // MARK: - Public Methods

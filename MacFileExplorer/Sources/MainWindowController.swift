@@ -17,10 +17,14 @@ class MainWindowController: NSWindowController {
         window.title = "Mac File Explorer"
         window.setFrameAutosaveName("MainWindow")
         window.isReleasedWhenClosed = false
+        window.backgroundColor = .windowBackgroundColor
 
         super.init(window: window)
 
         setupSplitView()
+
+        // Force the window to display
+        window.makeKeyAndOrderFront(nil)
     }
 
     required init?(coder: NSCoder) {
@@ -29,14 +33,11 @@ class MainWindowController: NSWindowController {
 
     override func windowDidLoad() {
         super.windowDidLoad()
-
-        // Ensure window is visible
-        window?.makeKeyAndOrderFront(nil)
     }
 
     private func setupSplitView() {
         splitViewController = SplitViewController()
-        window?.contentViewController = splitViewController
+        contentViewController = splitViewController
     }
 
     // MARK: - Public Methods
