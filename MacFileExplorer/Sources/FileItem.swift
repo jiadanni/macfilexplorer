@@ -7,6 +7,11 @@ class FileItem: Hashable {
     var children: [FileItem]?
     private(set) var size: Int64 = 0
     private(set) var modificationDate: Date?
+    private(set) var creationDate: Date?
+    private(set) var fileType: String = ""
+    private(set) var kind: String = ""
+    private(set) var permissions: String = ""
+    private(set) var owner: String = ""
 
     init(url: URL) {
         self.url = url
@@ -20,10 +25,31 @@ class FileItem: Hashable {
         if let attributes = try? FileManager.default.attributesOfItem(atPath: url.path) {
             self.size = attributes[.size] as? Int64 ?? 0
             self.modificationDate = attributes[.modificationDate] as? Date
+            self.creationDate = attributes[.creationDate] as? Date
+            self.owner = attributes[.ownerAccountName] as? String ?? ""
+
+            // Get permissions
+            if let posixPermissions = attributes[.posixPermissions] as? NSNumber {
+                self.permissions = String(format: "%o", posixPermissions.intValue)
+            }
         }
 
+        // Get file type and kind
         if isDirectory {
+            self.fileType = "Folder"
+            self.kind = "Folder"
             children = []
+        } else {
+            self.fileType = url.pathExtension.uppercased()
+            // Get localized kind description from system
+            if let values = try? url.resourceValues(forKeys: [.localizedTypeDescriptionKey]),
+               let kindDescription = values.localizedTypeDescription {
+                self.kind = kindDescription
+            } else if !url.pathExtension.isEmpty {
+                self.kind = "\(url.pathExtension.uppercased()) File"
+            } else {
+                self.kind = "File"
+            }
         }
     }
 
@@ -72,6 +98,19 @@ class FileItem: Hashable {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+
+    var formattedCreationDate: String {
+        guard let date = creationDate else { return "--" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+
+    var formattedPermissions: String {
+        guard !permissions.isEmpty else { return "--" }
+        return permissions
     }
 
     // MARK: - Hashable

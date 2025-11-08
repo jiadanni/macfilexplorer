@@ -1,14 +1,18 @@
 # Mac File Explorer
 
-A native macOS file explorer application built with Swift that combines the familiar Finder interface with powerful features like split-view tabs and an integrated terminal panel.
+A native macOS file explorer application built with Swift that combines the familiar Finder interface with powerful features like split-view tabs, an integrated terminal panel, and Windows Explorer-style list view with multiple columns.
 
 ## Features
 
-### 🎨 Finder-Style Interface
-- Clean, native macOS interface matching Finder's look and feel
-- List view with file icons, sizes, and modification dates
-- Smooth animations and transitions
-- Source list styling for enhanced visual appeal
+### 📊 Windows Explorer-Style List View
+- Multi-column list view with sortable headers
+- Columns: Name, Date Modified, Type, Size, Date Created
+- Click column headers to sort (ascending/descending)
+- Visual sort indicators on column headers
+- Resizable and reorderable columns
+- Alternating row colors for better readability
+- Right-aligned size column like Windows Explorer
+- File type descriptions (e.g., "PDF Document", "JPEG Image")
 
 ### 📑 Split View with Tabs
 - Multiple tabs for browsing different directories simultaneously

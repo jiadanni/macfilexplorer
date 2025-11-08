@@ -11,6 +11,10 @@ class FileBrowserViewController: NSViewController {
     private var fileSystemMonitor: FileSystemMonitor?
     private var selectedItems: Set<FileItem> = []
 
+    // Sorting state
+    private var sortColumn: String = "NameColumn"
+    private var sortAscending: Bool = true
+
     var currentPath: String {
         return currentDirectory.path
     }
@@ -42,38 +46,75 @@ class FileBrowserViewController: NSViewController {
         scrollView.borderType = .noBorder
         view.addSubview(scrollView)
 
-        // Create outline view (like Finder's list view)
+        // Create outline view (Windows Explorer list view style)
         outlineView = NSOutlineView()
-        outlineView.style = .sourceList
+        outlineView.style = .fullWidth  // More Windows Explorer-like
         outlineView.floatsGroupRows = false
         outlineView.rowSizeStyle = .default
-        outlineView.headerView = nil
+        outlineView.usesAlternatingRowBackgroundColors = true  // Like Windows Explorer
         outlineView.allowsMultipleSelection = true
         outlineView.autoresizesOutlineColumn = false
         outlineView.delegate = self
         outlineView.dataSource = self
         outlineView.doubleAction = #selector(outlineViewDoubleClicked(_:))
         outlineView.target = self
+        outlineView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
 
-        // Create columns
+        // Create and configure header view
+        let headerView = NSTableHeaderView()
+        outlineView.headerView = headerView
+
+        // Create columns - Windows Explorer style
         let nameColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("NameColumn"))
         nameColumn.title = "Name"
-        nameColumn.width = 300
+        nameColumn.width = 250
         nameColumn.minWidth = 100
+        nameColumn.maxWidth = 500
+        nameColumn.resizingMask = .userResizingMask
+        let nameDescriptor = NSSortDescriptor(key: "name", ascending: true)
+        nameColumn.sortDescriptorPrototype = nameDescriptor
         outlineView.addTableColumn(nameColumn)
         outlineView.outlineTableColumn = nameColumn
+
+        let dateModifiedColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("DateModifiedColumn"))
+        dateModifiedColumn.title = "Date Modified"
+        dateModifiedColumn.width = 150
+        dateModifiedColumn.minWidth = 100
+        dateModifiedColumn.maxWidth = 250
+        dateModifiedColumn.resizingMask = .userResizingMask
+        let dateModifiedDescriptor = NSSortDescriptor(key: "modificationDate", ascending: false)
+        dateModifiedColumn.sortDescriptorPrototype = dateModifiedDescriptor
+        outlineView.addTableColumn(dateModifiedColumn)
+
+        let typeColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("TypeColumn"))
+        typeColumn.title = "Type"
+        typeColumn.width = 120
+        typeColumn.minWidth = 80
+        typeColumn.maxWidth = 200
+        typeColumn.resizingMask = .userResizingMask
+        let typeDescriptor = NSSortDescriptor(key: "kind", ascending: true)
+        typeColumn.sortDescriptorPrototype = typeDescriptor
+        outlineView.addTableColumn(typeColumn)
 
         let sizeColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("SizeColumn"))
         sizeColumn.title = "Size"
         sizeColumn.width = 100
         sizeColumn.minWidth = 60
+        sizeColumn.maxWidth = 150
+        sizeColumn.resizingMask = .userResizingMask
+        let sizeDescriptor = NSSortDescriptor(key: "size", ascending: false)
+        sizeColumn.sortDescriptorPrototype = sizeDescriptor
         outlineView.addTableColumn(sizeColumn)
 
-        let dateColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("DateColumn"))
-        dateColumn.title = "Date Modified"
-        dateColumn.width = 150
-        dateColumn.minWidth = 100
-        outlineView.addTableColumn(dateColumn)
+        let dateCreatedColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("DateCreatedColumn"))
+        dateCreatedColumn.title = "Date Created"
+        dateCreatedColumn.width = 150
+        dateCreatedColumn.minWidth = 100
+        dateCreatedColumn.maxWidth = 250
+        dateCreatedColumn.resizingMask = .userResizingMask
+        let dateCreatedDescriptor = NSSortDescriptor(key: "creationDate", ascending: false)
+        dateCreatedColumn.sortDescriptorPrototype = dateCreatedDescriptor
+        outlineView.addTableColumn(dateCreatedColumn)
 
         scrollView.documentView = outlineView
 
@@ -85,7 +126,7 @@ class FileBrowserViewController: NSViewController {
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        // Apply Finder-like styling
+        // Apply Windows Explorer-like styling
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
     }
@@ -94,6 +135,7 @@ class FileBrowserViewController: NSViewController {
         currentDirectory = url
         rootItem = FileItem(url: url)
         rootItem.loadChildren()
+        sortItems()
 
         outlineView.reloadData()
         outlineView.expandItem(nil, expandChildren: true)
@@ -110,7 +152,109 @@ class FileBrowserViewController: NSViewController {
 
     private func refreshCurrentDirectory() {
         rootItem.loadChildren()
+        sortItems()
         outlineView.reloadData()
+    }
+
+    private func sortItems() {
+        guard var items = rootItem.children else { return }
+
+        switch sortColumn {
+        case "NameColumn":
+            items.sort { item1, item2 in
+                if sortAscending {
+                    return item1.name.localizedStandardCompare(item2.name) == .orderedAscending
+                } else {
+                    return item1.name.localizedStandardCompare(item2.name) == .orderedDescending
+                }
+            }
+        case "SizeColumn":
+            items.sort { item1, item2 in
+                // Directories always first, then by size
+                if item1.isDirectory != item2.isDirectory {
+                    return item1.isDirectory
+                }
+                return sortAscending ? item1.size < item2.size : item1.size > item2.size
+            }
+        case "DateModifiedColumn":
+            items.sort { item1, item2 in
+                guard let date1 = item1.modificationDate, let date2 = item2.modificationDate else {
+                    return false
+                }
+                return sortAscending ? date1 < date2 : date1 > date2
+            }
+        case "DateCreatedColumn":
+            items.sort { item1, item2 in
+                guard let date1 = item1.creationDate, let date2 = item2.creationDate else {
+                    return false
+                }
+                return sortAscending ? date1 < date2 : date1 > date2
+            }
+        case "TypeColumn":
+            items.sort { item1, item2 in
+                if sortAscending {
+                    return item1.kind.localizedStandardCompare(item2.kind) == .orderedAscending
+                } else {
+                    return item1.kind.localizedStandardCompare(item2.kind) == .orderedDescending
+                }
+            }
+        default:
+            break
+        }
+
+        rootItem.children = items
+
+        // Sort children recursively
+        items.forEach { item in
+            if item.isDirectory, var children = item.children {
+                sortChildren(&children)
+                item.children = children
+            }
+        }
+    }
+
+    private func sortChildren(_ children: inout [FileItem]) {
+        switch sortColumn {
+        case "NameColumn":
+            children.sort { item1, item2 in
+                if sortAscending {
+                    return item1.name.localizedStandardCompare(item2.name) == .orderedAscending
+                } else {
+                    return item1.name.localizedStandardCompare(item2.name) == .orderedDescending
+                }
+            }
+        case "SizeColumn":
+            children.sort { item1, item2 in
+                if item1.isDirectory != item2.isDirectory {
+                    return item1.isDirectory
+                }
+                return sortAscending ? item1.size < item2.size : item1.size > item2.size
+            }
+        case "DateModifiedColumn":
+            children.sort { item1, item2 in
+                guard let date1 = item1.modificationDate, let date2 = item2.modificationDate else {
+                    return false
+                }
+                return sortAscending ? date1 < date2 : date1 > date2
+            }
+        case "DateCreatedColumn":
+            children.sort { item1, item2 in
+                guard let date1 = item1.creationDate, let date2 = item2.creationDate else {
+                    return false
+                }
+                return sortAscending ? date1 < date2 : date1 > date2
+            }
+        case "TypeColumn":
+            children.sort { item1, item2 in
+                if sortAscending {
+                    return item1.kind.localizedStandardCompare(item2.kind) == .orderedAscending
+                } else {
+                    return item1.kind.localizedStandardCompare(item2.kind) == .orderedDescending
+                }
+            }
+        default:
+            break
+        }
     }
 
     @objc private func outlineViewDoubleClicked(_ sender: Any) {
@@ -238,6 +382,7 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
             textField.backgroundColor = .clear
             textField.isEditable = false
             textField.stringValue = fileItem.name
+            textField.lineBreakMode = .byTruncatingTail
 
             let imageView = NSImageView()
             imageView.image = fileItem.icon
@@ -275,6 +420,7 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
             textField.isBordered = false
             textField.backgroundColor = .clear
             textField.isEditable = false
+            textField.alignment = .right  // Right-align like Windows Explorer
             textField.stringValue = fileItem.formattedSize
 
             cellView.addSubview(textField)
@@ -288,13 +434,51 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
 
             cellView.textField = textField
             return cellView
-        } else if identifier == "DateColumn" {
+        } else if identifier == "DateModifiedColumn" {
             let cellView = NSTableCellView()
             let textField = NSTextField()
             textField.isBordered = false
             textField.backgroundColor = .clear
             textField.isEditable = false
             textField.stringValue = fileItem.formattedDate
+
+            cellView.addSubview(textField)
+            textField.translatesAutoresizingMaskIntoConstraints = false
+
+            NSLayoutConstraint.activate([
+                textField.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
+                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
+            ])
+
+            cellView.textField = textField
+            return cellView
+        } else if identifier == "TypeColumn" {
+            let cellView = NSTableCellView()
+            let textField = NSTextField()
+            textField.isBordered = false
+            textField.backgroundColor = .clear
+            textField.isEditable = false
+            textField.stringValue = fileItem.kind
+
+            cellView.addSubview(textField)
+            textField.translatesAutoresizingMaskIntoConstraints = false
+
+            NSLayoutConstraint.activate([
+                textField.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
+                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
+            ])
+
+            cellView.textField = textField
+            return cellView
+        } else if identifier == "DateCreatedColumn" {
+            let cellView = NSTableCellView()
+            let textField = NSTextField()
+            textField.isBordered = false
+            textField.backgroundColor = .clear
+            textField.isEditable = false
+            textField.stringValue = fileItem.formattedCreationDate
 
             cellView.addSubview(textField)
             textField.translatesAutoresizingMaskIntoConstraints = false
@@ -314,5 +498,30 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
 
     func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
         return 20
+    }
+
+    // Handle column sorting when header is clicked
+    func outlineView(_ outlineView: NSOutlineView, mouseDownInHeaderOf tableColumn: NSTableColumn) {
+        let columnIdentifier = tableColumn.identifier.rawValue
+
+        // Toggle sort order if clicking same column, otherwise default to ascending
+        if sortColumn == columnIdentifier {
+            sortAscending.toggle()
+        } else {
+            sortColumn = columnIdentifier
+            sortAscending = true
+        }
+
+        // Update visual indicator
+        outlineView.tableColumns.forEach { column in
+            outlineView.setIndicatorImage(nil, in: column)
+        }
+
+        let indicatorImage = sortAscending ? NSImage(named: NSImage.Name("NSAscendingSortIndicator")) : NSImage(named: NSImage.Name("NSDescendingSortIndicator"))
+        outlineView.setIndicatorImage(indicatorImage, in: tableColumn)
+
+        // Re-sort and reload
+        sortItems()
+        outlineView.reloadData()
     }
 }
