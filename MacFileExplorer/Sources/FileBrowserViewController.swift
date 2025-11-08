@@ -54,8 +54,7 @@ class FileBrowserViewController: NSViewController {
         outlineView.usesAlternatingRowBackgroundColors = true  // Like Windows Explorer
         outlineView.allowsMultipleSelection = true
         outlineView.autoresizesOutlineColumn = false
-        outlineView.delegate = self
-        outlineView.dataSource = self
+        // Note: delegate and dataSource are set in loadDirectory() after rootItem is initialized
         outlineView.doubleAction = #selector(outlineViewDoubleClicked(_:))
         outlineView.target = self
         outlineView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
@@ -136,6 +135,13 @@ class FileBrowserViewController: NSViewController {
         rootItem = FileItem(url: url)
         rootItem.loadChildren()
         sortItems()
+
+        // Set delegate and dataSource AFTER rootItem is initialized
+        // to avoid crashes from outline view querying data before it's ready
+        if outlineView.delegate == nil {
+            outlineView.delegate = self
+            outlineView.dataSource = self
+        }
 
         outlineView.reloadData()
         outlineView.expandItem(nil, expandChildren: true)
