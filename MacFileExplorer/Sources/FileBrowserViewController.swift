@@ -344,6 +344,10 @@ class FileBrowserViewController: NSViewController {
     func goForward(to url: URL) {
         loadDirectory(url)
     }
+
+    func navigateToURL(_ url: URL) {
+        loadDirectory(url)
+    }
 }
 
 // MARK: - NSOutlineViewDataSource

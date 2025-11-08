@@ -77,6 +77,11 @@ class TabBarController: NSViewController {
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].showBulkColorPicker()
     }
+
+    func navigateToLocation(_ url: URL) {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].navigateToURL(url)
+    }
 }
 
 // MARK: - FileBrowserDelegate
