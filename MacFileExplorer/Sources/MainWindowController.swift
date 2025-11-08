@@ -22,9 +22,6 @@ class MainWindowController: NSWindowController {
         super.init(window: window)
 
         setupSplitView()
-
-        // Force the window to display
-        window.makeKeyAndOrderFront(nil)
     }
 
     required init?(coder: NSCoder) {
@@ -33,11 +30,21 @@ class MainWindowController: NSWindowController {
 
     override func windowDidLoad() {
         super.windowDidLoad()
+
+        // Show window after everything is loaded
+        window?.makeKeyAndOrderFront(nil)
     }
 
     private func setupSplitView() {
         splitViewController = SplitViewController()
+
+        // Force the view to load now
+        _ = splitViewController.view
+
         contentViewController = splitViewController
+
+        // Ensure window displays
+        window?.makeKeyAndOrderFront(nil)
     }
 
     // MARK: - Public Methods

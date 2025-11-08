@@ -7,7 +7,7 @@ class TabBarController: NSViewController {
     private var currentTabIndex = 0
 
     override func loadView() {
-        view = NSView()
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
         setupUI()
     }
 
