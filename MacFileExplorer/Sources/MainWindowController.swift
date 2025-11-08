@@ -2,9 +2,9 @@ import Cocoa
 
 class MainWindowController: NSWindowController {
 
-    private var splitViewController: SplitViewController?
+    private var splitViewController: SplitViewController!
 
-    convenience init() {
+    init() {
         // Create the window
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
@@ -18,13 +18,13 @@ class MainWindowController: NSWindowController {
         window.setFrameAutosaveName("MainWindow")
         window.isReleasedWhenClosed = false
 
-        self.init(window: window)
+        super.init(window: window)
 
         setupSplitView()
     }
 
     required init?(coder: NSCoder) {
-        super.init(coder: coder)
+        fatalError("init(coder:) has not been implemented")
     }
 
     override func windowDidLoad() {
