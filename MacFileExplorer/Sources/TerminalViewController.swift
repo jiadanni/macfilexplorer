@@ -93,6 +93,19 @@ class TerminalViewController: NSViewController {
         textView.scrollToEndOfDocument(nil)
     }
 
+    private func appendErrorOutput(_ text: String) {
+        let attributedString = NSAttributedString(
+            string: text,
+            attributes: [
+                .foregroundColor: NSColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0),
+                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+            ]
+        )
+
+        textView.textStorage?.append(attributedString)
+        textView.scrollToEndOfDocument(nil)
+    }
+
     private func executeCommand(_ command: String) {
         guard !command.isEmpty else { return }
 
@@ -108,18 +121,27 @@ class TerminalViewController: NSViewController {
         switch cmd {
         case "help":
             showHelp()
-        case "clear":
+        case "clear", "cls":
             textView.string = ""
         case "pwd":
             appendOutput("\(currentDirectory)\n")
-        case "ls":
+        case "ls", "dir":
             listDirectory()
         case "cd":
             if components.count > 1 {
                 changeToDirectory(components[1])
             } else {
-                appendOutput("Usage: cd <directory>\n")
+                // cd without arguments goes to home
+                changeToDirectory("~")
             }
+        case "cat":
+            if components.count > 1 {
+                showFileContents(components[1])
+            } else {
+                appendErrorOutput("Usage: cat <file>\n")
+            }
+        case "exit", "quit":
+            appendOutput("Terminal cannot be closed from here. Use the View menu to toggle terminal visibility.\n")
         default:
             // Execute external command
             executeExternalCommand(command)
@@ -128,17 +150,44 @@ class TerminalViewController: NSViewController {
 
     private func showHelp() {
         let helpText = """
-        Available commands:
-        - ls                List files in current directory
-        - cd <dir>         Change directory
-        - pwd              Print working directory
-        - clear            Clear terminal
-        - help             Show this help message
+        Available Built-in Commands:
+        - ls, dir           List files in current directory
+        - cd [dir]          Change directory (no args = home)
+        - pwd               Print working directory
+        - cat <file>        Display file contents
+        - clear, cls        Clear terminal screen
+        - help              Show this help message
 
-        You can also run any system command.
+        You can also run any system command (git, grep, find, etc.)
 
         """
         appendOutput(helpText)
+    }
+
+    private func showFileContents(_ filename: String) {
+        var filePath: String
+
+        if filename.hasPrefix("/") {
+            // Absolute path
+            filePath = filename
+        } else if filename.hasPrefix("~") {
+            // Expand tilde
+            let path = (filename as NSString).expandingTildeInPath
+            filePath = path
+        } else {
+            // Relative path
+            filePath = (currentDirectory as NSString).appendingPathComponent(filename)
+        }
+
+        do {
+            let contents = try String(contentsOfFile: filePath, encoding: .utf8)
+            appendOutput(contents)
+            if !contents.hasSuffix("\n") {
+                appendOutput("\n")
+            }
+        } catch {
+            appendErrorOutput("Error reading file: \(error.localizedDescription)\n")
+        }
     }
 
     private func listDirectory() {
@@ -159,7 +208,7 @@ class TerminalViewController: NSViewController {
                 }
             }
         } catch {
-            appendOutput("Error: \(error.localizedDescription)\n")
+            appendErrorOutput("Error: \(error.localizedDescription)\n")
         }
     }
 
@@ -187,34 +236,45 @@ class TerminalViewController: NSViewController {
             updatePrompt()
             appendOutput("Changed to: \(newPath)\n")
         } else {
-            appendOutput("Error: Directory not found: \(newPath)\n")
+            appendErrorOutput("Error: Directory not found: \(newPath)\n")
         }
     }
 
     private func executeExternalCommand(_ command: String) {
         let task = Process()
         task.currentDirectoryURL = URL(fileURLWithPath: currentDirectory)
-        task.launchPath = "/bin/bash"
+        task.executableURL = URL(fileURLWithPath: "/bin/bash")
         task.arguments = ["-c", command]
 
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.standardError = pipe
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        task.standardOutput = outputPipe
+        task.standardError = errorPipe
 
         do {
             try task.run()
+
+            // Read output asynchronously to prevent deadlocks
+            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+
             task.waitUntilExit()
 
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8), !output.isEmpty {
+            // Display standard output
+            if let output = String(data: outputData, encoding: .utf8), !output.isEmpty {
                 appendOutput(output)
             }
 
+            // Display error output in red
+            if let errorOutput = String(data: errorData, encoding: .utf8), !errorOutput.isEmpty {
+                appendErrorOutput(errorOutput)
+            }
+
             if task.terminationStatus != 0 {
-                appendOutput("Command exited with status: \(task.terminationStatus)\n")
+                appendErrorOutput("Command exited with status: \(task.terminationStatus)\n")
             }
         } catch {
-            appendOutput("Error executing command: \(error.localizedDescription)\n")
+            appendErrorOutput("Error executing command: \(error.localizedDescription)\n")
         }
     }
 }
