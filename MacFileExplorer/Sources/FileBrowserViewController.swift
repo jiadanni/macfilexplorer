@@ -166,7 +166,7 @@ class FileBrowserViewController: NSViewController {
     }
 
     private func sortItems() {
-        guard var items = rootItem.children else { return }
+        guard let rootItem = rootItem, var items = rootItem.children else { return }
 
         switch sortColumn {
         case "NameColumn":
@@ -568,6 +568,9 @@ extension FileBrowserViewController: NSMenuDelegate {
 
 extension FileBrowserViewController: NSOutlineViewDataSource {
     func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
+        // Guard against nil rootItem to prevent crashes during initialization
+        guard let rootItem = rootItem else { return 0 }
+
         if item == nil {
             return rootItem.children?.count ?? 0
         }
@@ -576,6 +579,9 @@ extension FileBrowserViewController: NSOutlineViewDataSource {
     }
 
     func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
+        // Guard against nil rootItem to prevent crashes during initialization
+        guard let rootItem = rootItem else { return FileItem(url: currentDirectory) }
+
         if item == nil {
             return rootItem.children?[index] ?? FileItem(url: currentDirectory)
         }
