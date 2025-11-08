@@ -18,7 +18,7 @@ class SplitViewController: NSSplitViewController {
         tabBarController = TabBarController()
         let tabBarItem = NSSplitViewItem(viewController: tabBarController!)
         tabBarItem.minimumThickness = 300
-        tabBarItem.maximumThickness = .infinity
+        // Don't set maximumThickness - let it grow automatically
         tabBarItem.canCollapse = false
         addSplitViewItem(tabBarItem)
 
