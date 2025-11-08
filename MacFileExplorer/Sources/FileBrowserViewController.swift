@@ -117,6 +117,9 @@ class FileBrowserViewController: NSViewController {
 
         scrollView.documentView = outlineView
 
+        // Set up context menu
+        outlineView.menu = createContextMenu()
+
         // Set up constraints
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -347,6 +350,217 @@ class FileBrowserViewController: NSViewController {
 
     func navigateToURL(_ url: URL) {
         loadDirectory(url)
+    }
+
+    // MARK: - Context Menu
+
+    private func createContextMenu() -> NSMenu {
+        let menu = NSMenu()
+
+        menu.addItem(withTitle: "Open", action: #selector(contextMenuOpen(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Open With...", action: #selector(contextMenuOpenWith(_:)), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Get Info", action: #selector(contextMenuGetInfo(_:)), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Copy", action: #selector(contextMenuCopy(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Paste", action: #selector(contextMenuPaste(_:)), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Rename", action: #selector(contextMenuRename(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Move to Trash", action: #selector(contextMenuDelete(_:)), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "New Folder", action: #selector(contextMenuNewFolder(_:)), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Change Folder Color...", action: #selector(contextMenuChangeColor(_:)), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Show in Finder", action: #selector(contextMenuShowInFinder(_:)), keyEquivalent: "")
+
+        menu.delegate = self
+        return menu
+    }
+
+    private func getSelectedItems() -> [FileItem] {
+        var items: [FileItem] = []
+        let selectedRows = outlineView.selectedRowIndexes
+
+        selectedRows.forEach { row in
+            if let item = outlineView.item(atRow: row) as? FileItem {
+                items.append(item)
+            }
+        }
+
+        return items
+    }
+
+    @objc private func contextMenuOpen(_ sender: Any) {
+        let items = getSelectedItems()
+        items.forEach { item in
+            if item.isDirectory {
+                loadDirectory(item.url)
+            } else {
+                NSWorkspace.shared.open(item.url)
+            }
+        }
+    }
+
+    @objc private func contextMenuOpenWith(_ sender: Any) {
+        let items = getSelectedItems()
+        guard let firstItem = items.first else { return }
+
+        NSWorkspace.shared.openApplication(at: firstItem.url, configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    @objc private func contextMenuGetInfo(_ sender: Any) {
+        let items = getSelectedItems()
+        items.forEach { item in
+            NSWorkspace.shared.activateFileViewerSelecting([item.url])
+        }
+    }
+
+    @objc private func contextMenuCopy(_ sender: Any) {
+        let items = getSelectedItems()
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects(items.map { $0.url as NSURL })
+    }
+
+    @objc private func contextMenuPaste(_ sender: Any) {
+        let pasteboard = NSPasteboard.general
+        guard let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] else { return }
+
+        let fileManager = FileManager.default
+        for url in urls {
+            let destinationURL = currentDirectory.appendingPathComponent(url.lastPathComponent)
+            do {
+                try fileManager.copyItem(at: url, to: destinationURL)
+            } catch {
+                showError("Failed to paste: \(error.localizedDescription)")
+            }
+        }
+
+        refreshCurrentDirectory()
+    }
+
+    @objc private func contextMenuRename(_ sender: Any) {
+        let items = getSelectedItems()
+        guard let item = items.first, items.count == 1 else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Rename"
+        alert.informativeText = "Enter new name for '\(item.name)':"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Rename")
+        alert.addButton(withTitle: "Cancel")
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        textField.stringValue = item.name
+        alert.accessoryView = textField
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            let newName = textField.stringValue
+            guard !newName.isEmpty else { return }
+
+            let newURL = item.url.deletingLastPathComponent().appendingPathComponent(newName)
+            do {
+                try FileManager.default.moveItem(at: item.url, to: newURL)
+                refreshCurrentDirectory()
+            } catch {
+                showError("Failed to rename: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    @objc private func contextMenuDelete(_ sender: Any) {
+        let items = getSelectedItems()
+        guard !items.isEmpty else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Move to Trash"
+        alert.informativeText = "Are you sure you want to move \(items.count) item(s) to trash?"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Move to Trash")
+        alert.addButton(withTitle: "Cancel")
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            for item in items {
+                NSWorkspace.shared.recycle([item.url]) { _, _ in
+                    DispatchQueue.main.async {
+                        self.refreshCurrentDirectory()
+                    }
+                }
+            }
+        }
+    }
+
+    @objc private func contextMenuNewFolder(_ sender: Any) {
+        let alert = NSAlert()
+        alert.messageText = "New Folder"
+        alert.informativeText = "Enter name for new folder:"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Create")
+        alert.addButton(withTitle: "Cancel")
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        textField.stringValue = "Untitled Folder"
+        alert.accessoryView = textField
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            let folderName = textField.stringValue
+            guard !folderName.isEmpty else { return }
+
+            let newFolderURL = currentDirectory.appendingPathComponent(folderName)
+            do {
+                try FileManager.default.createDirectory(at: newFolderURL, withIntermediateDirectories: false)
+                refreshCurrentDirectory()
+            } catch {
+                showError("Failed to create folder: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    @objc private func contextMenuChangeColor(_ sender: Any) {
+        showBulkColorPicker()
+    }
+
+    @objc private func contextMenuShowInFinder(_ sender: Any) {
+        let items = getSelectedItems()
+        guard !items.isEmpty else { return }
+
+        NSWorkspace.shared.activateFileViewerSelecting(items.map { $0.url })
+    }
+
+    private func showError(_ message: String) {
+        let alert = NSAlert()
+        alert.messageText = "Error"
+        alert.informativeText = message
+        alert.alertStyle = .critical
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+}
+
+// MARK: - NSMenuDelegate
+
+extension FileBrowserViewController: NSMenuDelegate {
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        let selectedItems = getSelectedItems()
+        let hasSelection = !selectedItems.isEmpty
+        let hasMultiple = selectedItems.count > 1
+        let hasFolder = selectedItems.contains { $0.isDirectory }
+
+        // Enable/disable menu items based on selection
+        menu.item(withTitle: "Open")?.isEnabled = hasSelection
+        menu.item(withTitle: "Open With...")?.isEnabled = hasSelection && !hasMultiple
+        menu.item(withTitle: "Get Info")?.isEnabled = hasSelection
+        menu.item(withTitle: "Copy")?.isEnabled = hasSelection
+        menu.item(withTitle: "Rename")?.isEnabled = hasSelection && !hasMultiple
+        menu.item(withTitle: "Move to Trash")?.isEnabled = hasSelection
+        menu.item(withTitle: "Change Folder Color...")?.isEnabled = hasFolder
+        menu.item(withTitle: "Show in Finder")?.isEnabled = hasSelection
+
+        // Paste is enabled if pasteboard has URLs
+        let pasteboard = NSPasteboard.general
+        let hasPasteData = (pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL])?.isEmpty == false
+        menu.item(withTitle: "Paste")?.isEnabled = hasPasteData
     }
 }
 
