@@ -178,14 +178,21 @@ class SidebarViewController: NSViewController {
 
     private func loadSidebarItems() {
         let fileManager = FileManager.default
+        let workspace = NSWorkspace.shared
 
-        // Favorites
+        // Favorites - use actual file icons from workspace
+        let desktopURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Desktop")
+        let documentsURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Documents")
+        let downloadsURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
+        let applicationsURL = URL(fileURLWithPath: "/Applications")
+        let homeURL = fileManager.homeDirectoryForCurrentUser
+
         favoriteItems = [
-            SidebarItem(name: "Desktop", url: fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Desktop"), icon: NSImage(named: NSImage.userDesktopFolderName)),
-            SidebarItem(name: "Documents", url: fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Documents"), icon: NSImage(named: NSImage.folderName)),
-            SidebarItem(name: "Downloads", url: fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Downloads"), icon: NSImage(named: NSImage.folderName)),
-            SidebarItem(name: "Applications", url: URL(fileURLWithPath: "/Applications"), icon: NSImage(named: NSImage.applicationIconName)),
-            SidebarItem(name: "Home", url: fileManager.homeDirectoryForCurrentUser, icon: NSImage(named: NSImage.homeTemplateName))
+            SidebarItem(name: "Desktop", url: desktopURL, icon: workspace.icon(forFile: desktopURL.path)),
+            SidebarItem(name: "Documents", url: documentsURL, icon: workspace.icon(forFile: documentsURL.path)),
+            SidebarItem(name: "Downloads", url: downloadsURL, icon: workspace.icon(forFile: downloadsURL.path)),
+            SidebarItem(name: "Applications", url: applicationsURL, icon: workspace.icon(forFile: applicationsURL.path)),
+            SidebarItem(name: "Home", url: homeURL, icon: workspace.icon(forFile: homeURL.path))
         ]
 
         // Drives - get all mounted volumes
@@ -193,17 +200,11 @@ class SidebarViewController: NSViewController {
         if let volumeURLs = fileManager.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey, .volumeIsRemovableKey, .volumeIsEjectableKey], options: [.skipHiddenVolumes]) {
             for volumeURL in volumeURLs {
                 do {
-                    let resourceValues = try volumeURL.resourceValues(forKeys: [.volumeNameKey, .volumeIsRemovableKey, .volumeIsEjectableKey])
+                    let resourceValues = try volumeURL.resourceValues(forKeys: [.volumeNameKey])
                     let volumeName = resourceValues.volumeName ?? volumeURL.lastPathComponent
-                    let isRemovable = resourceValues.volumeIsRemovable ?? false
-                    let isEjectable = resourceValues.volumeIsEjectable ?? false
 
-                    var icon: NSImage?
-                    if isRemovable || isEjectable {
-                        icon = NSImage(named: NSImage.Name("NSEjectableVolume"))
-                    } else {
-                        icon = NSWorkspace.shared.icon(forFile: volumeURL.path)
-                    }
+                    // Use workspace icon for all volumes (it provides the correct icon automatically)
+                    let icon = workspace.icon(forFile: volumeURL.path)
 
                     driveItems.append(SidebarItem(name: volumeName, url: volumeURL, icon: icon))
                 } catch {
