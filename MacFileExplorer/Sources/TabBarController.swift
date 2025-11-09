@@ -41,9 +41,9 @@ class TabBarController: NSViewController {
         // Create stack view for tab buttons
         tabButtonsStackView = NSStackView()
         tabButtonsStackView.orientation = .horizontal
-        tabButtonsStackView.spacing = 4
+        tabButtonsStackView.spacing = 8  // More spacing between tabs
         tabButtonsStackView.alignment = .centerY
-        tabButtonsStackView.edgeInsets = NSEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
+        tabButtonsStackView.edgeInsets = NSEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
 
         // Create titlebar accessory view controller
         let accessory = NSTitlebarAccessoryViewController()
@@ -59,16 +59,35 @@ class TabBarController: NSViewController {
     private func createTabButton(title: String, index: Int) -> NSButton {
         let button = NSButton()
         button.title = title
-        button.bezelStyle = .texturedRounded
-        button.setButtonType(.momentaryPushIn)
+        button.bezelStyle = .rounded
+        button.setButtonType(.pushOnPushOff)
         button.target = self
         button.action = #selector(tabButtonClicked(_:))
         button.tag = index
         button.font = NSFont.systemFont(ofSize: 12)
 
-        // Style the button
+        // Set minimum width for tabs
+        button.widthAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+
+        // Style the button with custom appearance
+        button.wantsLayer = true
+
         if index == currentTabIndex {
+            // Active tab - bright with border
             button.state = .on
+            button.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.2).cgColor
+            button.layer?.borderColor = NSColor.controlAccentColor.cgColor
+            button.layer?.borderWidth = 2
+            button.layer?.cornerRadius = 6
+            button.contentTintColor = NSColor.controlAccentColor
+        } else {
+            // Inactive tab - subtle appearance
+            button.state = .off
+            button.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.5).cgColor
+            button.layer?.borderColor = NSColor.separatorColor.cgColor
+            button.layer?.borderWidth = 1
+            button.layer?.cornerRadius = 6
+            button.contentTintColor = NSColor.secondaryLabelColor
         }
 
         return button
