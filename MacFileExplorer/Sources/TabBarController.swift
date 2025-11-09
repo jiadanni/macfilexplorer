@@ -5,60 +5,56 @@ class TabBarController: NSViewController {
     private var tabView: NSTabView!
     private var tabs: [FileBrowserViewController] = []
     private var currentTabIndex = 0
+    private var tabBarContainer: NSView!
     private var tabButtonsStackView: NSStackView!
     private var tabButtons: [NSButton] = []
-    private var titlebarAccessory: NSTitlebarAccessoryViewController?
 
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
         setupUI()
     }
 
-    override func viewDidAppear() {
-        super.viewDidAppear()
-        setupTitlebarTabs()
-
-        // Force an immediate update to ensure tabs are visible
-        if tabButtonsStackView != nil && !tabs.isEmpty {
-            updateTabButtons()
-        }
-    }
-
     private func setupUI() {
-        // Create tab view without custom tab bar
+        // Create tab bar container at the top
+        tabBarContainer = NSView()
+        tabBarContainer.translatesAutoresizingMaskIntoConstraints = false
+        tabBarContainer.wantsLayer = true
+        tabBarContainer.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        view.addSubview(tabBarContainer)
+
+        // Create stack view for tab buttons
+        tabButtonsStackView = NSStackView()
+        tabButtonsStackView.translatesAutoresizingMaskIntoConstraints = false
+        tabButtonsStackView.orientation = .horizontal
+        tabButtonsStackView.spacing = 8
+        tabButtonsStackView.alignment = .centerY
+        tabBarContainer.addSubview(tabButtonsStackView)
+
+        // Create tab view
         tabView = NSTabView()
         tabView.tabViewType = .noTabsNoBorder
         tabView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tabView)
 
-        // Constrain tab view to fill entire view
+        // Constrain tab bar to top
         NSLayoutConstraint.activate([
-            tabView.topAnchor.constraint(equalTo: view.topAnchor),
+            tabBarContainer.topAnchor.constraint(equalTo: view.topAnchor),
+            tabBarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tabBarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tabBarContainer.heightAnchor.constraint(equalToConstant: 32),
+
+            tabButtonsStackView.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor, constant: 8),
+            tabButtonsStackView.topAnchor.constraint(equalTo: tabBarContainer.topAnchor, constant: 4),
+            tabButtonsStackView.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor, constant: -4)
+        ])
+
+        // Constrain tab view below tab bar
+        NSLayoutConstraint.activate([
+            tabView.topAnchor.constraint(equalTo: tabBarContainer.bottomAnchor),
             tabView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tabView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tabView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
-    }
-
-    private func setupTitlebarTabs() {
-        guard let window = view.window, titlebarAccessory == nil else { return }
-
-        // Create stack view for tab buttons
-        tabButtonsStackView = NSStackView()
-        tabButtonsStackView.orientation = .horizontal
-        tabButtonsStackView.spacing = 8  // More spacing between tabs
-        tabButtonsStackView.alignment = .centerY
-        tabButtonsStackView.edgeInsets = NSEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
-
-        // Create titlebar accessory view controller
-        let accessory = NSTitlebarAccessoryViewController()
-        accessory.view = tabButtonsStackView
-        accessory.layoutAttribute = .leading
-
-        window.addTitlebarAccessoryViewController(accessory)
-        titlebarAccessory = accessory
-
-        updateTabButtons()
     }
 
     private func createTabButton(title: String, index: Int) -> NSButton {
@@ -99,9 +95,6 @@ class TabBarController: NSViewController {
     }
 
     private func updateTabButtons() {
-        // Guard against nil stack view (before viewDidAppear is called)
-        guard tabButtonsStackView != nil else { return }
-
         // Remove all existing buttons
         tabButtonsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         tabButtons.removeAll()

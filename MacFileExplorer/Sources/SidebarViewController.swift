@@ -43,7 +43,7 @@ class SidebarViewController: NSViewController {
         // Create stack view to hold sections
         stackView = NSStackView()
         stackView.orientation = .vertical
-        stackView.alignment = .top
+        stackView.alignment = .leading
         stackView.spacing = 10
         stackView.edgeInsets = NSEdgeInsets(top: 10, left: 0, bottom: 10, right: 0)
         stackView.translatesAutoresizingMaskIntoConstraints = false
