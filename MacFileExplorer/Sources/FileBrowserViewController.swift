@@ -358,6 +358,7 @@ class FileBrowserViewController: NSViewController {
         let menu = NSMenu()
 
         menu.addItem(withTitle: "Open", action: #selector(contextMenuOpen(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Open in New Tab", action: #selector(contextMenuOpenInNewTab(_:)), keyEquivalent: "")
         menu.addItem(withTitle: "Open With...", action: #selector(contextMenuOpenWith(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Get Info", action: #selector(contextMenuGetInfo(_:)), keyEquivalent: "")
@@ -399,6 +400,16 @@ class FileBrowserViewController: NSViewController {
             } else {
                 NSWorkspace.shared.open(item.url)
             }
+        }
+    }
+
+    @objc private func contextMenuOpenInNewTab(_ sender: Any) {
+        let items = getSelectedItems()
+        // Only open directories in new tabs
+        let directories = items.filter { $0.isDirectory }
+
+        directories.forEach { item in
+            delegate?.openInNewTab(url: item.url)
         }
     }
 
@@ -549,6 +560,7 @@ extension FileBrowserViewController: NSMenuDelegate {
 
         // Enable/disable menu items based on selection
         menu.item(withTitle: "Open")?.isEnabled = hasSelection
+        menu.item(withTitle: "Open in New Tab")?.isEnabled = hasFolder
         menu.item(withTitle: "Open With...")?.isEnabled = hasSelection && !hasMultiple
         menu.item(withTitle: "Get Info")?.isEnabled = hasSelection
         menu.item(withTitle: "Copy")?.isEnabled = hasSelection

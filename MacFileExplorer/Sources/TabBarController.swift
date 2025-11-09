@@ -93,10 +93,29 @@ extension TabBarController: FileBrowserDelegate {
             splitVC.updateTerminalDirectory(path)
         }
     }
+
+    func openInNewTab(url: URL) {
+        // Create a new tab
+        let fileBrowser = FileBrowserViewController()
+        fileBrowser.delegate = self
+        tabs.append(fileBrowser)
+
+        let tabItem = NSTabViewItem(viewController: fileBrowser)
+        tabItem.label = url.lastPathComponent
+        tabView.addTabViewItem(tabItem)
+
+        // Switch to the new tab
+        tabView.selectTabViewItem(at: tabs.count - 1)
+        currentTabIndex = tabs.count - 1
+
+        // Navigate to the URL in the new tab
+        fileBrowser.navigateToURL(url)
+    }
 }
 
 // MARK: - FileBrowserDelegate Protocol
 
 protocol FileBrowserDelegate: AnyObject {
     func directoryDidChange(to path: String)
+    func openInNewTab(url: URL)
 }
