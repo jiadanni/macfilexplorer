@@ -43,7 +43,7 @@ class SidebarViewController: NSViewController {
         // Create stack view to hold sections
         stackView = NSStackView()
         stackView.orientation = .vertical
-        stackView.alignment = .leading
+        stackView.alignment = .top
         stackView.spacing = 10
         stackView.edgeInsets = NSEdgeInsets(top: 10, left: 0, bottom: 10, right: 0)
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -65,11 +65,15 @@ class SidebarViewController: NSViewController {
 
         // Constrain stack view within scroll view content
         if let contentView = scrollView.contentView as NSClipView? {
+            let bottomConstraint = stackView.bottomAnchor.constraint(greaterThanOrEqualTo: contentView.bottomAnchor)
+            bottomConstraint.priority = .defaultLow
+
             NSLayoutConstraint.activate([
                 stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
                 stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
                 stackView.topAnchor.constraint(equalTo: contentView.topAnchor),
-                stackView.widthAnchor.constraint(equalTo: contentView.widthAnchor)
+                stackView.widthAnchor.constraint(equalTo: contentView.widthAnchor),
+                bottomConstraint
             ])
         }
     }
