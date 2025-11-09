@@ -167,7 +167,7 @@ class FileBrowserViewController: NSViewController {
         // Update toolbar
         let canGoBack = currentHistoryIndex > 0
         let canGoForward = currentHistoryIndex < navigationHistory.count - 1
-        toolbarViewController?.updatePath(url, canGoBack: canGoBack, canGoForward: canGoForward)
+        toolbarViewController?.updatePath(url, canGoBack: canGoBack, canGoForward: canGoForward, history: navigationHistory, currentIndex: currentHistoryIndex)
 
         // Set delegate and dataSource if not already set
         if outlineView.delegate == nil {
@@ -860,5 +860,12 @@ extension FileBrowserViewController: ToolbarDelegate {
         sortAscending = ascending
         sortItems()
         outlineView.reloadData()
+    }
+
+    func toolbarDidRequestNavigateToHistoryIndex(_ index: Int) {
+        guard index >= 0 && index < navigationHistory.count else { return }
+        currentHistoryIndex = index
+        let url = navigationHistory[index]
+        loadDirectory(url, addToHistory: false)
     }
 }

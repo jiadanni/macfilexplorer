@@ -5,6 +5,7 @@ protocol ToolbarDelegate: AnyObject {
     func toolbarDidRequestForward()
     func toolbarDidRequestNavigate(to url: URL)
     func toolbarDidChangeSortColumn(_ column: String, ascending: Bool)
+    func toolbarDidRequestNavigateToHistoryIndex(_ index: Int)
 }
 
 class ToolbarViewController: NSViewController {
@@ -20,6 +21,8 @@ class ToolbarViewController: NSViewController {
     private var currentURL: URL?
     private var canGoBack: Bool = false
     private var canGoForward: Bool = false
+    private var navigationHistory: [URL] = []
+    private var currentHistoryIndex: Int = -1
 
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 40))
@@ -38,6 +41,7 @@ class ToolbarViewController: NSViewController {
         backButton.target = self
         backButton.action = #selector(backButtonClicked(_:))
         backButton.isEnabled = false
+        backButton.sendAction(on: [.leftMouseDown, .rightMouseDown])
         view.addSubview(backButton)
 
         // Forward button
@@ -48,6 +52,7 @@ class ToolbarViewController: NSViewController {
         forwardButton.target = self
         forwardButton.action = #selector(forwardButtonClicked(_:))
         forwardButton.isEnabled = false
+        forwardButton.sendAction(on: [.leftMouseDown, .rightMouseDown])
         view.addSubview(forwardButton)
 
         // Breadcrumb scroll view (for address bar)
@@ -121,10 +126,12 @@ class ToolbarViewController: NSViewController {
 
     // MARK: - Public Methods
 
-    func updatePath(_ url: URL, canGoBack: Bool, canGoForward: Bool) {
+    func updatePath(_ url: URL, canGoBack: Bool, canGoForward: Bool, history: [URL] = [], currentIndex: Int = -1) {
         self.currentURL = url
         self.canGoBack = canGoBack
         self.canGoForward = canGoForward
+        self.navigationHistory = history
+        self.currentHistoryIndex = currentIndex
 
         backButton.isEnabled = canGoBack
         forwardButton.isEnabled = canGoForward
@@ -191,12 +198,69 @@ class ToolbarViewController: NSViewController {
 
     // MARK: - Actions
 
-    @objc private func backButtonClicked(_ sender: Any) {
-        delegate?.toolbarDidRequestBack()
+    @objc private func backButtonClicked(_ sender: NSButton) {
+        let event = NSApp.currentEvent
+        if event?.type == .rightMouseDown {
+            showBackHistory(for: sender)
+        } else {
+            delegate?.toolbarDidRequestBack()
+        }
     }
 
-    @objc private func forwardButtonClicked(_ sender: Any) {
-        delegate?.toolbarDidRequestForward()
+    @objc private func forwardButtonClicked(_ sender: NSButton) {
+        let event = NSApp.currentEvent
+        if event?.type == .rightMouseDown {
+            showForwardHistory(for: sender)
+        } else {
+            delegate?.toolbarDidRequestForward()
+        }
+    }
+
+    private func showBackHistory(for button: NSButton) {
+        guard currentHistoryIndex > 0 else { return }
+
+        let menu = NSMenu()
+
+        // Show items from current position backwards
+        for i in stride(from: currentHistoryIndex - 1, through: 0, by: -1) {
+            let url = navigationHistory[i]
+            let displayName = url.lastPathComponent.isEmpty ? url.path : url.lastPathComponent
+            let menuItem = NSMenuItem(title: displayName, action: #selector(historyItemClicked(_:)), keyEquivalent: "")
+            menuItem.target = self
+            menuItem.tag = i
+            menuItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+            menu.addItem(menuItem)
+        }
+
+        // Show menu below button
+        let location = NSPoint(x: 0, y: button.bounds.height)
+        menu.popUp(positioning: nil, at: location, in: button)
+    }
+
+    private func showForwardHistory(for button: NSButton) {
+        guard currentHistoryIndex < navigationHistory.count - 1 else { return }
+
+        let menu = NSMenu()
+
+        // Show items from current position forwards
+        for i in (currentHistoryIndex + 1)..<navigationHistory.count {
+            let url = navigationHistory[i]
+            let displayName = url.lastPathComponent.isEmpty ? url.path : url.lastPathComponent
+            let menuItem = NSMenuItem(title: displayName, action: #selector(historyItemClicked(_:)), keyEquivalent: "")
+            menuItem.target = self
+            menuItem.tag = i
+            menuItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+            menu.addItem(menuItem)
+        }
+
+        // Show menu below button
+        let location = NSPoint(x: 0, y: button.bounds.height)
+        menu.popUp(positioning: nil, at: location, in: button)
+    }
+
+    @objc private func historyItemClicked(_ sender: NSMenuItem) {
+        let index = sender.tag
+        delegate?.toolbarDidRequestNavigateToHistoryIndex(index)
     }
 
     @objc private func breadcrumbClicked(_ sender: NSButton) {
