@@ -5,56 +5,55 @@ class TabBarController: NSViewController {
     private var tabView: NSTabView!
     private var tabs: [FileBrowserViewController] = []
     private var currentTabIndex = 0
-    private var tabBarContainer: NSView!
     private var tabButtonsStackView: NSStackView!
     private var tabButtons: [NSButton] = []
+    private var titlebarAccessory: NSTitlebarAccessoryViewController?
 
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
         setupUI()
     }
 
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        setupTitlebarTabs()
+    }
+
     private func setupUI() {
-        // Create tab bar container first
-        tabBarContainer = NSView()
-        tabBarContainer.translatesAutoresizingMaskIntoConstraints = false
-        tabBarContainer.wantsLayer = true
-        tabBarContainer.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-        view.addSubview(tabBarContainer)
-
-        // Create stack view for tab buttons
-        tabButtonsStackView = NSStackView()
-        tabButtonsStackView.translatesAutoresizingMaskIntoConstraints = false
-        tabButtonsStackView.orientation = .horizontal
-        tabButtonsStackView.spacing = 0
-        tabButtonsStackView.alignment = .centerY
-        tabBarContainer.addSubview(tabButtonsStackView)
-
-        // Create tab view
+        // Create tab view without custom tab bar
         tabView = NSTabView()
         tabView.tabViewType = .noTabsNoBorder
         tabView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tabView)
 
-        // Constrain tab bar to top
+        // Constrain tab view to fill entire view
         NSLayoutConstraint.activate([
-            tabBarContainer.topAnchor.constraint(equalTo: view.topAnchor),
-            tabBarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tabBarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tabBarContainer.heightAnchor.constraint(equalToConstant: 30),
-
-            tabButtonsStackView.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor, constant: 4),
-            tabButtonsStackView.topAnchor.constraint(equalTo: tabBarContainer.topAnchor, constant: 2),
-            tabButtonsStackView.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor, constant: -2)
-        ])
-
-        // Constrain tab view below tab bar
-        NSLayoutConstraint.activate([
-            tabView.topAnchor.constraint(equalTo: tabBarContainer.bottomAnchor),
+            tabView.topAnchor.constraint(equalTo: view.topAnchor),
             tabView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tabView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tabView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+    }
+
+    private func setupTitlebarTabs() {
+        guard let window = view.window, titlebarAccessory == nil else { return }
+
+        // Create stack view for tab buttons
+        tabButtonsStackView = NSStackView()
+        tabButtonsStackView.orientation = .horizontal
+        tabButtonsStackView.spacing = 4
+        tabButtonsStackView.alignment = .centerY
+        tabButtonsStackView.edgeInsets = NSEdgeInsets(top: 0, left: 8, bottom: 0, right: 8)
+
+        // Create titlebar accessory view controller
+        let accessory = NSTitlebarAccessoryViewController()
+        accessory.view = tabButtonsStackView
+        accessory.layoutAttribute = .leading
+
+        window.addTitlebarAccessoryViewController(accessory)
+        titlebarAccessory = accessory
+
+        updateTabButtons()
     }
 
     private func createTabButton(title: String, index: Int) -> NSButton {

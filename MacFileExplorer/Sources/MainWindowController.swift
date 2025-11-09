@@ -14,10 +14,13 @@ class MainWindowController: NSWindowController {
         )
 
         window.center()
-        window.title = "Mac File Explorer"
+        window.title = ""  // Hide title since tabs will show in title bar
         window.setFrameAutosaveName("MainWindow")
         window.isReleasedWhenClosed = false
         window.backgroundColor = .windowBackgroundColor
+
+        // Configure title bar for integrated tabs
+        window.titleVisibility = .hidden
 
         super.init(window: window)
 
