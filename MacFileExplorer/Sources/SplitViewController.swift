@@ -56,6 +56,9 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
         contentItem.canCollapse = false
         addSplitViewItem(contentItem)
 
+        // Force view hierarchy to load before adding initial tab
+        _ = tabBarController?.view
+
         // Add initial tab
         addNewTab()
     }
@@ -95,10 +98,16 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
     }
 
     func openLocationInNewTab(_ url: URL) {
+        // Ensure view is loaded
+        _ = tabBarController?.view
+
         // Add a new tab first
         addNewTab()
-        // Then navigate to the location
-        tabBarController?.navigateToLocation(url)
+
+        // Ensure the new tab is ready, then navigate to the location
+        DispatchQueue.main.async { [weak self] in
+            self?.tabBarController?.navigateToLocation(url)
+        }
     }
 
     // MARK: - SidebarDelegate
