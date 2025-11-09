@@ -60,12 +60,18 @@ class SidebarViewController: NSViewController {
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-
-            stackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            stackView.topAnchor.constraint(equalTo: scrollView.topAnchor)
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+
+        // Constrain stack view within scroll view content
+        if let contentView = scrollView.contentView as NSClipView? {
+            NSLayoutConstraint.activate([
+                stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+                stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+                stackView.topAnchor.constraint(equalTo: contentView.topAnchor),
+                stackView.widthAnchor.constraint(equalTo: contentView.widthAnchor)
+            ])
+        }
     }
 
     private func setupFavoritesSection() {
