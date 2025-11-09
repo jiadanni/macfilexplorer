@@ -4,12 +4,17 @@ class FileBrowserViewController: NSViewController {
 
     weak var delegate: FileBrowserDelegate?
 
+    private var toolbarViewController: ToolbarViewController!
     private var scrollView: NSScrollView!
     private var outlineView: NSOutlineView!
     private var currentDirectory: URL
     private var rootItem: FileItem!
     private var fileSystemMonitor: FileSystemMonitor?
     private var selectedItems: Set<FileItem> = []
+
+    // Navigation history
+    private var navigationHistory: [URL] = []
+    private var currentHistoryIndex: Int = -1
 
     // Sorting state
     private var sortColumn: String = "NameColumn"
@@ -38,6 +43,13 @@ class FileBrowserViewController: NSViewController {
     }
 
     private func setupUI() {
+        // Create toolbar
+        toolbarViewController = ToolbarViewController()
+        toolbarViewController.delegate = self
+        addChild(toolbarViewController)
+        view.addSubview(toolbarViewController.view)
+        toolbarViewController.view.translatesAutoresizingMaskIntoConstraints = false
+
         // Create scroll view
         scrollView = NSScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -123,7 +135,12 @@ class FileBrowserViewController: NSViewController {
 
         // Set up constraints
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+            toolbarViewController.view.topAnchor.constraint(equalTo: view.topAnchor),
+            toolbarViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            toolbarViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            toolbarViewController.view.heightAnchor.constraint(equalToConstant: 40),
+
+            scrollView.topAnchor.constraint(equalTo: toolbarViewController.view.bottomAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
@@ -134,8 +151,23 @@ class FileBrowserViewController: NSViewController {
         view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
     }
 
-    private func loadDirectory(_ url: URL) {
+    private func loadDirectory(_ url: URL, addToHistory: Bool = true) {
         currentDirectory = url
+
+        // Update navigation history
+        if addToHistory {
+            // Remove any forward history
+            if currentHistoryIndex < navigationHistory.count - 1 {
+                navigationHistory.removeSubrange((currentHistoryIndex + 1)...)
+            }
+            navigationHistory.append(url)
+            currentHistoryIndex = navigationHistory.count - 1
+        }
+
+        // Update toolbar
+        let canGoBack = currentHistoryIndex > 0
+        let canGoForward = currentHistoryIndex < navigationHistory.count - 1
+        toolbarViewController?.updatePath(url, canGoBack: canGoBack, canGoForward: canGoForward)
 
         // Set delegate and dataSource if not already set
         if outlineView.delegate == nil {
@@ -779,6 +811,35 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
         outlineView.setIndicatorImage(indicatorImage, in: tableColumn)
 
         // Re-sort and reload
+        sortItems()
+        outlineView.reloadData()
+    }
+}
+
+// MARK: - ToolbarDelegate
+
+extension FileBrowserViewController: ToolbarDelegate {
+    func toolbarDidRequestBack() {
+        guard currentHistoryIndex > 0 else { return }
+        currentHistoryIndex -= 1
+        let url = navigationHistory[currentHistoryIndex]
+        loadDirectory(url, addToHistory: false)
+    }
+
+    func toolbarDidRequestForward() {
+        guard currentHistoryIndex < navigationHistory.count - 1 else { return }
+        currentHistoryIndex += 1
+        let url = navigationHistory[currentHistoryIndex]
+        loadDirectory(url, addToHistory: false)
+    }
+
+    func toolbarDidRequestNavigate(to url: URL) {
+        loadDirectory(url)
+    }
+
+    func toolbarDidChangeSortColumn(_ column: String, ascending: Bool) {
+        sortColumn = column
+        sortAscending = ascending
         sortItems()
         outlineView.reloadData()
     }
