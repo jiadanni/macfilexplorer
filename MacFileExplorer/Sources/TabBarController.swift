@@ -51,6 +51,7 @@ class TabBarController: NSViewController {
             tabBarContainer.heightAnchor.constraint(equalToConstant: 32),
 
             tabButtonsStackView.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor, constant: 8),
+            tabButtonsStackView.trailingAnchor.constraint(lessThanOrEqualTo: tabBarContainer.trailingAnchor, constant: -8),
             tabButtonsStackView.topAnchor.constraint(equalTo: tabBarContainer.topAnchor, constant: 4),
             tabButtonsStackView.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor, constant: -4),
 

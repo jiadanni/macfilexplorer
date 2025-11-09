@@ -45,7 +45,7 @@ class SidebarViewController: NSViewController {
         stackView.orientation = .vertical
         stackView.alignment = .leading
         stackView.spacing = 10
-        stackView.edgeInsets = NSEdgeInsets(top: 10, left: 0, bottom: 10, right: 0)
+        stackView.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 10, right: 0)
         stackView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.documentView = stackView
 
@@ -112,7 +112,8 @@ class SidebarViewController: NSViewController {
             favoritesTableView.leadingAnchor.constraint(equalTo: favoritesContainer.leadingAnchor),
             favoritesTableView.trailingAnchor.constraint(equalTo: favoritesContainer.trailingAnchor),
             favoritesTableView.bottomAnchor.constraint(equalTo: favoritesContainer.bottomAnchor),
-            favoritesContainer.heightAnchor.constraint(equalToConstant: 200)
+            favoritesContainer.heightAnchor.constraint(equalToConstant: 200),
+            favoritesContainer.widthAnchor.constraint(greaterThanOrEqualToConstant: 180)
         ])
 
         stackView.addArrangedSubview(favoritesContainer)
@@ -152,7 +153,8 @@ class SidebarViewController: NSViewController {
             drivesTableView.leadingAnchor.constraint(equalTo: drivesContainer.leadingAnchor),
             drivesTableView.trailingAnchor.constraint(equalTo: drivesContainer.trailingAnchor),
             drivesTableView.bottomAnchor.constraint(equalTo: drivesContainer.bottomAnchor),
-            drivesContainer.heightAnchor.constraint(equalToConstant: 150)
+            drivesContainer.heightAnchor.constraint(equalToConstant: 150),
+            drivesContainer.widthAnchor.constraint(greaterThanOrEqualToConstant: 180)
         ])
 
         stackView.addArrangedSubview(drivesContainer)
