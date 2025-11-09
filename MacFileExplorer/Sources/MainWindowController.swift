@@ -19,6 +19,9 @@ class MainWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.backgroundColor = .windowBackgroundColor
 
+        // Disable native window tabs - we have our own custom tab implementation
+        window.tabbingMode = .disallowed
+
         super.init(window: window)
 
         setupSplitView()

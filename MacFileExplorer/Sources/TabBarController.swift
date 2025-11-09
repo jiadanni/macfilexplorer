@@ -145,9 +145,6 @@ class TabBarController: NSViewController {
     // MARK: - Public Methods
 
     func addNewTab() {
-        // Ensure view is loaded
-        _ = view
-
         let fileBrowser = FileBrowserViewController()
         fileBrowser.delegate = self
         tabs.append(fileBrowser)
@@ -159,10 +156,6 @@ class TabBarController: NSViewController {
         currentTabIndex = tabs.count - 1
 
         updateTabButtons()
-
-        // Force layout update
-        tabBarContainer.needsLayout = true
-        tabButtonsStackView.needsLayout = true
     }
 
     func closeCurrentTab() {

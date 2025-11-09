@@ -8,6 +8,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
     private var terminalViewController: TerminalViewController?
     private var terminalSplitItem: NSSplitViewItem?
     private var isTerminalVisible = false
+    private var hasInitializedTabs = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -55,12 +56,16 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
         let contentItem = NSSplitViewItem(viewController: contentSplitViewController!)
         contentItem.canCollapse = false
         addSplitViewItem(contentItem)
+    }
 
-        // Force view hierarchy to load before adding initial tab
-        _ = tabBarController?.view
+    override func viewDidAppear() {
+        super.viewDidAppear()
 
-        // Add initial tab
-        addNewTab()
+        // Create initial tab after view hierarchy is fully loaded (only once)
+        if !hasInitializedTabs {
+            hasInitializedTabs = true
+            addNewTab()
+        }
     }
 
     // MARK: - Public Methods
@@ -98,13 +103,10 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
     }
 
     func openLocationInNewTab(_ url: URL) {
-        // Ensure view is loaded
-        _ = tabBarController?.view
-
         // Add a new tab first
         addNewTab()
 
-        // Ensure the new tab is ready, then navigate to the location
+        // Navigate to the location asynchronously to ensure tab is ready
         DispatchQueue.main.async { [weak self] in
             self?.tabBarController?.navigateToLocation(url)
         }
