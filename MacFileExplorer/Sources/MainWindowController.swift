@@ -21,6 +21,13 @@ class MainWindowController: NSWindowController {
 
         // Configure title bar for integrated tabs
         window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = false
+
+        // Create and set an empty toolbar to enable titlebar accessories
+        let toolbar = NSToolbar()
+        toolbar.displayMode = .iconOnly
+        toolbar.showsBaselineSeparator = false
+        window.toolbar = toolbar
 
         super.init(window: window)
 

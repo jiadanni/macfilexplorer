@@ -17,6 +17,11 @@ class TabBarController: NSViewController {
     override func viewDidAppear() {
         super.viewDidAppear()
         setupTitlebarTabs()
+
+        // Force an immediate update to ensure tabs are visible
+        if tabButtonsStackView != nil && !tabs.isEmpty {
+            updateTabButtons()
+        }
     }
 
     private func setupUI() {
