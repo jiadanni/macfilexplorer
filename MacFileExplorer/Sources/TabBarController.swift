@@ -140,6 +140,12 @@ class TabBarController: NSViewController {
         currentTabIndex = index
         tabView.selectTabViewItem(at: index)
         updateTabButtons()
+
+        // Update terminal to the new tab's directory
+        let path = tabs[index].currentPath
+        if let splitVC = parent as? SplitViewController {
+            splitVC.updateTerminalDirectory(path)
+        }
     }
 
     // MARK: - Public Methods

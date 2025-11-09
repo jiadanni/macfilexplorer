@@ -73,6 +73,10 @@ class TerminalViewController: NSViewController {
         updatePrompt()
     }
 
+    func focusInput() {
+        view.window?.makeFirstResponder(inputField)
+    }
+
     // MARK: - Private Methods
 
     private func updatePrompt() {

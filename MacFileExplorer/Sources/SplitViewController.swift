@@ -85,10 +85,13 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
         terminalSplitItem.animator().isCollapsed = !isTerminalVisible
 
         if isTerminalVisible {
-            // Update terminal to current directory
+            // Update terminal to current directory when opening
             if let currentPath = tabBarController?.getCurrentPath() {
                 terminalViewController?.changeDirectory(to: currentPath)
             }
+
+            // Focus the input field
+            terminalViewController?.focusInput()
         }
     }
 
@@ -97,9 +100,9 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
     }
 
     func updateTerminalDirectory(_ path: String) {
-        if isTerminalVisible {
-            terminalViewController?.changeDirectory(to: path)
-        }
+        // Always update terminal directory, regardless of visibility
+        // This ensures it shows the correct directory when toggled open
+        terminalViewController?.changeDirectory(to: path)
     }
 
     func openLocationInNewTab(_ url: URL) {
