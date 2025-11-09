@@ -4,32 +4,47 @@ class ColorManager {
     static let shared = ColorManager()
 
     private let userDefaults = UserDefaults.standard
-    private let colorKey = "FolderColors"
+    private let colorKey = "GlobalFolderColors"
 
     private init() {}
 
     // MARK: - Public Methods
 
-    func setColor(_ color: NSColor, for url: URL) {
+    /// Set color for all folders with this name globally
+    func setColor(_ color: NSColor, forFolderName name: String) {
         var colors = loadColors()
-        colors[url.path] = color.toHex()
+        colors[name] = color.toHex()
         saveColors(colors)
     }
 
-    func getColor(for url: URL) -> NSColor? {
+    /// Get color for a folder by its name (not path)
+    func getColor(forFolderName name: String) -> NSColor? {
         let colors = loadColors()
-        guard let hexString = colors[url.path] else { return nil }
+        guard let hexString = colors[name] else { return nil }
         return NSColor(hex: hexString)
     }
 
-    func removeColor(for url: URL) {
+    /// Get color for a folder by its URL (uses folder name)
+    func getColor(for url: URL) -> NSColor? {
+        let folderName = url.lastPathComponent
+        return getColor(forFolderName: folderName)
+    }
+
+    /// Remove color assignment for folders with this name
+    func removeColor(forFolderName name: String) {
         var colors = loadColors()
-        colors.removeValue(forKey: url.path)
+        colors.removeValue(forKey: name)
         saveColors(colors)
     }
 
+    /// Clear all global color assignments
     func clearAllColors() {
         userDefaults.removeObject(forKey: colorKey)
+    }
+
+    /// Get all folder names that have colors assigned
+    func getAllColoredFolderNames() -> [String] {
+        return Array(loadColors().keys)
     }
 
     // MARK: - Private Methods

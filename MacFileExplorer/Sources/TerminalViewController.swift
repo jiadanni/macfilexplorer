@@ -243,7 +243,10 @@ class TerminalViewController: NSViewController {
     private func executeExternalCommand(_ command: String) {
         let task = Process()
         task.currentDirectoryURL = URL(fileURLWithPath: currentDirectory)
-        task.executableURL = URL(fileURLWithPath: "/bin/bash")
+
+        // Use the user's default shell from environment, fallback to zsh (default on modern macOS)
+        let shellPath = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+        task.executableURL = URL(fileURLWithPath: shellPath)
         task.arguments = ["-c", command]
 
         let outputPipe = Pipe()

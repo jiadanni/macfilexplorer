@@ -351,6 +351,23 @@ class FileBrowserViewController: NSViewController {
             return
         }
 
+        // Get unique folder names
+        let folderNames = Set(itemsToColor.map { $0.name })
+
+        // Show informative alert about global color application
+        let alert = NSAlert()
+        alert.messageText = "Change Folder Color"
+        if folderNames.count == 1 {
+            alert.informativeText = "The color will be applied globally to all folders named \"\(folderNames.first!)\"."
+        } else {
+            alert.informativeText = "The color will be applied globally to all folders with these names:\n\n" + folderNames.sorted().joined(separator: "\n")
+        }
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: "Cancel")
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
         // Show color picker
         let colorPanel = NSColorPanel.shared
         colorPanel.showsAlpha = false
@@ -374,9 +391,10 @@ class FileBrowserViewController: NSViewController {
 
         let selectedColor = colorPanel.color
 
-        // Apply color to all selected folders
-        selectedItems.forEach { item in
-            ColorManager.shared.setColor(selectedColor, for: item.url)
+        // Apply color globally to all folders with these names
+        let folderNames = Set(selectedItems.map { $0.name })
+        folderNames.forEach { folderName in
+            ColorManager.shared.setColor(selectedColor, forFolderName: folderName)
         }
 
         selectedItems.removeAll()
