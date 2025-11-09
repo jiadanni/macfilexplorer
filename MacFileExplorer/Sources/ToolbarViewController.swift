@@ -176,9 +176,11 @@ class ToolbarViewController: NSViewController {
 
             // Store the URL for this component
             var urlForComponent = URL(fileURLWithPath: "/")
-            for i in 1...index {
-                if i < components.count && components[i] != "/" {
-                    urlForComponent.appendPathComponent(components[i])
+            if index > 0 {
+                for i in 1...index {
+                    if i < components.count && components[i] != "/" {
+                        urlForComponent.appendPathComponent(components[i])
+                    }
                 }
             }
             button.identifier = NSUserInterfaceItemIdentifier(urlForComponent.path)
