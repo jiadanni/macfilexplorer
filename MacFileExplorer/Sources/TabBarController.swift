@@ -19,7 +19,14 @@ class TabBarController: NSViewController {
         tabBarContainer = NSView()
         tabBarContainer.translatesAutoresizingMaskIntoConstraints = false
         tabBarContainer.wantsLayer = true
-        tabBarContainer.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        tabBarContainer.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+
+        // Add bottom border for visual separation
+        let separator = NSBox()
+        separator.boxType = .separator
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        tabBarContainer.addSubview(separator)
+
         view.addSubview(tabBarContainer)
 
         // Create stack view for tab buttons
@@ -45,7 +52,12 @@ class TabBarController: NSViewController {
 
             tabButtonsStackView.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor, constant: 8),
             tabButtonsStackView.topAnchor.constraint(equalTo: tabBarContainer.topAnchor, constant: 4),
-            tabButtonsStackView.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor, constant: -4)
+            tabButtonsStackView.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor, constant: -4),
+
+            separator.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: tabBarContainer.trailingAnchor),
+            separator.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor),
+            separator.heightAnchor.constraint(equalToConstant: 1)
         ])
 
         // Constrain tab view below tab bar

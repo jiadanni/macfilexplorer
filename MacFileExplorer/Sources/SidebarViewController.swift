@@ -116,11 +116,6 @@ class SidebarViewController: NSViewController {
         ])
 
         stackView.addArrangedSubview(favoritesContainer)
-
-        NSLayoutConstraint.activate([
-            favoritesContainer.leadingAnchor.constraint(equalTo: stackView.leadingAnchor),
-            favoritesContainer.trailingAnchor.constraint(equalTo: stackView.trailingAnchor)
-        ])
     }
 
     private func setupDrivesSection() {
@@ -161,11 +156,6 @@ class SidebarViewController: NSViewController {
         ])
 
         stackView.addArrangedSubview(drivesContainer)
-
-        NSLayoutConstraint.activate([
-            drivesContainer.leadingAnchor.constraint(equalTo: stackView.leadingAnchor),
-            drivesContainer.trailingAnchor.constraint(equalTo: stackView.trailingAnchor)
-        ])
     }
 
     private func createSectionHeader(title: String) -> NSView {
