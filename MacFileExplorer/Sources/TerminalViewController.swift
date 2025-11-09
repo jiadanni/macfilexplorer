@@ -14,6 +14,16 @@ class TerminalViewController: NSViewController {
         setupUI()
     }
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        // Initialize with home directory if not already set
+        if currentDirectory.isEmpty {
+            currentDirectory = FileManager.default.homeDirectoryForCurrentUser.path
+            updatePrompt()
+        }
+    }
+
     private func setupUI() {
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor(white: 0.1, alpha: 1.0).cgColor
@@ -91,6 +101,9 @@ class TerminalViewController: NSViewController {
 
         textView.textStorage?.append(attributedString)
         textView.scrollToEndOfDocument(nil)
+
+        // Ensure input field is focused for next command
+        view.window?.makeFirstResponder(inputField)
     }
 
     private func appendErrorOutput(_ text: String) {
@@ -104,6 +117,9 @@ class TerminalViewController: NSViewController {
 
         textView.textStorage?.append(attributedString)
         textView.scrollToEndOfDocument(nil)
+
+        // Ensure input field is focused for next command
+        view.window?.makeFirstResponder(inputField)
     }
 
     private func executeCommand(_ command: String) {
@@ -254,14 +270,45 @@ class TerminalViewController: NSViewController {
         task.standardOutput = outputPipe
         task.standardError = errorPipe
 
+        // Set up asynchronous reading to prevent deadlocks
+        var outputData = Data()
+        var errorData = Data()
+
+        let outputHandle = outputPipe.fileHandleForReading
+        let errorHandle = errorPipe.fileHandleForReading
+
+        outputHandle.readabilityHandler = { handle in
+            let data = handle.availableData
+            if !data.isEmpty {
+                outputData.append(data)
+            }
+        }
+
+        errorHandle.readabilityHandler = { handle in
+            let data = handle.availableData
+            if !data.isEmpty {
+                errorData.append(data)
+            }
+        }
+
         do {
             try task.run()
-
-            // Read output asynchronously to prevent deadlocks
-            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-
             task.waitUntilExit()
+
+            // Stop reading handlers
+            outputHandle.readabilityHandler = nil
+            errorHandle.readabilityHandler = nil
+
+            // Read any remaining data
+            let remainingOutput = outputHandle.availableData
+            if !remainingOutput.isEmpty {
+                outputData.append(remainingOutput)
+            }
+
+            let remainingError = errorHandle.availableData
+            if !remainingError.isEmpty {
+                errorData.append(remainingError)
+            }
 
             // Display standard output
             if let output = String(data: outputData, encoding: .utf8), !output.isEmpty {
@@ -278,6 +325,9 @@ class TerminalViewController: NSViewController {
             }
         } catch {
             appendErrorOutput("Error executing command: \(error.localizedDescription)\n")
+            // Clean up handlers on error
+            outputHandle.readabilityHandler = nil
+            errorHandle.readabilityHandler = nil
         }
     }
 }
@@ -294,9 +344,12 @@ extension TerminalViewController: NSTextFieldDelegate {
             return true
         } else if commandSelector == #selector(NSResponder.moveUp(_:)) {
             // Up arrow - previous command
-            if historyIndex > 0 {
+            if !commandHistory.isEmpty && historyIndex > 0 {
                 historyIndex -= 1
                 inputField.stringValue = commandHistory[historyIndex]
+            } else if !commandHistory.isEmpty && historyIndex == 0 {
+                // Already at first command, stay there
+                inputField.stringValue = commandHistory[0]
             }
             return true
         } else if commandSelector == #selector(NSResponder.moveDown(_:)) {
@@ -304,10 +357,12 @@ extension TerminalViewController: NSTextFieldDelegate {
             if historyIndex < commandHistory.count - 1 {
                 historyIndex += 1
                 inputField.stringValue = commandHistory[historyIndex]
-            } else if historyIndex == commandHistory.count - 1 {
+            } else if historyIndex < commandHistory.count {
+                // Move past the last command to show empty input
                 historyIndex = commandHistory.count
                 inputField.stringValue = ""
             }
+            // If already past history (historyIndex >= commandHistory.count), stay there
             return true
         }
         return false
