@@ -180,19 +180,26 @@ class SidebarViewController: NSViewController {
         let fileManager = FileManager.default
         let workspace = NSWorkspace.shared
 
-        // Favorites - use actual file icons from workspace
+        // Favorites - use SF Symbols or system icons to avoid triggering permissions
         let desktopURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Desktop")
         let documentsURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Documents")
         let downloadsURL = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
         let applicationsURL = URL(fileURLWithPath: "/Applications")
         let homeURL = fileManager.homeDirectoryForCurrentUser
 
+        // Use system icons that don't require file access
+        let folderIcon = NSImage(systemSymbolName: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(forFileType: "public.folder")
+        let desktopIcon = NSImage(systemSymbolName: "desktopcomputer", accessibilityDescription: nil) ?? folderIcon
+        let documentIcon = NSImage(systemSymbolName: "doc", accessibilityDescription: nil) ?? folderIcon
+        let downloadIcon = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil) ?? folderIcon
+        let homeIcon = NSImage(systemSymbolName: "house", accessibilityDescription: nil) ?? folderIcon
+
         favoriteItems = [
-            SidebarItem(name: "Desktop", url: desktopURL, icon: workspace.icon(forFile: desktopURL.path)),
-            SidebarItem(name: "Documents", url: documentsURL, icon: workspace.icon(forFile: documentsURL.path)),
-            SidebarItem(name: "Downloads", url: downloadsURL, icon: workspace.icon(forFile: downloadsURL.path)),
+            SidebarItem(name: "Desktop", url: desktopURL, icon: desktopIcon),
+            SidebarItem(name: "Documents", url: documentsURL, icon: documentIcon),
+            SidebarItem(name: "Downloads", url: downloadsURL, icon: downloadIcon),
             SidebarItem(name: "Applications", url: applicationsURL, icon: workspace.icon(forFile: applicationsURL.path)),
-            SidebarItem(name: "Home", url: homeURL, icon: workspace.icon(forFile: homeURL.path))
+            SidebarItem(name: "Home", url: homeURL, icon: homeIcon)
         ]
 
         // Drives - get all mounted volumes

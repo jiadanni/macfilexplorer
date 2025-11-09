@@ -20,13 +20,14 @@ class FileBrowserViewController: NSViewController {
     }
 
     init() {
-        // Start at user's home directory
-        self.currentDirectory = FileManager.default.homeDirectoryForCurrentUser
+        // Start at /Applications to avoid triggering permission prompts
+        self.currentDirectory = URL(fileURLWithPath: "/Applications")
         super.init(nibName: nil, bundle: nil)
     }
 
     required init?(coder: NSCoder) {
-        self.currentDirectory = FileManager.default.homeDirectoryForCurrentUser
+        // Start at /Applications to avoid triggering permission prompts
+        self.currentDirectory = URL(fileURLWithPath: "/Applications")
         super.init(coder: coder)
     }
 
