@@ -69,10 +69,10 @@ class FileItem: Hashable {
             children = urls.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
                 .map { FileItem(url: $0) }
 
-            // Load children for subdirectories (one level only for performance)
+            // Only initialize children array for subdirectories, don't recursively load
             children?.forEach { child in
-                if child.isDirectory {
-                    child.loadChildren()
+                if child.isDirectory && child.children == nil {
+                    child.children = []
                 }
             }
         } catch {

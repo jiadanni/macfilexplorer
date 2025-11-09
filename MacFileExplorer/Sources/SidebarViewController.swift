@@ -84,7 +84,6 @@ class SidebarViewController: NSViewController {
         favoritesTableView.delegate = self
         favoritesTableView.dataSource = self
         favoritesTableView.target = self
-        favoritesTableView.doubleAction = #selector(tableViewDoubleClicked(_:))
         favoritesTableView.action = #selector(tableViewClicked(_:))
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("FavoritesColumn"))
@@ -128,7 +127,6 @@ class SidebarViewController: NSViewController {
         drivesTableView.delegate = self
         drivesTableView.dataSource = self
         drivesTableView.target = self
-        drivesTableView.doubleAction = #selector(tableViewDoubleClicked(_:))
         drivesTableView.action = #selector(tableViewClicked(_:))
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("DrivesColumn"))
@@ -225,22 +223,6 @@ class SidebarViewController: NSViewController {
     }
 
     @objc private func tableViewClicked(_ sender: NSTableView) {
-        let row = sender.clickedRow
-        guard row >= 0 else { return }
-
-        var item: SidebarItem?
-        if sender == favoritesTableView {
-            item = favoriteItems[row]
-        } else if sender == drivesTableView {
-            item = driveItems[row]
-        }
-
-        if let item = item {
-            delegate?.sidebarDidSelectLocation(item.url)
-        }
-    }
-
-    @objc private func tableViewDoubleClicked(_ sender: NSTableView) {
         let row = sender.clickedRow
         guard row >= 0 else { return }
 

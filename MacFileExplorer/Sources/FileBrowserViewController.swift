@@ -136,34 +136,49 @@ class FileBrowserViewController: NSViewController {
 
     private func loadDirectory(_ url: URL) {
         currentDirectory = url
-        rootItem = FileItem(url: url)
-        rootItem.loadChildren()
-        sortItems()
 
-        // Set delegate and dataSource AFTER rootItem is initialized
-        // to avoid crashes from outline view querying data before it's ready
+        // Set delegate and dataSource if not already set
         if outlineView.delegate == nil {
             outlineView.delegate = self
             outlineView.dataSource = self
         }
 
-        outlineView.reloadData()
-        outlineView.expandItem(nil, expandChildren: true)
+        // Load directory contents on background thread
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
 
-        // Set up file system monitoring
-        fileSystemMonitor = FileSystemMonitor(url: url) { [weak self] in
+            let item = FileItem(url: url)
+            item.loadChildren()
+
             DispatchQueue.main.async {
-                self?.refreshCurrentDirectory()
+                self.rootItem = item
+                self.sortItems()
+                self.outlineView.reloadData()
+                self.outlineView.expandItem(nil, expandChildren: true)
+
+                // Set up file system monitoring
+                self.fileSystemMonitor = FileSystemMonitor(url: url) { [weak self] in
+                    DispatchQueue.main.async {
+                        self?.refreshCurrentDirectory()
+                    }
+                }
+
+                self.delegate?.directoryDidChange(to: url.path)
             }
         }
-
-        delegate?.directoryDidChange(to: url.path)
     }
 
     private func refreshCurrentDirectory() {
-        rootItem.loadChildren()
-        sortItems()
-        outlineView.reloadData()
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+
+            self.rootItem.loadChildren()
+
+            DispatchQueue.main.async {
+                self.sortItems()
+                self.outlineView.reloadData()
+            }
+        }
     }
 
     private func sortItems() {
