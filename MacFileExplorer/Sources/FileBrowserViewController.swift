@@ -449,8 +449,17 @@ class FileBrowserViewController: NSViewController {
         var items: [FileItem] = []
         let selectedRows = outlineView.selectedRowIndexes
 
-        selectedRows.forEach { row in
-            if let item = outlineView.item(atRow: row) as? FileItem {
+        // If there are selected rows, use those
+        if !selectedRows.isEmpty {
+            selectedRows.forEach { row in
+                if let item = outlineView.item(atRow: row) as? FileItem {
+                    items.append(item)
+                }
+            }
+        } else {
+            // If no selection, check if there's a clicked row (for context menu)
+            let clickedRow = outlineView.clickedRow
+            if clickedRow >= 0, let item = outlineView.item(atRow: clickedRow) as? FileItem {
                 items.append(item)
             }
         }

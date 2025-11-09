@@ -103,13 +103,8 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
     }
 
     func openLocationInNewTab(_ url: URL) {
-        // Add a new tab first
-        addNewTab()
-
-        // Navigate to the location asynchronously to ensure tab is ready
-        DispatchQueue.main.async { [weak self] in
-            self?.tabBarController?.navigateToLocation(url)
-        }
+        // Use the TabBarController's openInNewTab method which handles everything properly
+        tabBarController?.openInNewTab(url: url)
     }
 
     // MARK: - SidebarDelegate

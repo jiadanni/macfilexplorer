@@ -2,6 +2,7 @@ import Cocoa
 
 protocol SplitPaneDelegate: AnyObject {
     func splitPaneDirectoryDidChange(to path: String)
+    func splitPaneOpenInNewTab(url: URL)
 }
 
 class SplitPaneViewController: NSViewController {
@@ -128,8 +129,7 @@ extension SplitPaneViewController: FileBrowserDelegate {
     }
 
     func openInNewTab(url: URL) {
-        // This should be handled by the parent TabBarController
-        // For now, just navigate in the active pane
-        navigateToURL(url)
+        // Delegate to parent TabBarController to handle opening in new tab
+        delegate?.splitPaneOpenInNewTab(url: url)
     }
 }

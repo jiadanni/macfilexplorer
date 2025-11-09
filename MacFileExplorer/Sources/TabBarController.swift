@@ -229,6 +229,9 @@ extension TabBarController: FileBrowserDelegate {
 
         updateTabButtons()
 
+        // Ensure the view is loaded before navigating
+        _ = fileBrowser.view
+        
         // Navigate to the URL in the new tab
         fileBrowser.navigateToURL(url)
     }
