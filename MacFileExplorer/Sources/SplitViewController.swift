@@ -94,6 +94,13 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
         }
     }
 
+    func openLocationInNewTab(_ url: URL) {
+        // Add a new tab first
+        addNewTab()
+        // Then navigate to the location
+        tabBarController?.navigateToLocation(url)
+    }
+
     // MARK: - SidebarDelegate
 
     func sidebarDidSelectLocation(_ url: URL) {

@@ -91,6 +91,8 @@ class SidebarViewController: NSViewController {
         favoritesTableView.dataSource = self
         favoritesTableView.target = self
         favoritesTableView.action = #selector(tableViewClicked(_:))
+        favoritesTableView.menu = createContextMenu()
+        favoritesTableView.menu?.delegate = self
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("FavoritesColumn"))
         column.width = 180
@@ -134,6 +136,8 @@ class SidebarViewController: NSViewController {
         drivesTableView.dataSource = self
         drivesTableView.target = self
         drivesTableView.action = #selector(tableViewClicked(_:))
+        drivesTableView.menu = createContextMenu()
+        drivesTableView.menu?.delegate = self
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("DrivesColumn"))
         column.width = 180
@@ -206,6 +210,9 @@ class SidebarViewController: NSViewController {
             SidebarItem(name: "Home", url: homeURL, icon: homeIcon)
         ]
 
+        // Load additional favorites from UserDefaults
+        loadFavoritesFromDefaults()
+
         // Drives - get all mounted volumes
         driveItems = []
         if let volumeURLs = fileManager.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey, .volumeIsRemovableKey, .volumeIsEjectableKey], options: [.skipHiddenVolumes]) {
@@ -242,6 +249,146 @@ class SidebarViewController: NSViewController {
         if let item = item {
             delegate?.sidebarDidSelectLocation(item.url)
         }
+    }
+
+    // MARK: - Context Menu
+
+    private func createContextMenu() -> NSMenu {
+        let menu = NSMenu()
+
+        menu.addItem(withTitle: "Open", action: #selector(contextMenuOpen(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Open in New Tab", action: #selector(contextMenuOpenInNewTab(_:)), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Show in Finder", action: #selector(contextMenuShowInFinder(_:)), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "Add to Favorites", action: #selector(contextMenuAddToFavorites(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Remove from Favorites", action: #selector(contextMenuRemoveFromFavorites(_:)), keyEquivalent: "")
+
+        return menu
+    }
+
+    private func getClickedItem(from menu: NSMenu) -> SidebarItem? {
+        // Determine which table view was right-clicked
+        var tableView: NSTableView?
+        if favoritesTableView.menu == menu {
+            tableView = favoritesTableView
+        } else if drivesTableView.menu == menu {
+            tableView = drivesTableView
+        }
+
+        guard let tv = tableView else { return nil }
+        let row = tv.clickedRow
+        guard row >= 0 else { return nil }
+
+        if tv == favoritesTableView {
+            return favoriteItems[row]
+        } else if tv == drivesTableView {
+            return driveItems[row]
+        }
+
+        return nil
+    }
+
+    @objc private func contextMenuOpen(_ sender: Any) {
+        guard let menuItem = sender as? NSMenuItem,
+              let menu = menuItem.menu,
+              let item = getClickedItem(from: menu) else { return }
+
+        delegate?.sidebarDidSelectLocation(item.url)
+    }
+
+    @objc private func contextMenuOpenInNewTab(_ sender: Any) {
+        guard let menuItem = sender as? NSMenuItem,
+              let menu = menuItem.menu,
+              let item = getClickedItem(from: menu) else { return }
+
+        // Notify delegate to open in new tab
+        if let splitVC = parent?.parent as? SplitViewController {
+            splitVC.openLocationInNewTab(item.url)
+        }
+    }
+
+    @objc private func contextMenuShowInFinder(_ sender: Any) {
+        guard let menuItem = sender as? NSMenuItem,
+              let menu = menuItem.menu,
+              let item = getClickedItem(from: menu) else { return }
+
+        NSWorkspace.shared.activateFileViewerSelecting([item.url])
+    }
+
+    @objc private func contextMenuAddToFavorites(_ sender: Any) {
+        guard let menuItem = sender as? NSMenuItem,
+              let menu = menuItem.menu,
+              let item = getClickedItem(from: menu) else { return }
+
+        // Check if already in favorites
+        if !favoriteItems.contains(where: { $0.url == item.url }) {
+            favoriteItems.append(item)
+            favoritesTableView.reloadData()
+
+            // Save to UserDefaults
+            saveFavorites()
+        }
+    }
+
+    @objc private func contextMenuRemoveFromFavorites(_ sender: Any) {
+        guard let menuItem = sender as? NSMenuItem,
+              let menu = menuItem.menu,
+              let item = getClickedItem(from: menu) else { return }
+
+        // Remove from favorites
+        if let index = favoriteItems.firstIndex(where: { $0.url == item.url }) {
+            favoriteItems.remove(at: index)
+            favoritesTableView.reloadData()
+
+            // Save to UserDefaults
+            saveFavorites()
+        }
+    }
+
+    private func saveFavorites() {
+        let favoritePaths = favoriteItems.map { $0.url.path }
+        UserDefaults.standard.set(favoritePaths, forKey: "SidebarFavorites")
+    }
+
+    private func loadFavoritesFromDefaults() {
+        guard let savedPaths = UserDefaults.standard.array(forKey: "SidebarFavorites") as? [String] else { return }
+
+        let workspace = NSWorkspace.shared
+        let folderIcon = NSImage(systemSymbolName: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(forFileType: "public.folder")
+
+        for path in savedPaths {
+            let url = URL(fileURLWithPath: path)
+            let icon = workspace.icon(forFile: path)
+            let name = url.lastPathComponent
+
+            // Only add if not already in favorites
+            if !favoriteItems.contains(where: { $0.url == url }) {
+                favoriteItems.append(SidebarItem(name: name, url: url, icon: icon))
+            }
+        }
+    }
+}
+
+// MARK: - NSMenuDelegate
+
+extension SidebarViewController: NSMenuDelegate {
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard let item = getClickedItem(from: menu) else {
+            // Disable all items if no valid selection
+            menu.items.forEach { $0.isEnabled = false }
+            return
+        }
+
+        // Enable appropriate menu items
+        menu.item(withTitle: "Open")?.isEnabled = true
+        menu.item(withTitle: "Open in New Tab")?.isEnabled = true
+        menu.item(withTitle: "Show in Finder")?.isEnabled = true
+
+        // Check if item is in favorites to enable/disable add/remove
+        let isInFavorites = favoriteItems.contains(where: { $0.url == item.url })
+        menu.item(withTitle: "Add to Favorites")?.isEnabled = !isInFavorites
+        menu.item(withTitle: "Remove from Favorites")?.isEnabled = isInFavorites
     }
 }
 
