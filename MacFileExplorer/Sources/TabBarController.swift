@@ -94,6 +94,9 @@ class TabBarController: NSViewController {
     }
 
     private func updateTabButtons() {
+        // Guard against nil stack view (before viewDidAppear is called)
+        guard tabButtonsStackView != nil else { return }
+
         // Remove all existing buttons
         tabButtonsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         tabButtons.removeAll()
