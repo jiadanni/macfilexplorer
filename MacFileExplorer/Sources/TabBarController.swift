@@ -50,7 +50,7 @@ class TabBarController: NSViewController {
         tabs.append(fileBrowser)
 
         let tabItem = NSTabViewItem(viewController: fileBrowser)
-        tabItem.label = "Home"
+        tabItem.label = "Applications"  // Will be updated when directory loads
         tabView.addTabViewItem(tabItem)
         tabView.selectTabViewItem(at: tabs.count - 1)
         currentTabIndex = tabs.count - 1
@@ -88,6 +88,16 @@ class TabBarController: NSViewController {
 
 extension TabBarController: FileBrowserDelegate {
     func directoryDidChange(to path: String) {
+        // Update tab label with current directory name
+        let url = URL(fileURLWithPath: path)
+        let directoryName = url.lastPathComponent.isEmpty ? url.path : url.lastPathComponent
+
+        // Find the tab that corresponds to the current directory change
+        if currentTabIndex < tabView.numberOfTabViewItems {
+            let tabItem = tabView.tabViewItem(at: currentTabIndex)
+            tabItem.label = directoryName
+        }
+
         // Notify parent to update terminal
         if let splitVC = parent as? SplitViewController {
             splitVC.updateTerminalDirectory(path)
