@@ -1,4 +1,43 @@
 import Cocoa
+import Foundation
+
+extension UserDefaults {
+    enum Keys: String, CaseIterable {
+        // General Settings
+        case hideOpenWith = "hideOpenWith"
+        case hideGetInfo = "hideGetInfo"
+        case hideCopy = "hideCopy"
+        case hideCut = "hideCut"
+        case hidePaste = "hidePaste"
+        case hideRename = "hideRename"
+        case hideMoveToTrash = "hideMoveToTrash"
+        case hideNewFolder = "hideNewFolder"
+        case hideChangeFolderColor = "hideChangeFolderColor"
+        case hideShowInFinder = "hideShowInFinder"
+
+        // Sidebar Settings
+        case expandSidebarToCurrentDirectory = "expandSidebarToCurrentDirectory"
+
+        // Status Bar Settings
+        case showStatusBar = "showStatusBar"
+    }
+}
+
+// MARK: - Settings Sidebar Delegate
+
+protocol SettingsSidebarDelegate: AnyObject {
+    func settingsSidebarDidSelectSection(_ section: SettingsSection)
+}
+
+// MARK: - Settings Sections Enum
+
+enum SettingsSection: String, CaseIterable {
+    case general = "General"
+    case tabs = "Tabs"
+    case terminal = "Terminal"
+    case advanced = "Advanced"
+    case sidebar = "Sidebar"
+}
 
 class SettingsViewController: NSSplitViewController, SettingsSidebarDelegate {
 
