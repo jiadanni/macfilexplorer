@@ -1,11 +1,16 @@
 import Cocoa
 
+protocol FileBrowserDelegate: AnyObject {
+    func directoryDidChange(to path: String)
+    func openInNewTab(url: URL)
+}
+
 protocol SplitPaneDelegate: AnyObject {
     func splitPaneDirectoryDidChange(to path: String)
     func splitPaneOpenInNewTab(url: URL)
 }
 
-class SplitPaneViewController: NSViewController {
+class SplitPaneViewController: NSViewController, FileBrowserDelegate {
 
     weak var delegate: SplitPaneDelegate?
 
@@ -46,7 +51,7 @@ class SplitPaneViewController: NSViewController {
 
     func addPane(url: URL? = nil) {
         let fileBrowser = FileBrowserViewController()
-        fileBrowser.delegate = self
+        fileBrowser.delegate = self // SplitPaneViewController is now the FileBrowserDelegate
         panes.append(fileBrowser)
 
         addChild(fileBrowser)
@@ -111,11 +116,24 @@ class SplitPaneViewController: NSViewController {
         guard activePaneIndex < panes.count else { return }
         panes[activePaneIndex].showBulkColorPicker()
     }
-}
 
-// MARK: - FileBrowserDelegate
+    func cutSelection() {
+        guard activePaneIndex < panes.count else { return }
+        panes[activePaneIndex].cutSelection()
+    }
 
-extension SplitPaneViewController: FileBrowserDelegate {
+    func copySelection() {
+        guard activePaneIndex < panes.count else { return }
+        panes[activePaneIndex].copySelection()
+    }
+
+    func pasteSelection() {
+        guard activePaneIndex < panes.count else { return }
+        panes[activePaneIndex].pasteSelection()
+    }
+
+    // MARK: - FileBrowserDelegate
+
     func directoryDidChange(to path: String) {
         // Find which pane changed
         for (index, pane) in panes.enumerated() {

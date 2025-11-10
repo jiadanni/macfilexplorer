@@ -12,6 +12,8 @@ class FileItem: Hashable {
     private(set) var kind: String = ""
     private(set) var permissions: String = ""
     private(set) var owner: String = ""
+    var isCut: Bool = false
+    var isHidden: Bool = false
 
     init(url: URL) {
         self.url = url
@@ -20,6 +22,7 @@ class FileItem: Hashable {
         var isDir: ObjCBool = false
         FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
         self.isDirectory = isDir.boolValue
+        self.isHidden = name.hasPrefix(".")
 
         // Get file attributes
         if let attributes = try? FileManager.default.attributesOfItem(atPath: url.path) {
@@ -55,15 +58,20 @@ class FileItem: Hashable {
 
     // MARK: - Public Methods
 
-    func loadChildren() {
+    func loadChildren(showsHiddenFiles: Bool = false) {
         guard isDirectory else { return }
 
         let fileManager = FileManager.default
         do {
+            var options: FileManager.DirectoryEnumerationOptions = []
+            if !showsHiddenFiles {
+                options.insert(.skipsHiddenFiles)
+            }
+
             let urls = try fileManager.contentsOfDirectory(
                 at: url,
                 includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey],
-                options: [.skipsHiddenFiles]
+                options: options
             )
 
             children = urls.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }

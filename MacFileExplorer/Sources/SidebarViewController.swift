@@ -257,8 +257,6 @@ class SidebarViewController: NSViewController {
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Show in Finder", action: #selector(contextMenuShowInFinder(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(withTitle: "Add to Favorites", action: #selector(contextMenuAddToFavorites(_:)), keyEquivalent: "")
-        menu.addItem(withTitle: "Remove from Favorites", action: #selector(contextMenuRemoveFromFavorites(_:)), keyEquivalent: "")
 
         return menu
     }
@@ -299,7 +297,7 @@ class SidebarViewController: NSViewController {
               let item = getClickedItem(from: menu) else { return }
 
         // Notify delegate to open in new tab
-        if let splitVC = parent?.parent as? SplitViewController {
+        if let splitVC = parent as? SplitViewController {
             splitVC.openLocationInNewTab(item.url)
         }
     }
@@ -381,10 +379,21 @@ extension SidebarViewController: NSMenuDelegate {
         menu.item(withTitle: "Open in New Tab")?.isEnabled = true
         menu.item(withTitle: "Show in Finder")?.isEnabled = true
 
-        // Check if item is in favorites to enable/disable add/remove
+        // Remove existing favorite items to avoid duplicates
+        if let addItem = menu.item(withTitle: "Add to Favorites") {
+            menu.removeItem(addItem)
+        }
+        if let removeItem = menu.item(withTitle: "Remove from Favorites") {
+            menu.removeItem(removeItem)
+        }
+
+        // Check if item is in favorites and add the correct menu item
         let isInFavorites = favoriteItems.contains(where: { $0.url == item.url })
-        menu.item(withTitle: "Add to Favorites")?.isEnabled = !isInFavorites
-        menu.item(withTitle: "Remove from Favorites")?.isEnabled = isInFavorites
+        if isInFavorites {
+            menu.addItem(withTitle: "Remove from Favorites", action: #selector(contextMenuRemoveFromFavorites(_:)), keyEquivalent: "")
+        } else {
+            menu.addItem(withTitle: "Add to Favorites", action: #selector(contextMenuAddToFavorites(_:)), keyEquivalent: "")
+        }
     }
 }
 

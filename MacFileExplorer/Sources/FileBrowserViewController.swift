@@ -11,10 +11,13 @@ class FileBrowserViewController: NSViewController {
     private var rootItem: FileItem!
     private var fileSystemMonitor: FileSystemMonitor?
     private var selectedItems: Set<FileItem> = []
+    private var cutItems: [FileItem]?
+
 
     // Navigation history
     private var navigationHistory: [URL] = []
     private var currentHistoryIndex: Int = -1
+    private var showsHiddenFiles: Bool = false
 
     // Sorting state
     private var sortColumn: String = "NameColumn"
@@ -40,6 +43,19 @@ class FileBrowserViewController: NSViewController {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
         setupUI()
         loadDirectory(currentDirectory)
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        view.window?.makeFirstResponder(outlineView) // Make outlineView the first responder
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "x" {
+            cutSelection()
+        } else {
+            super.keyDown(with: event)
+        }
     }
 
     private func setupUI() {
@@ -180,13 +196,17 @@ class FileBrowserViewController: NSViewController {
             guard let self = self else { return }
 
             let item = FileItem(url: url)
-            item.loadChildren()
+            item.loadChildren(showsHiddenFiles: self.showsHiddenFiles)
 
             DispatchQueue.main.async {
                 self.rootItem = item
                 self.sortItems()
                 self.outlineView.reloadData()
                 self.outlineView.expandItem(nil, expandChildren: true)
+
+                // Clear any cut items when changing directory
+                self.cutItems?.forEach { $0.isCut = false }
+                self.cutItems = nil
 
                 // Set up file system monitoring
                 self.fileSystemMonitor = FileSystemMonitor(url: url) { [weak self] in
@@ -204,7 +224,7 @@ class FileBrowserViewController: NSViewController {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            self.rootItem.loadChildren()
+            self.rootItem.loadChildren(showsHiddenFiles: self.showsHiddenFiles)
 
             DispatchQueue.main.async {
                 self.sortItems()
@@ -418,6 +438,20 @@ class FileBrowserViewController: NSViewController {
         loadDirectory(url)
     }
 
+    // MARK: - Public Actions
+
+    func cutSelection() {
+        contextMenuCut(self)
+    }
+
+    func copySelection() {
+        contextMenuCopy(self)
+    }
+
+    func pasteSelection() {
+        contextMenuPaste(self)
+    }
+
     // MARK: - Context Menu
 
     private func createContextMenu() -> NSMenu {
@@ -430,6 +464,7 @@ class FileBrowserViewController: NSViewController {
         menu.addItem(withTitle: "Get Info", action: #selector(contextMenuGetInfo(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Copy", action: #selector(contextMenuCopy(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Cut", action: #selector(contextMenuCut(_:)), keyEquivalent: "")
         menu.addItem(withTitle: "Paste", action: #selector(contextMenuPaste(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Rename", action: #selector(contextMenuRename(_:)), keyEquivalent: "")
@@ -507,23 +542,55 @@ class FileBrowserViewController: NSViewController {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.writeObjects(items.map { $0.url as NSURL })
+        cutItems = nil // Clear any pending cut operation
+    }
+
+    @objc private func contextMenuCut(_ sender: Any) {
+        // Clear any previously cut items' visual state
+        rootItem.children?.forEach { $0.isCut = false }
+
+        let items = getSelectedItems()
+        items.forEach { $0.isCut = true } // Mark selected items as cut
+        cutItems = items // Store FileItem objects
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects(items.map { $0.url as NSURL })
+        outlineView.reloadData() // Reload to show visual change
     }
 
     @objc private func contextMenuPaste(_ sender: Any) {
-        let pasteboard = NSPasteboard.general
-        guard let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] else { return }
-
         let fileManager = FileManager.default
-        for url in urls {
-            let destinationURL = currentDirectory.appendingPathComponent(url.lastPathComponent)
-            do {
-                try fileManager.copyItem(at: url, to: destinationURL)
-            } catch {
-                showError("Failed to paste: \(error.localizedDescription)")
+        let destinationFolderURL = self.currentDirectory
+
+        if let cutItemsToMove = cutItems {
+            // This is a "cut" operation (move)
+            for item in cutItemsToMove {
+                let destinationURL = destinationFolderURL.appendingPathComponent(item.url.lastPathComponent)
+                do {
+                    try fileManager.moveItem(at: item.url, to: destinationURL)
+                    item.isCut = false // Clear cut state after successful move
+                } catch {
+                    showError("Failed to move: \(error.localizedDescription)")
+                }
+            }
+            cutItems = nil // Clear cut items after paste
+        } else {
+            // This is a "copy" operation
+            let pasteboard = NSPasteboard.general
+            guard let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] else { return }
+
+            for url in urls {
+                let destinationURL = destinationFolderURL.appendingPathComponent(url.lastPathComponent)
+                do {
+                    try fileManager.copyItem(at: url, to: destinationURL)
+                } catch {
+                    showError("Failed to paste: \(error.localizedDescription)")
+                }
             }
         }
 
         refreshCurrentDirectory()
+        outlineView.reloadData() // Reload to update visual state
     }
 
     @objc private func contextMenuRename(_ sender: Any) {
@@ -639,6 +706,7 @@ extension FileBrowserViewController: NSMenuDelegate {
         menu.item(withTitle: "Open With...")?.isEnabled = hasSelection && !hasMultiple
         menu.item(withTitle: "Get Info")?.isEnabled = hasSelection
         menu.item(withTitle: "Copy")?.isEnabled = hasSelection
+        menu.item(withTitle: "Cut")?.isEnabled = hasSelection
         menu.item(withTitle: "Rename")?.isEnabled = hasSelection && !hasMultiple
         menu.item(withTitle: "Move to Trash")?.isEnabled = hasSelection
         menu.item(withTitle: "Change Folder Color...")?.isEnabled = hasFolder
@@ -730,6 +798,10 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
             cellView.imageView = imageView
             cellView.textField = textField
 
+            if fileItem.isCut {
+                textField.textColor = NSColor.secondaryLabelColor // Darker shade for cut items
+            }
+
             return cellView
         } else if identifier == "SizeColumn" {
             let cellView = NSTableCellView()
@@ -777,6 +849,7 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
             textField.backgroundColor = .clear
             textField.isEditable = false
             textField.stringValue = fileItem.kind
+            textField.lineBreakMode = .byCharWrapping
 
             cellView.addSubview(textField)
             textField.translatesAutoresizingMaskIntoConstraints = false
@@ -813,33 +886,14 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
         return nil
     }
 
-    func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
-        return 20
-    }
-
-    // Handle column sorting when header is clicked
-    func outlineView(_ outlineView: NSOutlineView, mouseDownInHeaderOf tableColumn: NSTableColumn) {
-        let columnIdentifier = tableColumn.identifier.rawValue
-
-        // Toggle sort order if clicking same column, otherwise default to ascending
-        if sortColumn == columnIdentifier {
-            sortAscending.toggle()
-        } else {
+    func outlineView(_ outlineView: NSOutlineView, sortDescriptorsDidChange oldDescriptors: [NSSortDescriptor]) {
+        guard let sortDescriptor = outlineView.sortDescriptors.first else { return }
+        if let columnIdentifier = outlineView.tableColumns.first(where: { $0.sortDescriptorPrototype === sortDescriptor })?.identifier.rawValue {
             sortColumn = columnIdentifier
-            sortAscending = true
+            sortAscending = sortDescriptor.ascending
+            sortItems()
+            outlineView.reloadData()
         }
-
-        // Update visual indicator
-        outlineView.tableColumns.forEach { column in
-            outlineView.setIndicatorImage(nil, in: column)
-        }
-
-        let indicatorImage = sortAscending ? NSImage(named: NSImage.Name("NSAscendingSortIndicator")) : NSImage(named: NSImage.Name("NSDescendingSortIndicator"))
-        outlineView.setIndicatorImage(indicatorImage, in: tableColumn)
-
-        // Re-sort and reload
-        sortItems()
-        outlineView.reloadData()
     }
 }
 
@@ -867,6 +921,10 @@ extension FileBrowserViewController: ToolbarDelegate {
     func toolbarDidChangeSortColumn(_ column: String, ascending: Bool) {
         sortColumn = column
         sortAscending = ascending
+        if let tableColumn = outlineView.tableColumn(withIdentifier: NSUserInterfaceItemIdentifier(column)),
+           let sortDescriptor = tableColumn.sortDescriptorPrototype {
+            outlineView.sortDescriptors = [sortDescriptor]
+        }
         sortItems()
         outlineView.reloadData()
     }
@@ -877,4 +935,15 @@ extension FileBrowserViewController: ToolbarDelegate {
         let url = navigationHistory[index]
         loadDirectory(url, addToHistory: false)
     }
+
+    func toolbarDidRequestNewFolder() {
+        contextMenuNewFolder(self)
+    }
+
+    func toolbarDidToggleHiddenFiles(show: Bool) {
+        showsHiddenFiles = show
+        refreshCurrentDirectory()
+    }
 }
+
+

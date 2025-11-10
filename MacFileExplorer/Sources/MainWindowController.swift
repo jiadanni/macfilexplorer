@@ -67,4 +67,16 @@ class MainWindowController: NSWindowController {
     func showBulkColorPicker() {
         splitViewController?.showBulkColorPicker()
     }
+
+    func cutSelection() {
+        splitViewController?.cutSelection()
+    }
+
+    func copySelection() {
+        splitViewController?.copySelection()
+    }
+
+    func pasteSelection() {
+        splitViewController?.pasteSelection()
+    }
 }

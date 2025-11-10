@@ -99,15 +99,29 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
         tabBarController?.showBulkColorPicker()
     }
 
-    func updateTerminalDirectory(_ path: String) {
+    func cutSelection() {
+        tabBarController?.cutSelection()
+    }
+
+    func copySelection() {
+        tabBarController?.copySelection()
+    }
+
+    func pasteSelection() {
+        tabBarController?.pasteSelection()
+    }
+
+    func updateTerminalDirectory() {
         // Always update terminal directory, regardless of visibility
         // This ensures it shows the correct directory when toggled open
-        terminalViewController?.changeDirectory(to: path)
+        if let currentPath = tabBarController?.getCurrentPath() {
+            terminalViewController?.changeDirectory(to: currentPath)
+        }
     }
 
     func openLocationInNewTab(_ url: URL) {
         // Use the TabBarController's openInNewTab method which handles everything properly
-        tabBarController?.openInNewTab(url: url)
+        (tabBarController as TabBarController?)?.openInNewTab(url: url)
     }
 
     // MARK: - SidebarDelegate

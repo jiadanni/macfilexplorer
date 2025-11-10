@@ -6,6 +6,8 @@ protocol ToolbarDelegate: AnyObject {
     func toolbarDidRequestNavigate(to url: URL)
     func toolbarDidChangeSortColumn(_ column: String, ascending: Bool)
     func toolbarDidRequestNavigateToHistoryIndex(_ index: Int)
+    func toolbarDidRequestNewFolder()
+    func toolbarDidToggleHiddenFiles(show: Bool)
 }
 
 class ToolbarViewController: NSViewController {
@@ -17,6 +19,8 @@ class ToolbarViewController: NSViewController {
     private var breadcrumbStackView: NSStackView!
     private var breadcrumbScrollView: NSScrollView!
     private var sortButton: NSPopUpButton!
+    private var viewButton: NSPopUpButton!
+    private var newFolderButton: NSButton!
 
     private var currentURL: URL?
     private var canGoBack: Bool = false
@@ -73,6 +77,19 @@ class ToolbarViewController: NSViewController {
         breadcrumbStackView.translatesAutoresizingMaskIntoConstraints = false
         breadcrumbScrollView.documentView = breadcrumbStackView
 
+        // View button
+        viewButton = NSPopUpButton()
+        viewButton.translatesAutoresizingMaskIntoConstraints = false
+        viewButton.bezelStyle = .texturedRounded
+        viewButton.pullsDown = true
+        viewButton.addItem(withTitle: "View")
+        (viewButton.item(at: 0) as NSMenuItem?)?.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "View Options")
+
+        viewButton.menu?.addItem(withTitle: "Show Hidden Files", action: #selector(showHiddenFiles(_:)), keyEquivalent: "")
+        viewButton.menu?.addItem(withTitle: "Hide Hidden Files", action: #selector(hideHiddenFiles(_:)), keyEquivalent: "")
+        viewButton.menu?.items.forEach { $0.target = self }
+        view.addSubview(viewButton)
+
         // Sort button
         sortButton = NSPopUpButton()
         sortButton.translatesAutoresizingMaskIntoConstraints = false
@@ -96,6 +113,15 @@ class ToolbarViewController: NSViewController {
         sortButton.menu?.items.forEach { $0.target = self }
         view.addSubview(sortButton)
 
+        // New Folder button
+        newFolderButton = NSButton()
+        newFolderButton.translatesAutoresizingMaskIntoConstraints = false
+        newFolderButton.bezelStyle = .texturedRounded
+        newFolderButton.image = NSImage(systemSymbolName: "folder.badge.plus", accessibilityDescription: "New Folder")
+        newFolderButton.target = self
+        newFolderButton.action = #selector(newFolderButtonClicked(_:))
+        view.addSubview(newFolderButton)
+
         // Layout constraints
         NSLayoutConstraint.activate([
             backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
@@ -109,13 +135,23 @@ class ToolbarViewController: NSViewController {
             forwardButton.heightAnchor.constraint(equalToConstant: 26),
 
             breadcrumbScrollView.leadingAnchor.constraint(equalTo: forwardButton.trailingAnchor, constant: 8),
-            breadcrumbScrollView.trailingAnchor.constraint(equalTo: sortButton.leadingAnchor, constant: -8),
+            breadcrumbScrollView.trailingAnchor.constraint(equalTo: viewButton.leadingAnchor, constant: -8),
             breadcrumbScrollView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             breadcrumbScrollView.heightAnchor.constraint(equalToConstant: 26),
 
             breadcrumbStackView.leadingAnchor.constraint(equalTo: breadcrumbScrollView.leadingAnchor),
             breadcrumbStackView.topAnchor.constraint(equalTo: breadcrumbScrollView.topAnchor),
             breadcrumbStackView.bottomAnchor.constraint(equalTo: breadcrumbScrollView.bottomAnchor),
+
+            viewButton.trailingAnchor.constraint(equalTo: newFolderButton.leadingAnchor, constant: -8),
+            viewButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            viewButton.widthAnchor.constraint(equalToConstant: 44),
+            viewButton.heightAnchor.constraint(equalToConstant: 26),
+
+            newFolderButton.trailingAnchor.constraint(equalTo: sortButton.leadingAnchor, constant: -8),
+            newFolderButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            newFolderButton.widthAnchor.constraint(equalToConstant: 30),
+            newFolderButton.heightAnchor.constraint(equalToConstant: 26),
 
             sortButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
             sortButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -299,5 +335,17 @@ class ToolbarViewController: NSViewController {
 
     @objc private func sortByTypeDescending(_ sender: Any) {
         delegate?.toolbarDidChangeSortColumn("TypeColumn", ascending: false)
+    }
+
+    @objc private func newFolderButtonClicked(_ sender: NSButton) {
+        delegate?.toolbarDidRequestNewFolder()
+    }
+
+    @objc private func showHiddenFiles(_ sender: Any) {
+        delegate?.toolbarDidToggleHiddenFiles(show: true)
+    }
+
+    @objc private func hideHiddenFiles(_ sender: Any) {
+        delegate?.toolbarDidToggleHiddenFiles(show: false)
     }
 }

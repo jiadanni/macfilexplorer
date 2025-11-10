@@ -1,9 +1,9 @@
 import Cocoa
 
-class TabBarController: NSViewController {
+class TabBarController: NSViewController, SplitPaneDelegate {
 
     private var tabView: NSTabView!
-    private var tabs: [FileBrowserViewController] = []
+    private var tabs: [SplitPaneViewController] = []
     private var currentTabIndex = 0
     private var tabBarContainer: NSView!
     private var tabButtonsStackView: NSStackView!
@@ -142,21 +142,20 @@ class TabBarController: NSViewController {
         updateTabButtons()
 
         // Update terminal to the new tab's directory
-        let path = tabs[index].currentPath
-        if let splitVC = parent as? SplitViewController {
-            splitVC.updateTerminalDirectory(path)
-        }
-    }
+                    let path = tabs[index].currentPath
+                    if let splitVC = parent as? SplitViewController {
+                        splitVC.updateTerminalDirectory()
+                    }    }
 
     // MARK: - Public Methods
 
     func addNewTab() {
-        let fileBrowser = FileBrowserViewController()
-        fileBrowser.delegate = self
-        tabs.append(fileBrowser)
+        let splitPane = SplitPaneViewController()
+        splitPane.delegate = self
+        tabs.append(splitPane)
 
-        let tabItem = NSTabViewItem(viewController: fileBrowser)
-        tabItem.label = "Applications"  // Will be updated when directory loads
+        let tabItem = NSTabViewItem(viewController: splitPane)
+        tabItem.label = URL(fileURLWithPath: splitPane.currentPath).lastPathComponent // Will be updated when directory loads
         tabView.addTabViewItem(tabItem)
         tabView.selectTabViewItem(at: tabs.count - 1)
         currentTabIndex = tabs.count - 1
@@ -188,16 +187,54 @@ class TabBarController: NSViewController {
         tabs[currentTabIndex].showBulkColorPicker()
     }
 
+    func cutSelection() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].cutSelection()
+    }
+
+    func copySelection() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].copySelection()
+    }
+
+    func pasteSelection() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].pasteSelection()
+    }
+
     func navigateToLocation(_ url: URL) {
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].navigateToURL(url)
     }
+
+    public func openInNewTab(url: URL) {
+        // Create a new tab with a SplitPaneViewController
+        let splitPane = SplitPaneViewController()
+        splitPane.delegate = self
+        tabs.append(splitPane)
+
+        let tabItem = NSTabViewItem(viewController: splitPane)
+        tabItem.label = url.lastPathComponent
+        tabView.addTabViewItem(tabItem)
+
+        // Switch to the new tab
+        tabView.selectTabViewItem(at: tabs.count - 1)
+        currentTabIndex = tabs.count - 1
+
+        updateTabButtons()
+
+        // Ensure the view is loaded before navigating
+        _ = splitPane.view
+        
+        // Navigate to the URL in the new tab
+        splitPane.navigateToURL(url)
+    }
 }
 
-// MARK: - FileBrowserDelegate
+// MARK: - SplitPaneDelegate
 
-extension TabBarController: FileBrowserDelegate {
-    func directoryDidChange(to path: String) {
+extension TabBarController {
+    func splitPaneDirectoryDidChange(to path: String) {
         // Update tab label with current directory name
         let url = URL(fileURLWithPath: path)
         let directoryName = url.lastPathComponent.isEmpty ? url.path : url.lastPathComponent
@@ -215,37 +252,12 @@ extension TabBarController: FileBrowserDelegate {
 
         // Notify parent to update terminal
         if let splitVC = parent as? SplitViewController {
-            splitVC.updateTerminalDirectory(path)
+            splitVC.updateTerminalDirectory()
         }
     }
 
-    func openInNewTab(url: URL) {
-        // Create a new tab
-        let fileBrowser = FileBrowserViewController()
-        fileBrowser.delegate = self
-        tabs.append(fileBrowser)
-
-        let tabItem = NSTabViewItem(viewController: fileBrowser)
-        tabItem.label = url.lastPathComponent
-        tabView.addTabViewItem(tabItem)
-
-        // Switch to the new tab
-        tabView.selectTabViewItem(at: tabs.count - 1)
-        currentTabIndex = tabs.count - 1
-
-        updateTabButtons()
-
-        // Ensure the view is loaded before navigating
-        _ = fileBrowser.view
-        
-        // Navigate to the URL in the new tab
-        fileBrowser.navigateToURL(url)
+    func splitPaneOpenInNewTab(url: URL) {
+        // Delegate to parent TabBarController to handle opening in new tab
+        openInNewTab(url: url)
     }
-}
-
-// MARK: - FileBrowserDelegate Protocol
-
-protocol FileBrowserDelegate: AnyObject {
-    func directoryDidChange(to path: String)
-    func openInNewTab(url: URL)
 }
