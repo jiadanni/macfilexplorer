@@ -5,14 +5,16 @@ class FileBrowserViewController: NSViewController {
     weak var delegate: FileBrowserDelegate?
 
     private var toolbarViewController: ToolbarViewController!
-    private var scrollView: NSScrollView!
+    private var containerView: NSView! // New container view
+    private var scrollView: NSScrollView! // For outlineView
     private var outlineView: NSOutlineView!
+    private var collectionView: NSCollectionView! // For icons view
     private var currentDirectory: URL
     private var rootItem: FileItem!
     private var fileSystemMonitor: FileSystemMonitor?
     private var selectedItems: Set<FileItem> = []
     private var cutItems: [FileItem]?
-
+    private var currentViewMode: ViewMode = .details // Default view mode
 
     // Navigation history
     private var navigationHistory: [URL] = []
@@ -66,14 +68,19 @@ class FileBrowserViewController: NSViewController {
         view.addSubview(toolbarViewController.view)
         toolbarViewController.view.translatesAutoresizingMaskIntoConstraints = false
 
-        // Create scroll view
+        // Create container view for file display
+        containerView = NSView()
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(containerView)
+
+        // Create scroll view for outline view
         scrollView = NSScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
-        view.addSubview(scrollView)
+        // scrollView will be added to containerView later
 
         // Create outline view (Windows Explorer list view style)
         outlineView = NSOutlineView()
@@ -83,7 +90,6 @@ class FileBrowserViewController: NSViewController {
         outlineView.usesAlternatingRowBackgroundColors = true  // Like Windows Explorer
         outlineView.allowsMultipleSelection = true
         outlineView.autoresizesOutlineColumn = false
-        // Note: delegate and dataSource are set in loadDirectory() after rootItem is initialized
         outlineView.doubleAction = #selector(outlineViewDoubleClicked(_:))
         outlineView.target = self
         outlineView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
@@ -156,15 +162,79 @@ class FileBrowserViewController: NSViewController {
             toolbarViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             toolbarViewController.view.heightAnchor.constraint(equalToConstant: 40),
 
-            scrollView.topAnchor.constraint(equalTo: toolbarViewController.view.bottomAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            containerView.topAnchor.constraint(equalTo: toolbarViewController.view.bottomAnchor),
+            containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            containerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
         // Apply Windows Explorer-like styling
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+
+        // Set initial view mode
+        displayFiles(for: currentViewMode)
+    }
+
+    private func displayFiles(for viewMode: ViewMode) {
+        // Remove all subviews from the container
+        containerView.subviews.forEach { $0.removeFromSuperview() }
+
+        switch viewMode {
+        case .list, .details:
+            // Use outlineView for list and details
+            containerView.addSubview(scrollView)
+            NSLayoutConstraint.activate([
+                scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+            ])
+            outlineView.reloadData()
+            view.window?.makeFirstResponder(outlineView)
+        case .icons:
+            if collectionView == nil {
+                setupCollectionView()
+            }
+            containerView.addSubview(collectionView)
+            NSLayoutConstraint.activate([
+                collectionView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                collectionView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                collectionView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                collectionView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+            ])
+            collectionView.reloadData()
+            view.window?.makeFirstResponder(collectionView)
+        case .columns:
+            // Placeholder for columns view
+            let label = NSTextField(labelWithString: "Columns View - Not Implemented Yet")
+            label.translatesAutoresizingMaskIntoConstraints = false
+            containerView.addSubview(label)
+            NSLayoutConstraint.activate([
+                label.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+                label.centerYAnchor.constraint(equalTo: containerView.centerYAnchor)
+            ])
+        }
+    }
+
+    private func setupCollectionView() {
+        let flowLayout = NSCollectionViewFlowLayout()
+        flowLayout.itemSize = NSSize(width: 100, height: 120) // Adjust as needed
+        flowLayout.sectionInset = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+        flowLayout.minimumLineSpacing = 10
+        flowLayout.minimumInteritemSpacing = 10
+
+        collectionView = NSCollectionView()
+        collectionView.collectionViewLayout = flowLayout
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        collectionView.isSelectable = true
+        collectionView.allowsMultipleSelection = true
+        collectionView.backgroundColors = [.clear]
+        collectionView.delegate = self
+        collectionView.dataSource = self
+
+        // Register item prototype
+        collectionView.register(FileIconItem.self, forItemWithIdentifier: NSUserInterfaceItemIdentifier("FileIconItem"))
     }
 
     private func loadDirectory(_ url: URL, addToHistory: Bool = true) {
@@ -202,6 +272,9 @@ class FileBrowserViewController: NSViewController {
                 self.rootItem = item
                 self.sortItems()
                 self.outlineView.reloadData()
+                if self.currentViewMode == .icons {
+                    self.collectionView.reloadData()
+                }
                 self.outlineView.expandItem(nil, expandChildren: true)
 
                 // Clear any cut items when changing directory
@@ -229,6 +302,9 @@ class FileBrowserViewController: NSViewController {
             DispatchQueue.main.async {
                 self.sortItems()
                 self.outlineView.reloadData()
+                if self.currentViewMode == .icons {
+                    self.collectionView.reloadData()
+                }
             }
         }
     }
@@ -691,66 +767,7 @@ class FileBrowserViewController: NSViewController {
     }
 }
 
-// MARK: - NSMenuDelegate
 
-extension FileBrowserViewController: NSMenuDelegate {
-    func menuNeedsUpdate(_ menu: NSMenu) {
-        let selectedItems = getSelectedItems()
-        let hasSelection = !selectedItems.isEmpty
-        let hasMultiple = selectedItems.count > 1
-        let hasFolder = selectedItems.contains { $0.isDirectory }
-
-        // Enable/disable menu items based on selection
-        menu.item(withTitle: "Open")?.isEnabled = hasSelection
-        menu.item(withTitle: "Open in New Tab")?.isEnabled = hasFolder
-        menu.item(withTitle: "Open With...")?.isEnabled = hasSelection && !hasMultiple
-        menu.item(withTitle: "Get Info")?.isEnabled = hasSelection
-        menu.item(withTitle: "Copy")?.isEnabled = hasSelection
-        menu.item(withTitle: "Cut")?.isEnabled = hasSelection
-        menu.item(withTitle: "Rename")?.isEnabled = hasSelection && !hasMultiple
-        menu.item(withTitle: "Move to Trash")?.isEnabled = hasSelection
-        menu.item(withTitle: "Change Folder Color...")?.isEnabled = hasFolder
-        menu.item(withTitle: "Show in Finder")?.isEnabled = hasSelection
-
-        // Paste is enabled if pasteboard has URLs
-        let pasteboard = NSPasteboard.general
-        let hasPasteData = (pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL])?.isEmpty == false
-        menu.item(withTitle: "Paste")?.isEnabled = hasPasteData
-    }
-}
-
-// MARK: - NSOutlineViewDataSource
-
-extension FileBrowserViewController: NSOutlineViewDataSource {
-    func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
-        // Guard against nil rootItem to prevent crashes during initialization
-        guard let rootItem = rootItem else { return 0 }
-
-        if item == nil {
-            return rootItem.children?.count ?? 0
-        }
-        guard let fileItem = item as? FileItem else { return 0 }
-        return fileItem.children?.count ?? 0
-    }
-
-    func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
-        // Guard against nil rootItem to prevent crashes during initialization
-        guard let rootItem = rootItem else { return FileItem(url: currentDirectory) }
-
-        if item == nil {
-            return rootItem.children?[index] ?? FileItem(url: currentDirectory)
-        }
-        guard let fileItem = item as? FileItem else {
-            return FileItem(url: currentDirectory)
-        }
-        return fileItem.children?[index] ?? FileItem(url: currentDirectory)
-    }
-
-    func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
-        guard let fileItem = item as? FileItem else { return false }
-        return fileItem.isDirectory && (fileItem.children?.count ?? 0) > 0
-    }
-}
 
 // MARK: - NSOutlineViewDelegate
 
@@ -944,6 +961,86 @@ extension FileBrowserViewController: ToolbarDelegate {
         showsHiddenFiles = show
         refreshCurrentDirectory()
     }
+
+    func toolbarDidChangeViewMode(_ viewMode: ViewMode) {
+        currentViewMode = viewMode
+        displayFiles(for: viewMode)
+    }
 }
+
+// MARK: - NSOutlineViewDataSource
+
+extension FileBrowserViewController: NSOutlineViewDataSource {
+    func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
+        // Guard against nil rootItem to prevent crashes during initialization
+        guard let rootItem = rootItem else { return 0 }
+
+        if item == nil {
+            return rootItem.children?.count ?? 0
+        }
+        guard let fileItem = item as? FileItem else { return 0 }
+        return fileItem.children?.count ?? 0
+    }
+
+    func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
+        // Guard against nil rootItem to prevent crashes during initialization
+        guard let rootItem = rootItem else { return FileItem(url: currentDirectory) }
+
+        if item == nil {
+            return rootItem.children?[index] ?? FileItem(url: currentDirectory)
+        }
+        guard let fileItem = item as? FileItem else {
+            return FileItem(url: currentDirectory)
+        }
+        return fileItem.children?[index] ?? FileItem(url: currentDirectory)
+    }
+
+    func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
+        guard let fileItem = item as? FileItem else { return false }
+        return fileItem.isDirectory && (fileItem.children?.count ?? 0) > 0
+    }
+}
+
+// MARK: - NSCollectionViewDataSource
+
+extension FileBrowserViewController: NSCollectionViewDataSource {
+    func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int {
+        return rootItem?.children?.count ?? 0
+    }
+
+    func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
+        guard let item = collectionView.makeItem(withIdentifier: NSUserInterfaceItemIdentifier("FileIconItem"), for: indexPath) as? FileIconItem else {
+            fatalError("Unable to create FileIconItem")
+        }
+
+        if let fileItem = rootItem?.children?[indexPath.item] {
+            item.fileItem = fileItem
+        }
+        return item
+    }
+}
+
+// MARK: - NSCollectionViewDelegate
+
+extension FileBrowserViewController: NSCollectionViewDelegate {
+    func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
+        // Handle selection if needed
+    }
+
+    func collectionView(_ collectionView: NSCollectionView, didDeselectItemsAt indexPaths: Set<IndexPath>) {
+        // Handle deselection if needed
+    }
+
+    func collectionView(_ collectionView: NSCollectionView, doubleClickOn item: NSCollectionViewItem) {
+        guard let fileIconItem = item as? FileIconItem, let fileItem = fileIconItem.fileItem else { return }
+
+        if fileItem.isDirectory {
+            loadDirectory(fileItem.url)
+        } else {
+            NSWorkspace.shared.open(fileItem.url)
+        }
+    }
+}
+
 
 

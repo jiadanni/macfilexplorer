@@ -1,5 +1,12 @@
 import Cocoa
 
+enum ViewMode: String, CaseIterable {
+    case list = "List"
+    case details = "Details"
+    case icons = "Icons"
+    case columns = "Columns" // This will be more complex to implement
+}
+
 protocol ToolbarDelegate: AnyObject {
     func toolbarDidRequestBack()
     func toolbarDidRequestForward()
@@ -8,6 +15,7 @@ protocol ToolbarDelegate: AnyObject {
     func toolbarDidRequestNavigateToHistoryIndex(_ index: Int)
     func toolbarDidRequestNewFolder()
     func toolbarDidToggleHiddenFiles(show: Bool)
+    func toolbarDidChangeViewMode(_ viewMode: ViewMode)
 }
 
 class ToolbarViewController: NSViewController {
@@ -87,6 +95,14 @@ class ToolbarViewController: NSViewController {
 
         viewButton.menu?.addItem(withTitle: "Show Hidden Files", action: #selector(showHiddenFiles(_:)), keyEquivalent: "")
         viewButton.menu?.addItem(withTitle: "Hide Hidden Files", action: #selector(hideHiddenFiles(_:)), keyEquivalent: "")
+        viewButton.menu?.addItem(NSMenuItem.separator())
+
+        // Add view mode options
+        for mode in ViewMode.allCases {
+            let menuItem = NSMenuItem(title: mode.rawValue, action: #selector(changeViewMode(_:)), keyEquivalent: "")
+            menuItem.tag = mode.hashValue // Use hashValue as a unique identifier for the enum case
+            viewButton.menu?.addItem(menuItem)
+        }
         viewButton.menu?.items.forEach { $0.target = self }
         view.addSubview(viewButton)
 
@@ -347,5 +363,11 @@ class ToolbarViewController: NSViewController {
 
     @objc private func hideHiddenFiles(_ sender: Any) {
         delegate?.toolbarDidToggleHiddenFiles(show: false)
+    }
+
+    @objc private func changeViewMode(_ sender: NSMenuItem) {
+        if let selectedMode = ViewMode.allCases.first(where: { $0.hashValue == sender.tag }) {
+            delegate?.toolbarDidChangeViewMode(selectedMode)
+        }
     }
 }
