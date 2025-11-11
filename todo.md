@@ -3,12 +3,12 @@ Features
 [x] cmd + x has no effect. File should change to indicate cut. I think it goes dark, a darker shade usually.
 staus bar with file info or free space if no file selected. 
  toolbar
-- [x] SplitPane view Not Implemented.
-Multiple views
+ [x] SplitPane view Not Implemented.
+[x] Multiple views
 Folder Explorer in Sidebar.
-Item preview On right side .
-implement Settings
-Zoom
+[] Item preview On right side .
+[x] implement Settings
+[] Zoom
 Context menu configuration. Ability to hide options.
 Storage Analyzer
 Color should not be folder-specific but an option within settings.

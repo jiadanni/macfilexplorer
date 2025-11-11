@@ -31,7 +31,7 @@ class SettingsSidebarViewController: NSViewController, NSTableViewDelegate, NSTa
         tableView.headerView = nil
         tableView.backgroundColor = .clear
         tableView.intercellSpacing = NSSize(width: 0, height: 5)
-        tableView.selectionHighlightStyle = .sourceList
+        tableView.style = .sourceList
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("SectionColumn"))
         tableView.addTableColumn(column)
@@ -59,19 +59,12 @@ class SettingsSidebarViewController: NSViewController, NSTableViewDelegate, NSTa
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let cellIdentifier = NSUserInterfaceItemIdentifier("SectionCell")
-        var cellView = tableView.makeView(withIdentifier: cellIdentifier, owner: self) as? NSTableCellView
+        let cellIdentifier = NSUserInterfaceItemIdentifier("SettingsSidebarCellView")
+        var cellView = tableView.makeView(withIdentifier: cellIdentifier, owner: self) as? SettingsSidebarCellView
 
         if cellView == nil {
-            cellView = NSTableCellView()
+            cellView = SettingsSidebarCellView()
             cellView?.identifier = cellIdentifier
-            cellView?.textField = NSTextField(labelWithString: "")
-            cellView?.textField?.translatesAutoresizingMaskIntoConstraints = false
-            cellView?.addSubview(cellView!.textField!)
-            NSLayoutConstraint.activate([
-                cellView!.textField!.leadingAnchor.constraint(equalTo: cellView!.leadingAnchor, constant: 10),
-                cellView!.textField!.centerYAnchor.constraint(equalTo: cellView!.centerYAnchor)
-            ])
         }
 
         if let textField = cellView?.textField {

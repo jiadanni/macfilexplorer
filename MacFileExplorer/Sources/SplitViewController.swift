@@ -124,6 +124,10 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
         (tabBarController as TabBarController?)?.openInNewTab(url: url)
     }
 
+    func updateZoomLevel(to level: Double) {
+        tabBarController?.updateZoomLevel(to: level)
+    }
+
     // MARK: - SidebarDelegate
 
     func sidebarDidSelectLocation(_ url: URL) {

@@ -87,7 +87,7 @@ class SidebarViewController: NSViewController {
         favoritesTableView = NSTableView()
         favoritesTableView.headerView = nil
         favoritesTableView.rowSizeStyle = .small
-        favoritesTableView.selectionHighlightStyle = .sourceList
+        favoritesTableView.style = .sourceList
         favoritesTableView.backgroundColor = .clear
         favoritesTableView.intercellSpacing = NSSize(width: 0, height: 0)
         favoritesTableView.style = .sourceList
@@ -128,7 +128,7 @@ class SidebarViewController: NSViewController {
         drivesTableView = NSTableView()
         drivesTableView.headerView = nil
         drivesTableView.rowSizeStyle = .small
-        drivesTableView.selectionHighlightStyle = .sourceList
+        drivesTableView.style = .sourceList
         drivesTableView.backgroundColor = .clear
         drivesTableView.intercellSpacing = NSSize(width: 0, height: 0)
         drivesTableView.style = .sourceList
@@ -192,7 +192,7 @@ class SidebarViewController: NSViewController {
         let homeURL = fileManager.homeDirectoryForCurrentUser
 
         // Use system icons that don't require file access
-        let folderIcon = NSImage(systemSymbolName: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(forFileType: "public.folder")
+        let folderIcon = NSImage(systemSymbolName: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(for: .folder)
         let desktopIcon = NSImage(systemSymbolName: "desktopcomputer", accessibilityDescription: nil) ?? folderIcon
         let documentIcon = NSImage(systemSymbolName: "doc", accessibilityDescription: nil) ?? folderIcon
         let downloadIcon = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil) ?? folderIcon
@@ -349,7 +349,7 @@ class SidebarViewController: NSViewController {
         guard let savedPaths = UserDefaults.standard.array(forKey: "SidebarFavorites") as? [String] else { return }
 
         let workspace = NSWorkspace.shared
-        let folderIcon = NSImage(systemSymbolName: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(forFileType: "public.folder")
+        _ = NSImage(systemSymbolName: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(for: .folder)
 
         for path in savedPaths {
             let url = URL(fileURLWithPath: path)

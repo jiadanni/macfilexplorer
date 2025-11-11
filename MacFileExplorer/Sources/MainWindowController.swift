@@ -1,8 +1,9 @@
 import Cocoa
 
-class MainWindowController: NSWindowController {
+class MainWindowController: NSWindowController, StatusBarDelegate {
 
     private var splitViewController: SplitViewController!
+    private var statusBarViewController: StatusBarViewController!
 
     init() {
         // Create the window
@@ -24,7 +25,38 @@ class MainWindowController: NSWindowController {
 
         super.init(window: window)
 
-        setupSplitView()
+        // Setup Split View Controller
+        splitViewController = SplitViewController()
+        // Force the view to load now
+        _ = splitViewController.view
+        
+        // Setup Status Bar Controller
+        statusBarViewController = StatusBarViewController()
+        statusBarViewController.delegate = self // Set delegate
+        // Force the view to load now
+        _ = statusBarViewController.view
+
+        // Add split view and status bar to the window's content view
+        if let contentView = window.contentView {
+            contentView.addSubview(splitViewController.view)
+            contentView.addSubview(statusBarViewController.view)
+
+            // Set up constraints
+            splitViewController.view.translatesAutoresizingMaskIntoConstraints = false
+            statusBarViewController.view.translatesAutoresizingMaskIntoConstraints = false
+
+            NSLayoutConstraint.activate([
+                splitViewController.view.topAnchor.constraint(equalTo: contentView.topAnchor),
+                splitViewController.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+                splitViewController.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+                splitViewController.view.bottomAnchor.constraint(equalTo: statusBarViewController.view.topAnchor),
+
+                statusBarViewController.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+                statusBarViewController.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+                statusBarViewController.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+                statusBarViewController.view.heightAnchor.constraint(equalToConstant: 22) // Standard status bar height
+            ])
+        }
     }
 
     required init?(coder: NSCoder) {
@@ -38,17 +70,7 @@ class MainWindowController: NSWindowController {
         window?.makeKeyAndOrderFront(nil)
     }
 
-    private func setupSplitView() {
-        splitViewController = SplitViewController()
 
-        // Force the view to load now
-        _ = splitViewController.view
-
-        contentViewController = splitViewController
-
-        // Ensure window displays
-        window?.makeKeyAndOrderFront(nil)
-    }
 
     // MARK: - Public Methods
 
@@ -78,5 +100,10 @@ class MainWindowController: NSWindowController {
 
     func pasteSelection() {
         splitViewController?.pasteSelection()
+    }
+
+    func zoomLevelDidChange(to level: Double) {
+        // Forward zoom level changes to the active file browser if needed
+        // For now, this can be a no-op or forward to splitViewController
     }
 }

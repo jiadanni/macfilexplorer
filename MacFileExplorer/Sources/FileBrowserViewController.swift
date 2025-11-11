@@ -1,6 +1,8 @@
 import Cocoa
+import AppKit
+import AppKit
 
-class FileBrowserViewController: NSViewController {
+class FileBrowserViewController: NSViewController, NSMenuDelegate {
 
     weak var delegate: FileBrowserDelegate?
 
@@ -9,11 +11,13 @@ class FileBrowserViewController: NSViewController {
     private var scrollView: NSScrollView! // For outlineView
     private var outlineView: NSOutlineView!
     private var collectionView: NSCollectionView! // For icons view
+    private var collectionViewScrollView: NSScrollView! // For collection view
+    private var browserView: NSBrowser! // For columns view
+
     private var currentDirectory: URL
     private var rootItem: FileItem!
     private var fileSystemMonitor: FileSystemMonitor?
     private var selectedItems: Set<FileItem> = []
-    private var cutItems: [FileItem]?
     private var currentViewMode: ViewMode = .details // Default view mode
 
     // Navigation history
@@ -67,6 +71,8 @@ class FileBrowserViewController: NSViewController {
         addChild(toolbarViewController)
         view.addSubview(toolbarViewController.view)
         toolbarViewController.view.translatesAutoresizingMaskIntoConstraints = false
+        toolbarViewController?.updateViewModeDisplay(for: currentViewMode)
+        toolbarViewController?.updateSortDisplay(column: sortColumn, ascending: sortAscending)
 
         // Create container view for file display
         containerView = NSView()
@@ -192,40 +198,77 @@ class FileBrowserViewController: NSViewController {
             ])
             outlineView.reloadData()
             view.window?.makeFirstResponder(outlineView)
-        case .icons:
+        case .icons, .windowsList: // Handle both icons and windowsList with collectionView
+            // Ensure collectionView is set up
             if collectionView == nil {
                 setupCollectionView()
             }
-            containerView.addSubview(collectionView)
+            
+            // Safety check
+            guard let collectionView = collectionView, let collectionViewScrollView = collectionViewScrollView else {
+                print("Error: CollectionView not properly initialized")
+                currentViewMode = .list
+                displayFiles(for: .list)
+                return
+            }
+            
+            containerView.addSubview(collectionViewScrollView)
             NSLayoutConstraint.activate([
-                collectionView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                collectionView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                collectionView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                collectionView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+                collectionViewScrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                collectionViewScrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                collectionViewScrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                collectionViewScrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
             ])
+
+            // Configure layout based on viewMode
+            if viewMode == .windowsList {
+                let flowLayout = NSCollectionViewFlowLayout()
+                flowLayout.itemSize = NSSize(width: 150, height: 20) // Width of an item, height of a row
+                flowLayout.sectionInset = NSEdgeInsets(top: 5, left: 5, bottom: 5, right: 5)
+                flowLayout.minimumLineSpacing = 2 // Vertical spacing between rows in a column
+                flowLayout.minimumInteritemSpacing = 10 // Horizontal spacing between columns
+                flowLayout.scrollDirection = .horizontal // Primary scrolling direction is horizontal
+                collectionView.collectionViewLayout = flowLayout
+            } else { // .icons mode
+                let flowLayout = NSCollectionViewFlowLayout()
+                flowLayout.itemSize = NSSize(width: 100, height: 120) // Adjust as needed
+                flowLayout.sectionInset = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+                flowLayout.minimumLineSpacing = 10
+                flowLayout.minimumInteritemSpacing = 10
+                flowLayout.scrollDirection = .vertical // Default for icons
+                collectionView.collectionViewLayout = flowLayout
+            }
+
             collectionView.reloadData()
             view.window?.makeFirstResponder(collectionView)
         case .columns:
-            // Placeholder for columns view
-            let label = NSTextField(labelWithString: "Columns View - Not Implemented Yet")
-            label.translatesAutoresizingMaskIntoConstraints = false
-            containerView.addSubview(label)
+            // Use NSBrowser for columns view
+            if browserView == nil {
+                setupBrowserView()
+            }
+            
+            guard let browserView = browserView else {
+                print("Error: BrowserView not properly initialized")
+                currentViewMode = .list
+                displayFiles(for: .list)
+                return
+            }
+            
+            containerView.addSubview(browserView)
             NSLayoutConstraint.activate([
-                label.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-                label.centerYAnchor.constraint(equalTo: containerView.centerYAnchor)
+                browserView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                browserView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                browserView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                browserView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
             ])
+            
+            browserView.loadColumnZero()
+            view.window?.makeFirstResponder(browserView)
         }
     }
 
     private func setupCollectionView() {
-        let flowLayout = NSCollectionViewFlowLayout()
-        flowLayout.itemSize = NSSize(width: 100, height: 120) // Adjust as needed
-        flowLayout.sectionInset = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
-        flowLayout.minimumLineSpacing = 10
-        flowLayout.minimumInteritemSpacing = 10
-
         collectionView = NSCollectionView()
-        collectionView.collectionViewLayout = flowLayout
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.isSelectable = true
         collectionView.allowsMultipleSelection = true
@@ -235,7 +278,77 @@ class FileBrowserViewController: NSViewController {
 
         // Register item prototype
         collectionView.register(FileIconItem.self, forItemWithIdentifier: NSUserInterfaceItemIdentifier("FileIconItem"))
+        
+        // Add double-click gesture recognizer for handling double-clicks
+        let doubleClickGesture = NSClickGestureRecognizer(target: self, action: #selector(handleCollectionViewDoubleClick(_:)))
+        doubleClickGesture.numberOfClicksRequired = 2
+        collectionView.addGestureRecognizer(doubleClickGesture)
+
+        collectionViewScrollView = NSScrollView()
+        collectionViewScrollView.translatesAutoresizingMaskIntoConstraints = false
+        collectionViewScrollView.hasVerticalScroller = true
+        collectionViewScrollView.hasHorizontalScroller = true
+        collectionViewScrollView.autohidesScrollers = true
+        collectionViewScrollView.borderType = .noBorder
+        collectionViewScrollView.documentView = collectionView
     }
+    
+    private func setupBrowserView() {
+        browserView = NSBrowser()
+        browserView.translatesAutoresizingMaskIntoConstraints = false
+        browserView.delegate = self
+        browserView.allowsMultipleSelection = true
+        browserView.allowsEmptySelection = true
+        browserView.takesTitleFromPreviousColumn = false
+        browserView.separatesColumns = true
+        browserView.rowHeight = 20.0
+        browserView.hasHorizontalScroller = true
+        browserView.autohidesScroller = true
+        browserView.columnsAutosaveName = "FileBrowserColumns"
+        browserView.doubleAction = #selector(handleBrowserDoubleClick(_:))
+        browserView.target = self
+    }
+    
+    @objc private func handleBrowserDoubleClick(_ sender: NSBrowser) {
+        let selectedColumn = browserView.selectedColumn
+        let selectedRow = browserView.selectedRow(inColumn: selectedColumn)
+        
+        guard selectedRow >= 0 else { return }
+        
+        let item = fileItemForColumn(selectedColumn)
+        guard let children = item?.children,
+              selectedRow < children.count else {
+            return
+        }
+        
+        let fileItem = children[selectedRow]
+        
+        if fileItem.isDirectory {
+            loadDirectory(fileItem.url)
+        } else {
+            NSWorkspace.shared.open(fileItem.url)
+        }
+    }
+    
+    @objc private func handleCollectionViewDoubleClick(_ sender: NSClickGestureRecognizer) {
+        guard let collectionView = collectionView else { return }
+        let point = sender.location(in: collectionView)
+        
+        if let indexPath = collectionView.indexPathForItem(at: point),
+           let item = collectionView.item(at: indexPath) as? FileIconItem,
+           let fileItem = item.fileItem {
+            
+            if fileItem.isDirectory {
+                loadDirectory(fileItem.url)
+            } else {
+                NSWorkspace.shared.open(fileItem.url)
+            }
+        }
+    }
+
+
+
+
 
     private func loadDirectory(_ url: URL, addToHistory: Bool = true) {
         currentDirectory = url
@@ -274,12 +387,12 @@ class FileBrowserViewController: NSViewController {
                 self.outlineView.reloadData()
                 if self.currentViewMode == .icons {
                     self.collectionView.reloadData()
+                } else if self.currentViewMode == .columns {
+                    // browserView.reloadData() // Temporarily disabled
                 }
                 self.outlineView.expandItem(nil, expandChildren: true)
 
-                // Clear any cut items when changing directory
-                self.cutItems?.forEach { $0.isCut = false }
-                self.cutItems = nil
+
 
                 // Set up file system monitoring
                 self.fileSystemMonitor = FileSystemMonitor(url: url) { [weak self] in
@@ -304,6 +417,8 @@ class FileBrowserViewController: NSViewController {
                 self.outlineView.reloadData()
                 if self.currentViewMode == .icons {
                     self.collectionView.reloadData()
+                } else if self.currentViewMode == .columns {
+                    // self.browserView.reloadData() // Temporarily disabled
                 }
             }
         }
@@ -618,52 +733,51 @@ class FileBrowserViewController: NSViewController {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.writeObjects(items.map { $0.url as NSURL })
-        cutItems = nil // Clear any pending cut operation
     }
 
     @objc private func contextMenuCut(_ sender: Any) {
-        // Clear any previously cut items' visual state
-        rootItem.children?.forEach { $0.isCut = false }
-
         let items = getSelectedItems()
-        items.forEach { $0.isCut = true } // Mark selected items as cut
-        cutItems = items // Store FileItem objects
+        guard !items.isEmpty else { return }
+
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
+
+        // Write URLs to pasteboard
         pasteboard.writeObjects(items.map { $0.url as NSURL })
-        outlineView.reloadData() // Reload to show visual change
+
+        // Write a custom type to indicate a "cut" operation
+        pasteboard.setString("cut", forType: NSPasteboard.PasteboardType("com.macfileexplorer.cutOperation"))
+
+        // No longer need to manage cutItems instance variable or visual state here
+        // The visual state will be handled by checking the pasteboard in outlineView(_:viewFor:item:)
+        outlineView.reloadData() // Reload to show visual change (if any)
     }
 
     @objc private func contextMenuPaste(_ sender: Any) {
         let fileManager = FileManager.default
         let destinationFolderURL = self.currentDirectory
+        let pasteboard = NSPasteboard.general
 
-        if let cutItemsToMove = cutItems {
-            // This is a "cut" operation (move)
-            for item in cutItemsToMove {
-                let destinationURL = destinationFolderURL.appendingPathComponent(item.url.lastPathComponent)
-                do {
-                    try fileManager.moveItem(at: item.url, to: destinationURL)
-                    item.isCut = false // Clear cut state after successful move
-                } catch {
-                    showError("Failed to move: \(error.localizedDescription)")
-                }
-            }
-            cutItems = nil // Clear cut items after paste
-        } else {
-            // This is a "copy" operation
-            let pasteboard = NSPasteboard.general
-            guard let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] else { return }
+        // Check if it's a "cut" operation
+        let isCutOperation = pasteboard.string(forType: NSPasteboard.PasteboardType("com.macfileexplorer.cutOperation")) == "cut"
 
-            for url in urls {
-                let destinationURL = destinationFolderURL.appendingPathComponent(url.lastPathComponent)
-                do {
+        guard let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] else { return }
+
+        for url in urls {
+            let destinationURL = destinationFolderURL.appendingPathComponent(url.lastPathComponent)
+            do {
+                if isCutOperation {
+                    try fileManager.moveItem(at: url, to: destinationURL)
+                } else {
                     try fileManager.copyItem(at: url, to: destinationURL)
-                } catch {
-                    showError("Failed to paste: \(error.localizedDescription)")
                 }
+            } catch {
+                showError("Failed to \(isCutOperation ? "move" : "copy"): \(error.localizedDescription)")
             }
         }
+
+        // Clear the pasteboard after a successful paste operation
+        pasteboard.clearContents()
 
         refreshCurrentDirectory()
         outlineView.reloadData() // Reload to update visual state
@@ -815,9 +929,7 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
             cellView.imageView = imageView
             cellView.textField = textField
 
-            if fileItem.isCut {
-                textField.textColor = NSColor.secondaryLabelColor // Darker shade for cut items
-            }
+
 
             return cellView
         } else if identifier == "SizeColumn" {
@@ -944,6 +1056,7 @@ extension FileBrowserViewController: ToolbarDelegate {
         }
         sortItems()
         outlineView.reloadData()
+        toolbarViewController?.updateSortDisplay(column: column, ascending: ascending)
     }
 
     func toolbarDidRequestNavigateToHistoryIndex(_ index: Int) {
@@ -965,6 +1078,15 @@ extension FileBrowserViewController: ToolbarDelegate {
     func toolbarDidChangeViewMode(_ viewMode: ViewMode) {
         currentViewMode = viewMode
         displayFiles(for: viewMode)
+        toolbarViewController?.updateViewModeDisplay(for: viewMode)
+    }
+
+    func toolbarDidRequestSplitVertically() {
+        delegate?.fileBrowserDidRequestSplit(self, orientation: .vertical)
+    }
+
+    func toolbarDidRequestSplitHorizontally() {
+        delegate?.fileBrowserDidRequestSplit(self, orientation: .horizontal)
     }
 }
 
@@ -1025,20 +1147,75 @@ extension FileBrowserViewController: NSCollectionViewDataSource {
 extension FileBrowserViewController: NSCollectionViewDelegate {
     func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
         // Handle selection if needed
+        // Update status bar or toolbar with selection count
     }
 
     func collectionView(_ collectionView: NSCollectionView, didDeselectItemsAt indexPaths: Set<IndexPath>) {
         // Handle deselection if needed
     }
+}
 
-    func collectionView(_ collectionView: NSCollectionView, doubleClickOn item: NSCollectionViewItem) {
-        guard let fileIconItem = item as? FileIconItem, let fileItem = fileIconItem.fileItem else { return }
+// MARK: - NSBrowserDelegate
 
-        if fileItem.isDirectory {
-            loadDirectory(fileItem.url)
-        } else {
-            NSWorkspace.shared.open(fileItem.url)
+extension FileBrowserViewController: NSBrowserDelegate {
+    func browser(_ browser: NSBrowser, numberOfRowsInColumn column: Int) -> Int {
+        let item = fileItemForColumn(column)
+        return item?.children?.count ?? 0
+    }
+    
+    func browser(_ browser: NSBrowser, willDisplayCell cell: Any, atRow row: Int, column: Int) {
+        guard let cell = cell as? NSBrowserCell,
+              let item = fileItemForColumn(column),
+              let children = item.children,
+              row < children.count else {
+            return
         }
+        
+        let fileItem = children[row]
+        cell.title = fileItem.name
+        cell.isLeaf = !fileItem.isDirectory
+        
+        if fileItem.isDirectory {
+            cell.image = NSWorkspace.shared.icon(forFile: fileItem.url.path)
+        }
+    }
+    
+    func browser(_ browser: NSBrowser, selectRow row: Int, inColumn column: Int) -> Bool {
+        return true
+    }
+    
+    func browser(_ browser: NSBrowser, titleOfColumn column: Int) -> String? {
+        if column == 0 {
+            return currentDirectory.lastPathComponent
+        }
+        
+        let item = fileItemForColumn(column - 1)
+        let selectedRow = browser.selectedRow(inColumn: column - 1)
+        
+        if let children = item?.children, selectedRow >= 0, selectedRow < children.count {
+            return children[selectedRow].name
+        }
+        
+        return nil
+    }
+    
+    private func fileItemForColumn(_ column: Int) -> FileItem? {
+        if column == 0 {
+            return rootItem
+        }
+        
+        var item = rootItem
+        for col in 0..<column {
+            let selectedRow = browserView.selectedRow(inColumn: col)
+            guard selectedRow >= 0,
+                  let children = item?.children,
+                  selectedRow < children.count else {
+                return nil
+            }
+            item = children[selectedRow]
+        }
+        
+        return item
     }
 }
 

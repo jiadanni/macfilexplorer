@@ -87,13 +87,13 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         button.wantsLayer = true
 
         if index == currentTabIndex {
-            // Active tab - bright with border
+            // Active tab - subtle highlight
             button.state = .on
-            button.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.2).cgColor
-            button.layer?.borderColor = NSColor.controlAccentColor.cgColor
-            button.layer?.borderWidth = 2
+            button.layer?.backgroundColor = NSColor.unemphasizedSelectedContentBackgroundColor.cgColor // More neutral highlight
+            button.layer?.borderColor = NSColor.separatorColor.cgColor // Subtle border
+            button.layer?.borderWidth = 1
             button.layer?.cornerRadius = 6
-            button.contentTintColor = NSColor.controlAccentColor
+            button.contentTintColor = NSColor.labelColor // Standard text color
         } else {
             // Inactive tab - subtle appearance
             button.state = .off
@@ -142,7 +142,7 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         updateTabButtons()
 
         // Update terminal to the new tab's directory
-                    let path = tabs[index].currentPath
+                    _ = tabs[index].currentPath
                     if let splitVC = parent as? SplitViewController {
                         splitVC.updateTerminalDirectory()
                     }    }
@@ -207,6 +207,11 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         tabs[currentTabIndex].navigateToURL(url)
     }
 
+    func updateZoomLevel(to level: Double) {
+        // Forward zoom level to the current tab/pane if needed
+        // This can be implemented when zoom functionality is added to file browsers
+    }
+
     public func openInNewTab(url: URL) {
         // Create a new tab with a SplitPaneViewController
         let splitPane = SplitPaneViewController()
@@ -259,5 +264,15 @@ extension TabBarController {
     func splitPaneOpenInNewTab(url: URL) {
         // Delegate to parent TabBarController to handle opening in new tab
         openInNewTab(url: url)
+    }
+
+    func toolbarDidRequestSplitVertically() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].splitVertically()
+    }
+
+    func toolbarDidRequestSplitHorizontally() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].splitHorizontally()
     }
 }

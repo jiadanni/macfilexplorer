@@ -20,6 +20,11 @@
 		AA0000330000000000000001 /* ToolbarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000320000000000000001 /* ToolbarViewController.swift */; };
 		AA0000340000000000000001 /* SplitPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000350000000000000001 /* SplitPaneViewController.swift */; };
 		AA0000370000000000000001 /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000360000000000000001 /* SettingsViewController.swift */; };
+		AA0000380000000000000001 /* SettingsSidebarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000390000000000000001 /* SettingsSidebarViewController.swift */; };
+		AA0000400000000000000001 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000410000000000000001 /* SettingsWindowController.swift */; };
+		AA0000440000000000000001 /* SettingsSidebarCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000450000000000000001 /* SettingsSidebarCellView.swift */; };
+		AA0000420000000000000001 /* FileIconItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000430000000000000001 /* FileIconItem.swift */; };
+		AA0000460000000000000001 /* StatusBarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000470000000000000001 /* StatusBarViewController.swift */; };
 		AA0000190000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000200000000000000001 /* Assets.xcassets */; };
 		AA0000210000000000000001 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = AA0000220000000000000001 /* MainMenu.xib */; };
 /* End PBXBuildFile section */
@@ -39,6 +44,11 @@
 		AA0000320000000000000001 /* ToolbarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarViewController.swift; sourceTree = "<group>"; };
 		AA0000350000000000000001 /* SplitPaneViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitPaneViewController.swift; sourceTree = "<group>"; };
 		AA0000360000000000000001 /* SettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewController.swift; sourceTree = "<group>"; };
+		AA0000390000000000000001 /* SettingsSidebarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSidebarViewController.swift; sourceTree = "<group>"; };
+		AA0000410000000000000001 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		AA0000450000000000000001 /* SettingsSidebarCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSidebarCellView.swift; sourceTree = "<group>"; };
+		AA0000430000000000000001 /* FileIconItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileIconItem.swift; sourceTree = "<group>"; };
+		AA0000470000000000000001 /* StatusBarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarViewController.swift; sourceTree = "<group>"; };
 		AA0000200000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000220000000000000001 /* MainMenu.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MainMenu.xib; sourceTree = "<group>"; };
 		AA0000230000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -95,7 +105,12 @@
 				AA0000320000000000000001 /* ToolbarViewController.swift */,
 				AA0000350000000000000001 /* SplitPaneViewController.swift */,
 				AA0000360000000000000001 /* SettingsViewController.swift */,
+				AA0000390000000000000001 /* SettingsSidebarViewController.swift */,
+				AA0000410000000000000001 /* SettingsWindowController.swift */,
+				AA0000450000000000000001 /* SettingsSidebarCellView.swift */,
 				AA0000140000000000000001 /* FileItem.swift */,
+				AA0000430000000000000001 /* FileIconItem.swift */,
+				AA0000470000000000000001 /* StatusBarViewController.swift */,
 				AA0000160000000000000001 /* ColorManager.swift */,
 				AA0000180000000000000001 /* FileSystemMonitor.swift */,
 			);
@@ -201,7 +216,12 @@
 				AA0000330000000000000001 /* ToolbarViewController.swift in Sources */,
 				AA0000340000000000000001 /* SplitPaneViewController.swift in Sources */,
 				AA0000370000000000000001 /* SettingsViewController.swift in Sources */,
+				AA0000380000000000000001 /* SettingsSidebarViewController.swift in Sources */,
+				AA0000400000000000000001 /* SettingsWindowController.swift in Sources */,
+				AA0000440000000000000001 /* SettingsSidebarCellView.swift in Sources */,
 				AA0000130000000000000001 /* FileItem.swift in Sources */,
+				AA0000420000000000000001 /* FileIconItem.swift in Sources */,
+				AA0000460000000000000001 /* StatusBarViewController.swift in Sources */,
 				AA0000150000000000000001 /* ColorManager.swift in Sources */,
 				AA0000170000000000000001 /* FileSystemMonitor.swift in Sources */,
 			);

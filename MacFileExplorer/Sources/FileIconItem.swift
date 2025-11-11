@@ -8,6 +8,9 @@ class FileIconItem: NSCollectionViewItem {
         }
     }
 
+    private var myImageView: NSImageView?
+    private var myTextField: NSTextField?
+
     override func loadView() {
         self.view = NSView()
     }
@@ -18,42 +21,44 @@ class FileIconItem: NSCollectionViewItem {
     }
 
     private func setupUI() {
-        imageView = NSImageView()
-        imageView?.translatesAutoresizingMaskIntoConstraints = false
-        imageView?.imageScaling = .scaleProportionallyDown
-        view.addSubview(imageView!)
+        myImageView = NSImageView()
+        myImageView?.translatesAutoresizingMaskIntoConstraints = false
+        myImageView?.imageScaling = .scaleProportionallyDown
+        view.addSubview(myImageView!)
+        self.imageView = myImageView // Assign to the NSCollectionViewItem's imageView property
 
-        textField = NSTextField(labelWithString: "")
-        textField?.translatesAutoresizingMaskIntoConstraints = false
-        textField?.usesSingleLineMode = true
-        textField?.maximumNumberOfLines = 1
-        textField?.lineBreakMode = .byTruncatingTail
-        textField?.alignment = .center
-        view.addSubview(textField!)
+        myTextField = NSTextField(labelWithString: "")
+        myTextField?.translatesAutoresizingMaskIntoConstraints = false
+        myTextField?.usesSingleLineMode = true
+        myTextField?.maximumNumberOfLines = 1
+        myTextField?.lineBreakMode = .byTruncatingTail
+        myTextField?.alignment = .center
+        view.addSubview(myTextField!)
+        self.textField = myTextField // Assign to the NSCollectionViewItem's textField property
 
         NSLayoutConstraint.activate([
-            imageView!.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            imageView!.topAnchor.constraint(equalTo: view.topAnchor, constant: 5),
-            imageView!.widthAnchor.constraint(equalToConstant: 64),
-            imageView!.heightAnchor.constraint(equalToConstant: 64),
+            myImageView!.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            myImageView!.topAnchor.constraint(equalTo: view.topAnchor, constant: 5),
+            myImageView!.widthAnchor.constraint(equalToConstant: 64),
+            myImageView!.heightAnchor.constraint(equalToConstant: 64),
 
-            textField!.topAnchor.constraint(equalTo: imageView!.bottomAnchor, constant: 5),
-            textField!.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
-            textField!.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
-            textField!.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -5)
+            myTextField!.topAnchor.constraint(equalTo: myImageView!.bottomAnchor, constant: 5),
+            myTextField!.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
+            myTextField!.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
+            myTextField!.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -5)
         ])
     }
 
     private func updateView() {
         guard let fileItem = fileItem else { return }
-        imageView?.image = fileItem.icon
-        textField?.stringValue = fileItem.name
+        myImageView?.image = fileItem.icon
+        myTextField?.stringValue = fileItem.name
 
         // Apply custom folder color if set
         if fileItem.isDirectory, let customColor = ColorManager.shared.getColor(for: fileItem.url) {
-            imageView?.contentTintColor = customColor
+            myImageView?.contentTintColor = customColor
         } else {
-            imageView?.contentTintColor = nil // Reset tint color
+            myImageView?.contentTintColor = nil // Reset tint color
         }
     }
 }

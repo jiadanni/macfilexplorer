@@ -4,7 +4,7 @@ import Cocoa
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     var windowController: MainWindowController!
-    var settingsWindowController: NSWindowController?
+
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create and show the main window
@@ -17,28 +17,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         
         createEditMenu()
-        createSettingsMenu()
     }
 
-    func createSettingsMenu() {
-        guard let mainMenu = NSApp.mainMenu, let appMenu = mainMenu.item(at: 0)?.submenu else { return }
 
-        let settingsMenuItem = NSMenuItem(title: "Settings...", action: #selector(showSettingsWindow(_:)), keyEquivalent: ",")
-        settingsMenuItem.target = self
-        
-        appMenu.insertItem(NSMenuItem.separator(), at: 2)
-        appMenu.insertItem(settingsMenuItem, at: 3)
-    }
 
-    @objc func showSettingsWindow(_ sender: Any?) {
-        if settingsWindowController == nil {
-            let settingsViewController = SettingsViewController()
-            let window = NSWindow(contentViewController: settingsViewController)
-            window.title = "Settings"
-            settingsWindowController = NSWindowController(window: window)
-        }
-        settingsWindowController?.showWindow(sender)
-    }
+
 
 
     func createEditMenu() {

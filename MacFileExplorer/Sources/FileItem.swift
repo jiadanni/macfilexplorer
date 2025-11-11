@@ -12,7 +12,7 @@ class FileItem: Hashable {
     private(set) var kind: String = ""
     private(set) var permissions: String = ""
     private(set) var owner: String = ""
-    var isCut: Bool = false
+
     var isHidden: Bool = false
 
     init(url: URL) {

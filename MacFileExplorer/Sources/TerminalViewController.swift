@@ -14,6 +14,18 @@ class TerminalViewController: NSViewController {
         setupUI()
     }
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        currentDirectory = FileManager.default.homeDirectoryForCurrentUser.path
+        updatePrompt()
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        focusInput()
+        inputField.becomeFirstResponder()
+    }
+
     private func setupUI() {
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor(white: 0.1, alpha: 1.0).cgColor
@@ -111,7 +123,11 @@ class TerminalViewController: NSViewController {
     }
 
     private func executeCommand(_ command: String) {
-        guard !command.isEmpty else { return }
+        print("executeCommand called with: \(command)")
+        guard !command.isEmpty else {
+            print("Command is empty, returning.")
+            return
+        }
 
         commandHistory.append(command)
         historyIndex = commandHistory.count
@@ -290,14 +306,17 @@ class TerminalViewController: NSViewController {
 
 extension TerminalViewController: NSTextFieldDelegate {
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        print("control(_:textView:doCommandBy:) called with selector: \(commandSelector)")
         if commandSelector == #selector(NSResponder.insertNewline(_:)) {
             // Enter key pressed
+            print("Enter key pressed")
             let command = inputField.stringValue
             executeCommand(command)
             inputField.stringValue = ""
             return true
         } else if commandSelector == #selector(NSResponder.moveUp(_:)) {
             // Up arrow - previous command
+            print("Up arrow pressed")
             if historyIndex > 0 {
                 historyIndex -= 1
                 inputField.stringValue = commandHistory[historyIndex]
@@ -305,6 +324,7 @@ extension TerminalViewController: NSTextFieldDelegate {
             return true
         } else if commandSelector == #selector(NSResponder.moveDown(_:)) {
             // Down arrow - next command
+            print("Down arrow pressed")
             if historyIndex < commandHistory.count - 1 {
                 historyIndex += 1
                 inputField.stringValue = commandHistory[historyIndex]

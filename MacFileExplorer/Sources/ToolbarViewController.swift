@@ -4,7 +4,8 @@ enum ViewMode: String, CaseIterable {
     case list = "List"
     case details = "Details"
     case icons = "Icons"
-    case columns = "Columns" // This will be more complex to implement
+    case columns = "Columns"
+    case windowsList = "Windows List" // This will be more complex to implement
 }
 
 protocol ToolbarDelegate: AnyObject {
@@ -16,6 +17,8 @@ protocol ToolbarDelegate: AnyObject {
     func toolbarDidRequestNewFolder()
     func toolbarDidToggleHiddenFiles(show: Bool)
     func toolbarDidChangeViewMode(_ viewMode: ViewMode)
+    func toolbarDidRequestSplitVertically()
+    func toolbarDidRequestSplitHorizontally()
 }
 
 class ToolbarViewController: NSViewController {
@@ -89,9 +92,9 @@ class ToolbarViewController: NSViewController {
         viewButton = NSPopUpButton()
         viewButton.translatesAutoresizingMaskIntoConstraints = false
         viewButton.bezelStyle = .texturedRounded
-        viewButton.pullsDown = true
-        viewButton.addItem(withTitle: "View")
-        (viewButton.item(at: 0) as NSMenuItem?)?.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "View Options")
+        viewButton.pullsDown = false // Change to false so the selected item is displayed
+        // No initial "View" item, the selected item will be displayed as the title
+
 
         viewButton.menu?.addItem(withTitle: "Show Hidden Files", action: #selector(showHiddenFiles(_:)), keyEquivalent: "")
         viewButton.menu?.addItem(withTitle: "Hide Hidden Files", action: #selector(hideHiddenFiles(_:)), keyEquivalent: "")
@@ -100,9 +103,12 @@ class ToolbarViewController: NSViewController {
         // Add view mode options
         for mode in ViewMode.allCases {
             let menuItem = NSMenuItem(title: mode.rawValue, action: #selector(changeViewMode(_:)), keyEquivalent: "")
-            menuItem.tag = mode.hashValue // Use hashValue as a unique identifier for the enum case
+            menuItem.representedObject = mode.rawValue // Use rawValue as a stable identifier
             viewButton.menu?.addItem(menuItem)
         }
+        viewButton.menu?.addItem(NSMenuItem.separator())
+        viewButton.menu?.addItem(withTitle: "Split Vertically", action: #selector(splitVerticallyClicked(_:)), keyEquivalent: "")
+        viewButton.menu?.addItem(withTitle: "Split Horizontally", action: #selector(splitHorizontallyClicked(_:)), keyEquivalent: "")
         viewButton.menu?.items.forEach { $0.target = self }
         view.addSubview(viewButton)
 
@@ -191,32 +197,69 @@ class ToolbarViewController: NSViewController {
         updateBreadcrumbs(for: url)
     }
 
+    func updateViewModeDisplay(for viewMode: ViewMode) {
+        viewButton.title = viewMode.rawValue
+        // Optionally update image based on viewMode
+        switch viewMode {
+        case .list:
+            viewButton.image = NSImage(systemSymbolName: "list.bullet", accessibilityDescription: "List View")
+        case .details:
+            viewButton.image = NSImage(systemSymbolName: "tablecells", accessibilityDescription: "Details View")
+        case .icons:
+            viewButton.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "Icons View")
+        case .columns:
+            viewButton.image = NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Columns View")
+        case .windowsList:
+            viewButton.image = NSImage(systemSymbolName: "list.bullet.rectangle.portrait", accessibilityDescription: "Windows List View")
+        }
+    }
+
+    func updateSortDisplay(column: String, ascending: Bool) {
+        var title = ""
+        var image: NSImage?
+
+        switch column {
+        case "NameColumn":
+            title = "Name"
+        case "DateModifiedColumn":
+            title = "Date Modified"
+        case "SizeColumn":
+            title = "Size"
+        case "TypeColumn":
+            title = "Type"
+        case "DateCreatedColumn":
+            title = "Date Created"
+        default:
+            title = "Sort"
+        }
+
+        if ascending {
+            title += " ↑"
+            image = NSImage(systemSymbolName: "arrow.up", accessibilityDescription: "Ascending")
+        } else {
+            title += " ↓"
+            image = NSImage(systemSymbolName: "arrow.down", accessibilityDescription: "Descending")
+        }
+
+        sortButton.title = title
+        sortButton.image = image
+    }
+
     private func updateBreadcrumbs(for url: URL) {
         // Clear existing breadcrumbs
         breadcrumbStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
-        // Build path components
-        var components: [String] = []
-        var currentPath = url
+        let pathComponents = url.pathComponents
+        var currentPathURL = URL(fileURLWithPath: "/")
 
-        // Handle root specially
-        if url.path == "/" {
-            components = ["/"]
-        } else {
-            while !currentPath.path.isEmpty && currentPath.path != "/" {
-                components.insert(currentPath.lastPathComponent, at: 0)
-                currentPath = currentPath.deletingLastPathComponent()
+        for (index, component) in pathComponents.enumerated() {
+            // Skip the first empty component if path is "/"
+            if component.isEmpty && index == 0 && pathComponents.count > 1 {
+                continue
             }
-            // Add root if not already there
-            if !components.isEmpty {
-                components.insert("/", at: 0)
-            }
-        }
 
-        // Create breadcrumb buttons
-        for (index, component) in components.enumerated() {
-            // Add separator (except before first item)
-            if index > 0 {
+            // Add separator (except before first actual component)
+            if index > 0 && !(component.isEmpty && index == 0) {
                 let separator = NSTextField(labelWithString: " ▸ ")
                 separator.textColor = .secondaryLabelColor
                 separator.font = NSFont.systemFont(ofSize: 12)
@@ -225,24 +268,20 @@ class ToolbarViewController: NSViewController {
 
             // Create breadcrumb button
             let button = NSButton()
-            button.title = component
             button.bezelStyle = .roundRect
             button.isBordered = false
             button.font = NSFont.systemFont(ofSize: 12)
             button.target = self
             button.action = #selector(breadcrumbClicked(_:))
-            button.tag = index
 
-            // Store the URL for this component
-            var urlForComponent = URL(fileURLWithPath: "/")
-            if index > 0 {
-                for i in 1...index {
-                    if i < components.count && components[i] != "/" {
-                        urlForComponent.appendPathComponent(components[i])
-                    }
-                }
+            if component == "/" && index == 0 {
+                button.title = "/"
+                currentPathURL = URL(fileURLWithPath: "/")
+            } else {
+                button.title = component
+                currentPathURL.appendPathComponent(component)
             }
-            button.identifier = NSUserInterfaceItemIdentifier(urlForComponent.path)
+            button.identifier = NSUserInterfaceItemIdentifier(currentPathURL.path)
 
             breadcrumbStackView.addArrangedSubview(button)
         }
@@ -366,8 +405,17 @@ class ToolbarViewController: NSViewController {
     }
 
     @objc private func changeViewMode(_ sender: NSMenuItem) {
-        if let selectedMode = ViewMode.allCases.first(where: { $0.hashValue == sender.tag }) {
+        if let rawValue = sender.representedObject as? String,
+           let selectedMode = ViewMode(rawValue: rawValue) {
             delegate?.toolbarDidChangeViewMode(selectedMode)
         }
+    }
+
+    @objc private func splitVerticallyClicked(_ sender: Any) {
+        delegate?.toolbarDidRequestSplitVertically()
+    }
+
+    @objc private func splitHorizontallyClicked(_ sender: Any) {
+        delegate?.toolbarDidRequestSplitHorizontally()
     }
 }

@@ -1,8 +1,14 @@
 import Cocoa
 
+enum SplitOrientation {
+    case vertical
+    case horizontal
+}
+
 protocol FileBrowserDelegate: AnyObject {
     func directoryDidChange(to path: String)
     func openInNewTab(url: URL)
+    func fileBrowserDidRequestSplit(_ fileBrowser: FileBrowserViewController, orientation: SplitOrientation)
 }
 
 protocol SplitPaneDelegate: AnyObject {
@@ -149,5 +155,26 @@ class SplitPaneViewController: NSViewController, FileBrowserDelegate {
     func openInNewTab(url: URL) {
         // Delegate to parent TabBarController to handle opening in new tab
         delegate?.splitPaneOpenInNewTab(url: url)
+    }
+
+    func fileBrowserDidRequestSplit(_ fileBrowser: FileBrowserViewController, orientation: SplitOrientation) {
+        // Determine which pane requested the split
+        guard let paneIndex = panes.firstIndex(of: fileBrowser) else { return }
+        
+        // Change split view orientation if needed
+        let isVertical = (orientation == .vertical)
+        if splitView.isVertical != isVertical {
+            splitView.isVertical = isVertical
+        }
+        
+        // Add a new pane next to the requesting pane with the same directory
+        // Use the currentPath property to get the directory URL
+        let currentPath = fileBrowser.currentPath
+        if let currentURL = URL(string: "file://\(currentPath)") {
+            addPane(url: currentURL)
+        } else {
+            // Fallback to home directory if path is unavailable
+            addPane(url: FileManager.default.homeDirectoryForCurrentUser)
+        }
     }
 }
