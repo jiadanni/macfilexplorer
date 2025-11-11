@@ -114,6 +114,7 @@ class SplitPaneViewController: NSViewController, FileBrowserDelegate {
     }
 
     func navigateToURL(_ url: URL) {
+        print("SplitPaneViewController: navigateToURL - Received URL: \(url.path)")
         guard activePaneIndex < panes.count else { return }
         panes[activePaneIndex].navigateToURL(url)
     }
@@ -136,6 +137,21 @@ class SplitPaneViewController: NSViewController, FileBrowserDelegate {
     func pasteSelection() {
         guard activePaneIndex < panes.count else { return }
         panes[activePaneIndex].pasteSelection()
+    }
+    
+    func setViewMode(_ viewMode: ViewMode) {
+        guard activePaneIndex < panes.count else { return }
+        panes[activePaneIndex].toolbarDidChangeViewMode(viewMode)
+    }
+    
+    func toggleHiddenFiles() {
+        guard activePaneIndex < panes.count else { return }
+        panes[activePaneIndex].toggleHiddenFilesState()
+    }
+    
+    func updateZoomLevel(to level: Double) {
+        guard activePaneIndex < panes.count else { return }
+        panes[activePaneIndex].setZoomLevel(level)
     }
 
     // MARK: - FileBrowserDelegate

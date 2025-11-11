@@ -17,7 +17,7 @@ class TerminalViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         currentDirectory = FileManager.default.homeDirectoryForCurrentUser.path
-        updatePrompt()
+        displayPrompt()
     }
 
     override func viewDidAppear() {
@@ -56,7 +56,7 @@ class TerminalViewController: NSViewController {
         inputField.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         inputField.isBordered = false
         inputField.focusRingType = .none
-        inputField.placeholderString = "Enter command..."
+        inputField.placeholderString = ""
         inputField.delegate = self
         view.addSubview(inputField)
 
@@ -74,7 +74,25 @@ class TerminalViewController: NSViewController {
         ])
 
         // Display welcome message
-        appendOutput("Terminal Ready\nType 'help' for available commands\n\n")
+        appendOutput("Terminal Ready - Using shell: \(getShellPath())\n")
+        appendOutput("Type 'help' for available commands\n\n")
+    }
+    
+    private func getShellPath() -> String {
+        // First try SHELL environment variable
+        if let shell = ProcessInfo.processInfo.environment["SHELL"] {
+            return shell
+        }
+        
+        // Fallback to user's default shell from /etc/passwd or use zsh
+        let userName = NSUserName()
+        if let passwdEntry = getpwnam(userName),
+           let shellCStr = passwdEntry.pointee.pw_shell {
+            return String(cString: shellCStr)
+        }
+        
+        // Final fallback to zsh (macOS default since Catalina)
+        return "/bin/zsh"
     }
 
     // MARK: - Public Methods
@@ -82,7 +100,7 @@ class TerminalViewController: NSViewController {
     func changeDirectory(to path: String) {
         currentDirectory = path
         appendOutput("📁 Changed directory to: \(path)\n")
-        updatePrompt()
+        displayPrompt()
     }
 
     func focusInput() {
@@ -91,9 +109,22 @@ class TerminalViewController: NSViewController {
 
     // MARK: - Private Methods
 
-    private func updatePrompt() {
-        let prompt = "\(currentDirectory) $ "
-        inputField.placeholderString = prompt
+    private func getPromptString() -> String {
+        let dirName = (currentDirectory as NSString).lastPathComponent
+        return "\(dirName) $ "
+    }
+    
+    private func displayPrompt() {
+        let promptString = getPromptString()
+        let attributedPrompt = NSAttributedString(
+            string: promptString,
+            attributes: [
+                .foregroundColor: NSColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 1.0),
+                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .bold)
+            ]
+        )
+        textView.textStorage?.append(attributedPrompt)
+        textView.scrollToEndOfDocument(nil)
     }
 
     private func appendOutput(_ text: String) {
@@ -123,30 +154,37 @@ class TerminalViewController: NSViewController {
     }
 
     private func executeCommand(_ command: String) {
-        print("executeCommand called with: \(command)")
         guard !command.isEmpty else {
-            print("Command is empty, returning.")
+            displayPrompt()
             return
         }
 
         commandHistory.append(command)
         historyIndex = commandHistory.count
 
-        appendOutput("\(currentDirectory) $ \(command)\n")
+        // Echo the command
+        appendOutput("\(command)\n")
 
         // Handle built-in commands
         let components = command.split(separator: " ").map(String.init)
-        guard let cmd = components.first else { return }
+        guard let cmd = components.first else { 
+            displayPrompt()
+            return
+        }
 
         switch cmd {
         case "help":
             showHelp()
+            displayPrompt()
         case "clear", "cls":
             textView.string = ""
+            displayPrompt()
         case "pwd":
             appendOutput("\(currentDirectory)\n")
+            displayPrompt()
         case "ls", "dir":
             listDirectory()
+            displayPrompt()
         case "cd":
             if components.count > 1 {
                 changeToDirectory(components[1])
@@ -154,17 +192,21 @@ class TerminalViewController: NSViewController {
                 // cd without arguments goes to home
                 changeToDirectory("~")
             }
+            displayPrompt()
         case "cat":
             if components.count > 1 {
                 showFileContents(components[1])
             } else {
                 appendErrorOutput("Usage: cat <file>\n")
             }
+            displayPrompt()
         case "exit", "quit":
             appendOutput("Terminal cannot be closed from here. Use the View menu to toggle terminal visibility.\n")
+            displayPrompt()
         default:
             // Execute external command
             executeExternalCommand(command)
+            displayPrompt()
         }
     }
 
@@ -253,8 +295,7 @@ class TerminalViewController: NSViewController {
         var isDir: ObjCBool = false
         if FileManager.default.fileExists(atPath: newPath, isDirectory: &isDir), isDir.boolValue {
             currentDirectory = newPath
-            updatePrompt()
-            appendOutput("Changed to: \(newPath)\n")
+            // Don't call displayPrompt here - it's called after this function returns
         } else {
             appendErrorOutput("Error: Directory not found: \(newPath)\n")
         }
@@ -264,8 +305,8 @@ class TerminalViewController: NSViewController {
         let task = Process()
         task.currentDirectoryURL = URL(fileURLWithPath: currentDirectory)
 
-        // Use the user's default shell from environment, fallback to zsh (default on modern macOS)
-        let shellPath = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
+        // Use the system's default shell
+        let shellPath = getShellPath()
         task.executableURL = URL(fileURLWithPath: shellPath)
         task.arguments = ["-c", command]
 

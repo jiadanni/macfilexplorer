@@ -120,13 +120,64 @@
                     <modifierMask key="keyEquivalentModifierMask"/>
                     <menu key="submenu" title="View" id="HyV-fh-RgO">
                         <items>
+                            <menuItem title="as List" keyEquivalent="1" id="VML-1-Lst">
+                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                                <connections>
+                                    <action selector="viewAsList:" target="Voe-Tx-rLC" id="VML-1-Act"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="as Details" keyEquivalent="2" id="VML-2-Det">
+                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                                <connections>
+                                    <action selector="viewAsDetails:" target="Voe-Tx-rLC" id="VML-2-Act"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="as Icons" keyEquivalent="3" id="VML-3-Icn">
+                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                                <connections>
+                                    <action selector="viewAsIcons:" target="Voe-Tx-rLC" id="VML-3-Act"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="as Columns" keyEquivalent="4" id="VML-4-Col">
+                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                                <connections>
+                                    <action selector="viewAsColumns:" target="Voe-Tx-rLC" id="VML-4-Act"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="as Windows List" keyEquivalent="5" id="VML-5-Win">
+                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
+                                <connections>
+                                    <action selector="viewAsWindowsList:" target="Voe-Tx-rLC" id="VML-5-Act"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="VML-Sep-1"/>
+                            <menuItem title="Show Hidden Files" keyEquivalent="." id="VML-HF-Shw">
+                                <modifierMask key="keyEquivalentModifierMask" shift="YES" command="YES"/>
+                                <connections>
+                                    <action selector="toggleHiddenFiles:" target="Voe-Tx-rLC" id="VML-HF-Act"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="VML-Sep-2"/>
+                            <menuItem title="Split Vertically" id="VML-SV-Btn">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="splitVertically:" target="Voe-Tx-rLC" id="VML-SV-Act"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem title="Split Horizontally" id="VML-SH-Btn">
+                                <modifierMask key="keyEquivalentModifierMask"/>
+                                <connections>
+                                    <action selector="splitHorizontally:" target="Voe-Tx-rLC" id="VML-SH-Act"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="hB3-LF-h0Y"/>
                             <menuItem title="Toggle Terminal" keyEquivalent="`" id="4Gg-7E-YHt">
                                 <modifierMask key="keyEquivalentModifierMask" control="YES"/>
                                 <connections>
                                     <action selector="toggleTerminal:" target="Voe-Tx-rLC" id="OHc-lp-YgQ"/>
                                 </connections>
                             </menuItem>
-                            <menuItem isSeparatorItem="YES" id="hB3-LF-h0Y"/>
+                            <menuItem isSeparatorItem="YES" id="hB3-LF-h0Y-2"/>
                             <menuItem title="Change Folder Colors..." keyEquivalent="C" id="mQF-Br-5YV">
                                 <modifierMask key="keyEquivalentModifierMask" shift="YES" command="YES"/>
                                 <connections>

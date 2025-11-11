@@ -201,18 +201,41 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].pasteSelection()
     }
+    
+    func setViewMode(_ viewMode: ViewMode) {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].setViewMode(viewMode)
+    }
+    
+    func toggleHiddenFiles() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].toggleHiddenFiles()
+    }
+    
+    func splitVertically() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].splitVertically()
+    }
+    
+    func splitHorizontally() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].splitHorizontally()
+    }
 
     func navigateToLocation(_ url: URL) {
+        print("TabBarController: navigateToLocation - Received URL: \(url.path)")
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].navigateToURL(url)
     }
 
     func updateZoomLevel(to level: Double) {
-        // Forward zoom level to the current tab/pane if needed
-        // This can be implemented when zoom functionality is added to file browsers
+        // Forward zoom level to the current tab/pane
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].updateZoomLevel(to: level)
     }
 
     public func openInNewTab(url: URL) {
+        print("TabBarController: openInNewTab - Received URL: \(url.path)")
         // Create a new tab with a SplitPaneViewController
         let splitPane = SplitPaneViewController()
         splitPane.delegate = self
@@ -262,6 +285,7 @@ extension TabBarController {
     }
 
     func splitPaneOpenInNewTab(url: URL) {
+        print("TabBarController: splitPaneOpenInNewTab - Received URL: \(url.path)")
         // Delegate to parent TabBarController to handle opening in new tab
         openInNewTab(url: url)
     }

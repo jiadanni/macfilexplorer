@@ -10,17 +10,33 @@ class FileIconItem: NSCollectionViewItem {
 
     private var myImageView: NSImageView?
     private var myTextField: NSTextField?
+    
+    override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) {
+        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
 
     override func loadView() {
-        self.view = NSView()
+        // Create and configure the view
+        let containerView = NSView()
+        containerView.wantsLayer = true
+        self.view = containerView
+        
+        // Set up the UI immediately in loadView to ensure it's ready
+        setupUI()
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupUI()
     }
 
     private func setupUI() {
+        // Prevent double setup
+        guard myImageView == nil else { return }
+        
         myImageView = NSImageView()
         myImageView?.translatesAutoresizingMaskIntoConstraints = false
         myImageView?.imageScaling = .scaleProportionallyDown

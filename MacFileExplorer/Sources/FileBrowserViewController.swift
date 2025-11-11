@@ -13,6 +13,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
     private var collectionView: NSCollectionView! // For icons view
     private var collectionViewScrollView: NSScrollView! // For collection view
     private var browserView: NSBrowser! // For columns view
+    
+    // Constraint management for view switching
+    private var activeConstraints: [NSLayoutConstraint] = []
 
     private var currentDirectory: URL
     private var rootItem: FileItem!
@@ -28,6 +31,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
     // Sorting state
     private var sortColumn: String = "NameColumn"
     private var sortAscending: Bool = true
+    
+    // Zoom level (0.5 to 2.0, default 1.0)
+    private var zoomLevel: Double = 1.0
 
     var currentPath: String {
         return currentDirectory.path
@@ -183,6 +189,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
     }
 
     private func displayFiles(for viewMode: ViewMode) {
+        // Deactivate any existing constraints
+        NSLayoutConstraint.deactivate(activeConstraints)
+        activeConstraints.removeAll()
+        
         // Remove all subviews from the container
         containerView.subviews.forEach { $0.removeFromSuperview() }
 
@@ -190,12 +200,13 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
         case .list, .details:
             // Use outlineView for list and details
             containerView.addSubview(scrollView)
-            NSLayoutConstraint.activate([
+            activeConstraints = [
                 scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
                 scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
                 scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
                 scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-            ])
+            ]
+            NSLayoutConstraint.activate(activeConstraints)
             outlineView.reloadData()
             view.window?.makeFirstResponder(outlineView)
         case .icons, .windowsList: // Handle both icons and windowsList with collectionView
@@ -213,12 +224,13 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
             }
             
             containerView.addSubview(collectionViewScrollView)
-            NSLayoutConstraint.activate([
+            activeConstraints = [
                 collectionViewScrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
                 collectionViewScrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
                 collectionViewScrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
                 collectionViewScrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-            ])
+            ]
+            NSLayoutConstraint.activate(activeConstraints)
 
             // Configure layout based on viewMode
             if viewMode == .windowsList {
@@ -255,12 +267,13 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
             }
             
             containerView.addSubview(browserView)
-            NSLayoutConstraint.activate([
+            activeConstraints = [
                 browserView.topAnchor.constraint(equalTo: containerView.topAnchor),
                 browserView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
                 browserView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
                 browserView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-            ])
+            ]
+            NSLayoutConstraint.activate(activeConstraints)
             
             browserView.loadColumnZero()
             view.window?.makeFirstResponder(browserView)
@@ -351,6 +364,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
 
 
     private func loadDirectory(_ url: URL, addToHistory: Bool = true) {
+        print("FileBrowserViewController: loadDirectory - Loading URL: \(url.path)")
         currentDirectory = url
 
         // Update navigation history
@@ -379,27 +393,22 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
             guard let self = self else { return }
 
             let item = FileItem(url: url)
-            item.loadChildren(showsHiddenFiles: self.showsHiddenFiles)
+            item.loadChildren(showsHiddenFiles: self.showsHiddenFiles) // This loads children for the *new* root item
 
             DispatchQueue.main.async {
                 self.rootItem = item
+                print("FileBrowserViewController: loadDirectory - rootItem URL: \(self.rootItem.url.path), children count: \(self.rootItem.children?.count ?? 0)")
                 self.sortItems()
-                self.outlineView.reloadData()
+                self.outlineView.reloadData() // Reloads the outline view
+                print("FileBrowserViewController: outlineView reloaded.")
                 if self.currentViewMode == .icons {
                     self.collectionView.reloadData()
                 } else if self.currentViewMode == .columns {
                     // browserView.reloadData() // Temporarily disabled
                 }
-                self.outlineView.expandItem(nil, expandChildren: true)
+                self.outlineView.expandItem(nil, expandChildren: true) // This expands the *root* item
 
-
-
-                // Set up file system monitoring
-                self.fileSystemMonitor = FileSystemMonitor(url: url) { [weak self] in
-                    DispatchQueue.main.async {
-                        self?.refreshCurrentDirectory()
-                    }
-                }
+                // Set up file system monitoring (correctly handled)
 
                 self.delegate?.directoryDidChange(to: url.path)
             }
@@ -540,6 +549,49 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
     }
 
     // MARK: - Public Methods
+    
+    func setZoomLevel(_ level: Double) {
+        zoomLevel = max(0.5, min(2.0, level)) // Clamp between 0.5 and 2.0
+        applyZoomToCurrentView()
+    }
+    
+    private func applyZoomToCurrentView() {
+        switch currentViewMode {
+        case .icons, .windowsList:
+            guard let collectionView = collectionView else { return }
+            
+            if currentViewMode == .windowsList {
+                let flowLayout = NSCollectionViewFlowLayout()
+                let baseWidth: CGFloat = 150
+                let baseHeight: CGFloat = 20
+                flowLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
+                flowLayout.sectionInset = NSEdgeInsets(top: 5, left: 5, bottom: 5, right: 5)
+                flowLayout.minimumLineSpacing = 2
+                flowLayout.minimumInteritemSpacing = 10
+                flowLayout.scrollDirection = .horizontal
+                collectionView.collectionViewLayout = flowLayout
+            } else { // .icons mode
+                let flowLayout = NSCollectionViewFlowLayout()
+                let baseWidth: CGFloat = 100
+                let baseHeight: CGFloat = 120
+                flowLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
+                flowLayout.sectionInset = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+                flowLayout.minimumLineSpacing = 10
+                flowLayout.minimumInteritemSpacing = 10
+                flowLayout.scrollDirection = .vertical
+                collectionView.collectionViewLayout = flowLayout
+            }
+        case .list, .details:
+            // For outline view, adjust row height
+            if let outlineView = outlineView {
+                let baseRowHeight: CGFloat = 20
+                outlineView.rowHeight = baseRowHeight * zoomLevel
+            }
+        case .columns:
+            // Browser view doesn't need zoom adjustments
+            break
+        }
+    }
 
     func showBulkColorPicker() {
         // Get selected items
@@ -1073,6 +1125,11 @@ extension FileBrowserViewController: ToolbarDelegate {
     func toolbarDidToggleHiddenFiles(show: Bool) {
         showsHiddenFiles = show
         refreshCurrentDirectory()
+        toolbarViewController?.updateHiddenFilesDisplay(showing: show)
+    }
+    
+    func toggleHiddenFilesState() {
+        toolbarDidToggleHiddenFiles(show: !showsHiddenFiles)
     }
 
     func toolbarDidChangeViewMode(_ viewMode: ViewMode) {

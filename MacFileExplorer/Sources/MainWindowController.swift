@@ -101,9 +101,25 @@ class MainWindowController: NSWindowController, StatusBarDelegate {
     func pasteSelection() {
         splitViewController?.pasteSelection()
     }
+    
+    func setViewMode(_ viewMode: ViewMode) {
+        splitViewController?.setViewMode(viewMode)
+    }
+    
+    func toggleHiddenFiles() {
+        splitViewController?.toggleHiddenFiles()
+    }
+    
+    func splitVertically() {
+        splitViewController?.splitVertically()
+    }
+    
+    func splitHorizontally() {
+        splitViewController?.splitHorizontally()
+    }
 
     func zoomLevelDidChange(to level: Double) {
-        // Forward zoom level changes to the active file browser if needed
-        // For now, this can be a no-op or forward to splitViewController
+        // Forward zoom level changes to the split view controller
+        splitViewController?.updateZoomLevel(to: level)
     }
 }

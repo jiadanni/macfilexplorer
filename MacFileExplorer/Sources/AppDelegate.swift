@@ -89,4 +89,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @IBAction func pasteSelection(_ sender: Any?) {
         windowController?.pasteSelection()
     }
+    
+    // MARK: - View Menu Actions
+    
+    @IBAction func viewAsList(_ sender: Any?) {
+        windowController?.setViewMode(.list)
+    }
+    
+    @IBAction func viewAsDetails(_ sender: Any?) {
+        windowController?.setViewMode(.details)
+    }
+    
+    @IBAction func viewAsIcons(_ sender: Any?) {
+        windowController?.setViewMode(.icons)
+    }
+    
+    @IBAction func viewAsColumns(_ sender: Any?) {
+        windowController?.setViewMode(.columns)
+    }
+    
+    @IBAction func viewAsWindowsList(_ sender: Any?) {
+        windowController?.setViewMode(.windowsList)
+    }
+    
+    @IBAction func toggleHiddenFiles(_ sender: Any?) {
+        windowController?.toggleHiddenFiles()
+    }
+    
+    @IBAction func splitVertically(_ sender: Any?) {
+        windowController?.splitVertically()
+    }
+    
+    @IBAction func splitHorizontally(_ sender: Any?) {
+        windowController?.splitHorizontally()
+    }
 }

@@ -30,7 +30,10 @@ class ToolbarViewController: NSViewController {
     private var breadcrumbStackView: NSStackView!
     private var breadcrumbScrollView: NSScrollView!
     private var sortButton: NSPopUpButton!
-    private var viewButton: NSPopUpButton!
+    private var viewModeButton: NSPopUpButton!
+    private var hiddenFilesButton: NSButton!
+    private var splitVerticalButton: NSButton!
+    private var splitHorizontalButton: NSButton!
     private var newFolderButton: NSButton!
 
     private var currentURL: URL?
@@ -38,6 +41,7 @@ class ToolbarViewController: NSViewController {
     private var canGoForward: Bool = false
     private var navigationHistory: [URL] = []
     private var currentHistoryIndex: Int = -1
+    private var showingHiddenFiles: Bool = false
 
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 40))
@@ -88,29 +92,47 @@ class ToolbarViewController: NSViewController {
         breadcrumbStackView.translatesAutoresizingMaskIntoConstraints = false
         breadcrumbScrollView.documentView = breadcrumbStackView
 
-        // View button
-        viewButton = NSPopUpButton()
-        viewButton.translatesAutoresizingMaskIntoConstraints = false
-        viewButton.bezelStyle = .texturedRounded
-        viewButton.pullsDown = false // Change to false so the selected item is displayed
-        // No initial "View" item, the selected item will be displayed as the title
-
-
-        viewButton.menu?.addItem(withTitle: "Show Hidden Files", action: #selector(showHiddenFiles(_:)), keyEquivalent: "")
-        viewButton.menu?.addItem(withTitle: "Hide Hidden Files", action: #selector(hideHiddenFiles(_:)), keyEquivalent: "")
-        viewButton.menu?.addItem(NSMenuItem.separator())
-
+        // View Mode button
+        viewModeButton = NSPopUpButton()
+        viewModeButton.translatesAutoresizingMaskIntoConstraints = false
+        viewModeButton.bezelStyle = .texturedRounded
+        viewModeButton.pullsDown = false
+        
         // Add view mode options
         for mode in ViewMode.allCases {
             let menuItem = NSMenuItem(title: mode.rawValue, action: #selector(changeViewMode(_:)), keyEquivalent: "")
-            menuItem.representedObject = mode.rawValue // Use rawValue as a stable identifier
-            viewButton.menu?.addItem(menuItem)
+            menuItem.representedObject = mode.rawValue
+            viewModeButton.menu?.addItem(menuItem)
         }
-        viewButton.menu?.addItem(NSMenuItem.separator())
-        viewButton.menu?.addItem(withTitle: "Split Vertically", action: #selector(splitVerticallyClicked(_:)), keyEquivalent: "")
-        viewButton.menu?.addItem(withTitle: "Split Horizontally", action: #selector(splitHorizontallyClicked(_:)), keyEquivalent: "")
-        viewButton.menu?.items.forEach { $0.target = self }
-        view.addSubview(viewButton)
+        viewModeButton.menu?.items.forEach { $0.target = self }
+        view.addSubview(viewModeButton)
+        
+        // Hidden Files toggle button
+        hiddenFilesButton = NSButton()
+        hiddenFilesButton.translatesAutoresizingMaskIntoConstraints = false
+        hiddenFilesButton.bezelStyle = .texturedRounded
+        hiddenFilesButton.image = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: "Show Hidden Files")
+        hiddenFilesButton.target = self
+        hiddenFilesButton.action = #selector(toggleHiddenFiles(_:))
+        view.addSubview(hiddenFilesButton)
+        
+        // Split Vertical button
+        splitVerticalButton = NSButton()
+        splitVerticalButton.translatesAutoresizingMaskIntoConstraints = false
+        splitVerticalButton.bezelStyle = .texturedRounded
+        splitVerticalButton.image = NSImage(systemSymbolName: "rectangle.split.2x1", accessibilityDescription: "Split Vertically")
+        splitVerticalButton.target = self
+        splitVerticalButton.action = #selector(splitVerticallyClicked(_:))
+        view.addSubview(splitVerticalButton)
+        
+        // Split Horizontal button
+        splitHorizontalButton = NSButton()
+        splitHorizontalButton.translatesAutoresizingMaskIntoConstraints = false
+        splitHorizontalButton.bezelStyle = .texturedRounded
+        splitHorizontalButton.image = NSImage(systemSymbolName: "rectangle.split.1x2", accessibilityDescription: "Split Horizontally")
+        splitHorizontalButton.target = self
+        splitHorizontalButton.action = #selector(splitHorizontallyClicked(_:))
+        view.addSubview(splitHorizontalButton)
 
         // Sort button
         sortButton = NSPopUpButton()
@@ -157,18 +179,34 @@ class ToolbarViewController: NSViewController {
             forwardButton.heightAnchor.constraint(equalToConstant: 26),
 
             breadcrumbScrollView.leadingAnchor.constraint(equalTo: forwardButton.trailingAnchor, constant: 8),
-            breadcrumbScrollView.trailingAnchor.constraint(equalTo: viewButton.leadingAnchor, constant: -8),
             breadcrumbScrollView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             breadcrumbScrollView.heightAnchor.constraint(equalToConstant: 26),
+            breadcrumbScrollView.widthAnchor.constraint(lessThanOrEqualToConstant: 400),
+            breadcrumbScrollView.trailingAnchor.constraint(lessThanOrEqualTo: viewModeButton.leadingAnchor, constant: -8),
 
             breadcrumbStackView.leadingAnchor.constraint(equalTo: breadcrumbScrollView.leadingAnchor),
             breadcrumbStackView.topAnchor.constraint(equalTo: breadcrumbScrollView.topAnchor),
             breadcrumbStackView.bottomAnchor.constraint(equalTo: breadcrumbScrollView.bottomAnchor),
 
-            viewButton.trailingAnchor.constraint(equalTo: newFolderButton.leadingAnchor, constant: -8),
-            viewButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            viewButton.widthAnchor.constraint(equalToConstant: 44),
-            viewButton.heightAnchor.constraint(equalToConstant: 26),
+            viewModeButton.trailingAnchor.constraint(equalTo: hiddenFilesButton.leadingAnchor, constant: -4),
+            viewModeButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            viewModeButton.widthAnchor.constraint(equalToConstant: 70),
+            viewModeButton.heightAnchor.constraint(equalToConstant: 26),
+            
+            hiddenFilesButton.trailingAnchor.constraint(equalTo: splitVerticalButton.leadingAnchor, constant: -4),
+            hiddenFilesButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            hiddenFilesButton.widthAnchor.constraint(equalToConstant: 30),
+            hiddenFilesButton.heightAnchor.constraint(equalToConstant: 26),
+            
+            splitVerticalButton.trailingAnchor.constraint(equalTo: splitHorizontalButton.leadingAnchor, constant: -4),
+            splitVerticalButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            splitVerticalButton.widthAnchor.constraint(equalToConstant: 30),
+            splitVerticalButton.heightAnchor.constraint(equalToConstant: 26),
+            
+            splitHorizontalButton.trailingAnchor.constraint(equalTo: newFolderButton.leadingAnchor, constant: -8),
+            splitHorizontalButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            splitHorizontalButton.widthAnchor.constraint(equalToConstant: 30),
+            splitHorizontalButton.heightAnchor.constraint(equalToConstant: 26),
 
             newFolderButton.trailingAnchor.constraint(equalTo: sortButton.leadingAnchor, constant: -8),
             newFolderButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -198,19 +236,18 @@ class ToolbarViewController: NSViewController {
     }
 
     func updateViewModeDisplay(for viewMode: ViewMode) {
-        viewButton.title = viewMode.rawValue
-        // Optionally update image based on viewMode
-        switch viewMode {
-        case .list:
-            viewButton.image = NSImage(systemSymbolName: "list.bullet", accessibilityDescription: "List View")
-        case .details:
-            viewButton.image = NSImage(systemSymbolName: "tablecells", accessibilityDescription: "Details View")
-        case .icons:
-            viewButton.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "Icons View")
-        case .columns:
-            viewButton.image = NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Columns View")
-        case .windowsList:
-            viewButton.image = NSImage(systemSymbolName: "list.bullet.rectangle.portrait", accessibilityDescription: "Windows List View")
+        // Select the appropriate menu item in the view mode button
+        if let index = ViewMode.allCases.firstIndex(of: viewMode) {
+            viewModeButton.selectItem(at: index)
+        }
+    }
+    
+    func updateHiddenFilesDisplay(showing: Bool) {
+        showingHiddenFiles = showing
+        if showing {
+            hiddenFilesButton.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "Hide Hidden Files")
+        } else {
+            hiddenFilesButton.image = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: "Show Hidden Files")
         }
     }
 
@@ -250,16 +287,33 @@ class ToolbarViewController: NSViewController {
         breadcrumbStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
         let pathComponents = url.pathComponents
-        var currentPathURL = URL(fileURLWithPath: "/")
+        var displayComponents: [String] = []
+        var breadcrumbURLs: [URL] = []
 
-        for (index, component) in pathComponents.enumerated() {
-            // Skip the first empty component if path is "/"
-            if component.isEmpty && index == 0 && pathComponents.count > 1 {
-                continue
+        if pathComponents.count == 1 && pathComponents[0] == "/" {
+            // Handle root path "/"
+            displayComponents.append("/")
+            breadcrumbURLs.append(URL(fileURLWithPath: "/"))
+        } else if pathComponents.count > 1 {
+            // Merge "/" with the first directory component
+            let firstCombinedComponent = pathComponents[0] + pathComponents[1] // e.g., "/Applications"
+            displayComponents.append(firstCombinedComponent)
+            breadcrumbURLs.append(URL(fileURLWithPath: pathComponents[0]).appendingPathComponent(pathComponents[1]))
+
+            // Add remaining components
+            var currentPathURL = breadcrumbURLs.last!
+            for i in 2..<pathComponents.count {
+                let component = pathComponents[i]
+                displayComponents.append(component)
+                currentPathURL.appendPathComponent(component)
+                breadcrumbURLs.append(currentPathURL)
             }
+        }
 
-            // Add separator (except before first actual component)
-            if index > 0 && !(component.isEmpty && index == 0) {
+        // Create breadcrumb buttons
+        for (index, component) in displayComponents.enumerated() {
+            // Add separator (except before first item)
+            if index > 0 {
                 let separator = NSTextField(labelWithString: " ▸ ")
                 separator.textColor = .secondaryLabelColor
                 separator.font = NSFont.systemFont(ofSize: 12)
@@ -268,20 +322,17 @@ class ToolbarViewController: NSViewController {
 
             // Create breadcrumb button
             let button = NSButton()
+            button.title = component
             button.bezelStyle = .roundRect
             button.isBordered = false
             button.font = NSFont.systemFont(ofSize: 12)
             button.target = self
             button.action = #selector(breadcrumbClicked(_:))
-
-            if component == "/" && index == 0 {
-                button.title = "/"
-                currentPathURL = URL(fileURLWithPath: "/")
-            } else {
-                button.title = component
-                currentPathURL.appendPathComponent(component)
+            
+            // Set the URL for this component
+            if index < breadcrumbURLs.count {
+                button.identifier = NSUserInterfaceItemIdentifier(breadcrumbURLs[index].path)
             }
-            button.identifier = NSUserInterfaceItemIdentifier(currentPathURL.path)
 
             breadcrumbStackView.addArrangedSubview(button)
         }
@@ -396,12 +447,10 @@ class ToolbarViewController: NSViewController {
         delegate?.toolbarDidRequestNewFolder()
     }
 
-    @objc private func showHiddenFiles(_ sender: Any) {
-        delegate?.toolbarDidToggleHiddenFiles(show: true)
-    }
-
-    @objc private func hideHiddenFiles(_ sender: Any) {
-        delegate?.toolbarDidToggleHiddenFiles(show: false)
+    @objc private func toggleHiddenFiles(_ sender: Any) {
+        showingHiddenFiles = !showingHiddenFiles
+        delegate?.toolbarDidToggleHiddenFiles(show: showingHiddenFiles)
+        updateHiddenFilesDisplay(showing: showingHiddenFiles)
     }
 
     @objc private func changeViewMode(_ sender: NSMenuItem) {

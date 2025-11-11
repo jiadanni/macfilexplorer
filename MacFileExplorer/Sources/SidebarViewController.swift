@@ -8,18 +8,24 @@ class SidebarViewController: NSViewController {
 
     weak var delegate: SidebarDelegate?
 
-    private var scrollView: NSScrollView!
-    private var stackView: NSStackView!
-
     // Favorites
     private var favoritesHeaderView: NSView!
     private var favoritesTableView: NSTableView!
     private var favoriteItems: [SidebarItem] = []
 
-    // Drives
+    // Locations (formerly Drives)
     private var drivesHeaderView: NSView!
     private var drivesTableView: NSTableView!
     private var driveItems: [SidebarItem] = []
+
+    // Folder Explorer
+    private var folderExplorerHeaderView: NSView!
+    private var folderExplorerOutlineView: NSOutlineView!
+    private var folderExplorerRootItem: FileItem!
+    private var folderExplorerScrollView: NSScrollView!
+
+    // Main stack view to hold sections
+    private var stackView: NSStackView!
 
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 600))
@@ -31,57 +37,55 @@ class SidebarViewController: NSViewController {
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
 
-        // Create main scroll view
-        scrollView = NSScrollView()
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.hasVerticalScroller = true
-        scrollView.autohidesScrollers = true
-        scrollView.borderType = .noBorder
-        scrollView.drawsBackground = false
-        view.addSubview(scrollView)
-
-        // Create stack view to hold sections
+        // Use a main stack view to arrange sections vertically
         stackView = NSStackView()
         stackView.orientation = .vertical
-        stackView.alignment = .leading
-        stackView.spacing = 10
-        stackView.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 10, right: 0)
+        stackView.alignment = .leading // Align items to the leading edge
+        stackView.spacing = 0 // No spacing between sections, separators will provide it
         stackView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.documentView = stackView
+        view.addSubview(stackView)
+
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: view.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            stackView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            stackView.widthAnchor.constraint(equalTo: view.widthAnchor) // Ensure stack view fills width
+        ])
 
         // Favorites section
         setupFavoritesSection()
+        stackView.addArrangedSubview(favoritesHeaderView)
+        stackView.addArrangedSubview(favoritesTableView.enclosingScrollView!) // Add the scroll view
 
-        // Drives section
-        setupDrivesSection()
+        // Separator
+        let separator1 = NSBox()
+        separator1.boxType = .separator
+        separator1.translatesAutoresizingMaskIntoConstraints = false
+        stackView.addArrangedSubview(separator1)
+        separator1.widthAnchor.constraint(equalTo: stackView.widthAnchor).isActive = true
 
-        // Set up constraints
-        NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
+        // Locations section (formerly Drives)
+        setupLocationsSection() // Renamed method
+        stackView.addArrangedSubview(drivesHeaderView)
+        stackView.addArrangedSubview(drivesTableView.enclosingScrollView!) // Add the scroll view
 
-        // Constrain stack view within scroll view content
-        if let contentView = scrollView.contentView as NSClipView? {
-            let bottomConstraint = stackView.bottomAnchor.constraint(greaterThanOrEqualTo: contentView.bottomAnchor)
-            bottomConstraint.priority = .defaultLow
+        // Separator
+        let separator2 = NSBox()
+        separator2.boxType = .separator
+        separator2.translatesAutoresizingMaskIntoConstraints = false
+        stackView.addArrangedSubview(separator2)
+        separator2.widthAnchor.constraint(equalTo: stackView.widthAnchor).isActive = true
 
-            NSLayoutConstraint.activate([
-                stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-                stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-                stackView.topAnchor.constraint(equalTo: contentView.topAnchor),
-                stackView.widthAnchor.constraint(equalTo: contentView.widthAnchor),
-                bottomConstraint
-            ])
-        }
+        // Folder Explorer section
+        setupFolderExplorerSection()
+        stackView.addArrangedSubview(folderExplorerHeaderView)
+        stackView.addArrangedSubview(folderExplorerOutlineView.enclosingScrollView!) // Add the scroll view
     }
 
     private func setupFavoritesSection() {
         // Header
         favoritesHeaderView = createSectionHeader(title: "FAVORITES")
-        stackView.addArrangedSubview(favoritesHeaderView)
 
         // Table view
         favoritesTableView = NSTableView()
@@ -90,7 +94,6 @@ class SidebarViewController: NSViewController {
         favoritesTableView.style = .sourceList
         favoritesTableView.backgroundColor = .clear
         favoritesTableView.intercellSpacing = NSSize(width: 0, height: 0)
-        favoritesTableView.style = .sourceList
         favoritesTableView.delegate = self
         favoritesTableView.dataSource = self
         favoritesTableView.target = self
@@ -102,27 +105,22 @@ class SidebarViewController: NSViewController {
         column.width = 180
         favoritesTableView.addTableColumn(column)
 
-        let favoritesContainer = NSView()
-        favoritesContainer.translatesAutoresizingMaskIntoConstraints = false
-        favoritesContainer.addSubview(favoritesTableView)
-        favoritesTableView.translatesAutoresizingMaskIntoConstraints = false
+        // Create scroll view for favoritesTableView
+        let favoritesScrollView = NSScrollView()
+        favoritesScrollView.translatesAutoresizingMaskIntoConstraints = false
+        favoritesScrollView.hasVerticalScroller = true
+        favoritesScrollView.autohidesScrollers = true
+        favoritesScrollView.borderType = .noBorder
+        favoritesScrollView.documentView = favoritesTableView
 
-        NSLayoutConstraint.activate([
-            favoritesTableView.topAnchor.constraint(equalTo: favoritesContainer.topAnchor),
-            favoritesTableView.leadingAnchor.constraint(equalTo: favoritesContainer.leadingAnchor),
-            favoritesTableView.trailingAnchor.constraint(equalTo: favoritesContainer.trailingAnchor),
-            favoritesTableView.bottomAnchor.constraint(equalTo: favoritesContainer.bottomAnchor),
-            favoritesContainer.heightAnchor.constraint(equalToConstant: 200),
-            favoritesContainer.widthAnchor.constraint(greaterThanOrEqualToConstant: 180)
-        ])
-
-        stackView.addArrangedSubview(favoritesContainer)
+        // Set minimum height for favorites section
+        favoritesScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+        favoritesScrollView.widthAnchor.constraint(equalToConstant: 200).isActive = true // Match sidebar width
     }
 
-    private func setupDrivesSection() {
+    private func setupLocationsSection() { // Renamed from setupDrivesSection
         // Header
         drivesHeaderView = createSectionHeader(title: "LOCATIONS")
-        stackView.addArrangedSubview(drivesHeaderView)
 
         // Table view
         drivesTableView = NSTableView()
@@ -131,7 +129,6 @@ class SidebarViewController: NSViewController {
         drivesTableView.style = .sourceList
         drivesTableView.backgroundColor = .clear
         drivesTableView.intercellSpacing = NSSize(width: 0, height: 0)
-        drivesTableView.style = .sourceList
         drivesTableView.delegate = self
         drivesTableView.dataSource = self
         drivesTableView.target = self
@@ -143,21 +140,53 @@ class SidebarViewController: NSViewController {
         column.width = 180
         drivesTableView.addTableColumn(column)
 
-        let drivesContainer = NSView()
-        drivesContainer.translatesAutoresizingMaskIntoConstraints = false
-        drivesContainer.addSubview(drivesTableView)
-        drivesTableView.translatesAutoresizingMaskIntoConstraints = false
+        // Create scroll view for drivesTableView
+        let drivesScrollView = NSScrollView()
+        drivesScrollView.translatesAutoresizingMaskIntoConstraints = false
+        drivesScrollView.hasVerticalScroller = true
+        drivesScrollView.autohidesScrollers = true
+        drivesScrollView.borderType = .noBorder
+        drivesScrollView.documentView = drivesTableView
 
-        NSLayoutConstraint.activate([
-            drivesTableView.topAnchor.constraint(equalTo: drivesContainer.topAnchor),
-            drivesTableView.leadingAnchor.constraint(equalTo: drivesContainer.leadingAnchor),
-            drivesTableView.trailingAnchor.constraint(equalTo: drivesContainer.trailingAnchor),
-            drivesTableView.bottomAnchor.constraint(equalTo: drivesContainer.bottomAnchor),
-            drivesContainer.heightAnchor.constraint(equalToConstant: 150),
-            drivesContainer.widthAnchor.constraint(greaterThanOrEqualToConstant: 180)
-        ])
+        // Set minimum height for drives section
+        drivesScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+        drivesScrollView.widthAnchor.constraint(equalToConstant: 200).isActive = true // Match sidebar width
+    }
 
-        stackView.addArrangedSubview(drivesContainer)
+    private func setupFolderExplorerSection() {
+        // Header
+        folderExplorerHeaderView = createSectionHeader(title: "FOLDER EXPLORER")
+
+        // Outline view
+        folderExplorerOutlineView = NSOutlineView()
+        folderExplorerOutlineView.headerView = nil
+        folderExplorerOutlineView.rowSizeStyle = .small
+        folderExplorerOutlineView.style = .sourceList
+        folderExplorerOutlineView.backgroundColor = .clear
+        folderExplorerOutlineView.intercellSpacing = NSSize(width: 0, height: 0)
+        folderExplorerOutlineView.delegate = self
+        folderExplorerOutlineView.dataSource = self
+        folderExplorerOutlineView.target = self
+        folderExplorerOutlineView.doubleAction = #selector(outlineViewDoubleClicked(_:))
+        folderExplorerOutlineView.menu = createContextMenu() // Reuse context menu
+        folderExplorerOutlineView.menu?.delegate = self
+
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("FolderExplorerColumn"))
+        column.width = 180
+        folderExplorerOutlineView.addTableColumn(column)
+        folderExplorerOutlineView.outlineTableColumn = column // Set the outline column
+
+        // Create scroll view for folderExplorerOutlineView
+        folderExplorerScrollView = NSScrollView()
+        folderExplorerScrollView.translatesAutoresizingMaskIntoConstraints = false
+        folderExplorerScrollView.hasVerticalScroller = true
+        folderExplorerScrollView.autohidesScrollers = true
+        folderExplorerScrollView.borderType = .noBorder
+        folderExplorerScrollView.documentView = folderExplorerOutlineView
+
+        // Set minimum height for folder explorer section
+        folderExplorerScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 150).isActive = true
+        folderExplorerScrollView.widthAnchor.constraint(equalToConstant: 200).isActive = true // Match sidebar width
     }
 
     private func createSectionHeader(title: String) -> NSView {
@@ -227,8 +256,13 @@ class SidebarViewController: NSViewController {
             }
         }
 
+        // Folder Explorer - initialize with root
+        folderExplorerRootItem = FileItem(url: URL(fileURLWithPath: "/"))
+        folderExplorerRootItem.loadChildren(showsHiddenFiles: false) // Load children for the root
+
         favoritesTableView.reloadData()
         drivesTableView.reloadData()
+        folderExplorerOutlineView.reloadData()
     }
 
     @objc private func tableViewClicked(_ sender: NSTableView) {
@@ -244,6 +278,15 @@ class SidebarViewController: NSViewController {
 
         if let item = item {
             delegate?.sidebarDidSelectLocation(item.url)
+        }
+    }
+
+    @objc private func outlineViewDoubleClicked(_ sender: NSOutlineView) {
+        let row = sender.clickedRow
+        guard row >= 0 else { return }
+
+        if let fileItem = sender.item(atRow: row) as? FileItem {
+            delegate?.sidebarDidSelectLocation(fileItem.url)
         }
     }
 
@@ -293,12 +336,29 @@ class SidebarViewController: NSViewController {
 
     @objc private func contextMenuOpenInNewTab(_ sender: Any) {
         guard let menuItem = sender as? NSMenuItem,
-              let menu = menuItem.menu,
-              let item = getClickedItem(from: menu) else { return }
+              let menu = menuItem.menu else { return }
+
+        var urlToOpen: URL?
+
+        // Check which view the context menu was opened from
+        if menu == favoritesTableView.menu || menu == drivesTableView.menu {
+            if let item = getClickedItem(from: menu) {
+                urlToOpen = item.url
+            }
+        } else if menu == folderExplorerOutlineView.menu {
+            let row = folderExplorerOutlineView.clickedRow
+            if row >= 0, let item = folderExplorerOutlineView.item(atRow: row) as? FileItem {
+                if item.isDirectory {
+                    urlToOpen = item.url
+                }
+            }
+        }
+
+        guard let url = urlToOpen else { return }
 
         // Notify delegate to open in new tab
         if let splitVC = parent as? SplitViewController {
-            splitVC.openLocationInNewTab(item.url)
+            splitVC.openLocationInNewTab(url)
         }
     }
 
@@ -368,8 +428,62 @@ class SidebarViewController: NSViewController {
 
 extension SidebarViewController: NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
-        guard let item = getClickedItem(from: menu) else {
-            // Disable all items if no valid selection
+        // Determine which table view was right-clicked
+        var tableView: NSTableView?
+        if favoritesTableView.menu == menu {
+            tableView = favoritesTableView
+        } else if drivesTableView.menu == menu {
+            tableView = drivesTableView
+        } else if folderExplorerOutlineView.menu == menu { // Handle folder explorer context menu
+            // For folder explorer, we need to get the FileItem from the outline view
+            let row = folderExplorerOutlineView.clickedRow
+            guard row >= 0, let fileItem = folderExplorerOutlineView.item(atRow: row) as? FileItem else {
+                menu.items.forEach { $0.isEnabled = false }
+                return
+            }
+
+            // Enable appropriate menu items
+            menu.item(withTitle: "Open")?.isEnabled = true
+            menu.item(withTitle: "Open in New Tab")?.isEnabled = true
+            menu.item(withTitle: "Show in Finder")?.isEnabled = true
+
+            // Remove existing favorite items to avoid duplicates
+            if let addItem = menu.item(withTitle: "Add to Favorites") {
+                menu.removeItem(addItem)
+            }
+            if let removeItem = menu.item(withTitle: "Remove from Favorites") {
+                menu.removeItem(removeItem)
+            }
+
+            // Check if item is in favorites and add the correct menu item
+            let isInFavorites = favoriteItems.contains(where: { $0.url == fileItem.url })
+            if isInFavorites {
+                menu.addItem(withTitle: "Remove from Favorites", action: #selector(contextMenuRemoveFromFavorites(_:)), keyEquivalent: "")
+            } else {
+                menu.addItem(withTitle: "Add to Favorites", action: #selector(contextMenuAddToFavorites(_:)), keyEquivalent: "")
+            }
+            return
+        }
+
+        guard let tv = tableView else {
+            menu.items.forEach { $0.isEnabled = false }
+            return
+        }
+
+        let row = tv.clickedRow
+        guard row >= 0 else {
+            menu.items.forEach { $0.isEnabled = false }
+            return
+        }
+
+        var item: SidebarItem?
+        if tv == favoritesTableView {
+            item = favoriteItems[row]
+        } else if tv == drivesTableView {
+            item = driveItems[row]
+        }
+
+        guard let selectedItem = item else {
             menu.items.forEach { $0.isEnabled = false }
             return
         }
@@ -388,7 +502,7 @@ extension SidebarViewController: NSMenuDelegate {
         }
 
         // Check if item is in favorites and add the correct menu item
-        let isInFavorites = favoriteItems.contains(where: { $0.url == item.url })
+        let isInFavorites = favoriteItems.contains(where: { $0.url == selectedItem.url })
         if isInFavorites {
             menu.addItem(withTitle: "Remove from Favorites", action: #selector(contextMenuRemoveFromFavorites(_:)), keyEquivalent: "")
         } else {
@@ -471,4 +585,93 @@ struct SidebarItem {
     let name: String
     let url: URL
     let icon: NSImage?
+}
+
+// MARK: - NSOutlineViewDataSource
+
+extension SidebarViewController: NSOutlineViewDataSource {
+    func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
+        if item == nil { // Root item
+            return folderExplorerRootItem?.children?.count ?? 0
+        }
+        guard let fileItem = item as? FileItem else { return 0 }
+        return fileItem.children?.count ?? 0
+    }
+
+    func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
+        if item == nil { // Root item
+            return folderExplorerRootItem?.children?[index] as Any
+        }
+        guard let fileItem = item as? FileItem else {
+            fatalError("Invalid item for outline view")
+        }
+        return fileItem.children?[index] as Any
+    }
+
+    func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
+        guard let fileItem = item as? FileItem else { return false }
+        return fileItem.isDirectory
+    }
+}
+
+// MARK: - NSOutlineViewDelegate
+
+extension SidebarViewController: NSOutlineViewDelegate {
+    func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
+        guard let fileItem = item as? FileItem else { return nil }
+
+        let cellView = NSTableCellView()
+
+        let imageView = NSImageView()
+        imageView.imageScaling = .scaleProportionallyDown
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.image = fileItem.icon
+
+        let textField = NSTextField()
+        textField.isBordered = false
+        textField.backgroundColor = .clear
+        textField.isEditable = false
+        textField.font = NSFont.systemFont(ofSize: 13)
+        textField.lineBreakMode = .byTruncatingTail
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        textField.stringValue = fileItem.name
+
+        cellView.addSubview(imageView)
+        cellView.addSubview(textField)
+
+        NSLayoutConstraint.activate([
+            imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
+            imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+            imageView.widthAnchor.constraint(equalToConstant: 16),
+            imageView.heightAnchor.constraint(equalToConstant: 16),
+
+            textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
+            textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+            textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
+        ])
+
+        cellView.imageView = imageView
+        cellView.textField = textField
+
+        return cellView
+    }
+
+    func outlineViewSelectionDidChange(_ notification: Notification) {
+        guard let outlineView = notification.object as? NSOutlineView else { return }
+        let selectedRow = outlineView.selectedRow
+        guard selectedRow >= 0 else { return }
+
+        if let fileItem = outlineView.item(atRow: selectedRow) as? FileItem {
+            print("SidebarViewController: outlineViewSelectionDidChange - Selected URL: \(fileItem.url.path)")
+            delegate?.sidebarDidSelectLocation(fileItem.url)
+        }
+    }
+
+    func outlineViewItemWillExpand(_ notification: Notification) {
+        guard let expandedItem = notification.userInfo?["NSObject"] as? FileItem else { return }
+        print("SidebarViewController: outlineViewItemWillExpand - Expanding URL: \(expandedItem.url.path)")
+        print("SidebarViewController: Children before loadChildren: \(expandedItem.children?.count ?? 0)")
+        expandedItem.loadChildren(showsHiddenFiles: false) // Load children when item is about to expand
+        print("SidebarViewController: Children after loadChildren: \(expandedItem.children?.count ?? 0)")
+    }
 }

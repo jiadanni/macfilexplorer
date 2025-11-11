@@ -110,6 +110,22 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
     func pasteSelection() {
         tabBarController?.pasteSelection()
     }
+    
+    func setViewMode(_ viewMode: ViewMode) {
+        tabBarController?.setViewMode(viewMode)
+    }
+    
+    func toggleHiddenFiles() {
+        tabBarController?.toggleHiddenFiles()
+    }
+    
+    func splitVertically() {
+        tabBarController?.splitVertically()
+    }
+    
+    func splitHorizontally() {
+        tabBarController?.splitHorizontally()
+    }
 
     func updateTerminalDirectory() {
         // Always update terminal directory, regardless of visibility
@@ -131,6 +147,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
     // MARK: - SidebarDelegate
 
     func sidebarDidSelectLocation(_ url: URL) {
+        print("SplitViewController: sidebarDidSelectLocation - Received URL: \(url.path)")
         tabBarController?.navigateToLocation(url)
     }
 }
