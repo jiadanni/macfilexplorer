@@ -26,7 +26,12 @@ class FileItem: Hashable {
         // For cloud storage (like Google Drive), also check resource values and symlink targets
         var detectedAsDirectory = isDir.boolValue
         
-        if let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .isPackageKey]) {
+        if let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .isPackageKey, .contentTypeKey]) {
+            // If content type is public.folder, it's a directory
+            if let contentType = resourceValues.contentType, contentType.conforms(to: .folder) {
+                detectedAsDirectory = true
+            }
+            
             // Check if it's a directory
             if let isDirectory = resourceValues.isDirectory {
                 detectedAsDirectory = isDirectory
