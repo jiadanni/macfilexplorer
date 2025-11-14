@@ -23,11 +23,25 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
             updateView()
         }
     }
-    
+
     var isListMode: Bool = false // Set to true for Windows List view
+    var zoomLevel: Double = 1.0 {
+        didSet {
+            updateLayoutConstraints()
+            updateFontSize()
+        }
+    }
+    var showCheckbox: Bool = false {
+        didSet {
+            if showCheckbox != oldValue {
+                updateLayoutConstraints()
+            }
+        }
+    }
 
     private var myImageView: NSImageView?
     private var myTextField: NSTextField?
+    private var myCheckbox: NSButton?
     private var hasSetupUI = false
     private var currentConstraints: [NSLayoutConstraint] = []
     
@@ -86,46 +100,111 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
         myTextField?.drawsBackground = false
         view.addSubview(myTextField!)
         self.textField = myTextField // Assign to the NSCollectionViewItem's textField property
-        
+
+        // Create checkbox (will be shown/hidden based on showCheckbox property)
+        myCheckbox = NSButton(checkboxWithTitle: "", target: self, action: #selector(checkboxToggled(_:)))
+        myCheckbox?.translatesAutoresizingMaskIntoConstraints = false
+        myCheckbox?.isHidden = !showCheckbox
+        view.addSubview(myCheckbox!)
+
         updateLayoutConstraints()
+        updateFontSize()
+    }
+
+    @objc private func checkboxToggled(_ sender: NSButton) {
+        // Toggle selection when checkbox is clicked
+        isSelected = (sender.state == .on)
+    }
+
+    private func updateFontSize() {
+        guard let myTextField = myTextField else { return }
+        // Scale font size with zoom but maintain minimum readable size
+        let baseFontSize: CGFloat = 11
+        let scaledFontSize = max(8, baseFontSize * zoomLevel) // Minimum 8pt
+        myTextField.font = NSFont.systemFont(ofSize: scaledFontSize)
     }
     
     private func updateLayoutConstraints() {
         // Remove existing constraints
         NSLayoutConstraint.deactivate(currentConstraints)
         currentConstraints.removeAll()
-        
-        guard let myImageView = myImageView, let myTextField = myTextField else { return }
-        
-        if isListMode {
-            // Horizontal layout for Windows List view: [icon] [label]
-            myTextField.alignment = .left
-            currentConstraints = [
-                myImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
-                myImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-                myImageView.widthAnchor.constraint(equalToConstant: 16),
-                myImageView.heightAnchor.constraint(equalToConstant: 16),
-                
-                myTextField.leadingAnchor.constraint(equalTo: myImageView.trailingAnchor, constant: 4),
-                myTextField.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-                myTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2)
-            ]
-        } else {
-            // Vertical layout for Icons view: icon above label
-            myTextField.alignment = .center
-            currentConstraints = [
-                myImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-                myImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 5),
-                myImageView.widthAnchor.constraint(equalToConstant: 64),
-                myImageView.heightAnchor.constraint(equalToConstant: 64),
 
-                myTextField.topAnchor.constraint(equalTo: myImageView.bottomAnchor, constant: 5),
-                myTextField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
-                myTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
-                myTextField.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -5)
-            ]
+        guard let myImageView = myImageView, let myTextField = myTextField, let myCheckbox = myCheckbox else { return }
+
+        // Update checkbox visibility
+        myCheckbox.isHidden = !showCheckbox
+
+        if isListMode {
+            // Horizontal layout for Windows List view: [checkbox?] [icon] [label]
+            myTextField.alignment = .left
+            let iconSize = max(12, 16 * zoomLevel) // Scale icon but keep minimum size
+
+            if showCheckbox {
+                currentConstraints = [
+                    myCheckbox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
+                    myCheckbox.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                    myCheckbox.widthAnchor.constraint(equalToConstant: 18),
+
+                    myImageView.leadingAnchor.constraint(equalTo: myCheckbox.trailingAnchor, constant: 2),
+                    myImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                    myImageView.widthAnchor.constraint(equalToConstant: iconSize),
+                    myImageView.heightAnchor.constraint(equalToConstant: iconSize),
+
+                    myTextField.leadingAnchor.constraint(equalTo: myImageView.trailingAnchor, constant: 4),
+                    myTextField.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                    myTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2)
+                ]
+            } else {
+                currentConstraints = [
+                    myImageView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
+                    myImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                    myImageView.widthAnchor.constraint(equalToConstant: iconSize),
+                    myImageView.heightAnchor.constraint(equalToConstant: iconSize),
+
+                    myTextField.leadingAnchor.constraint(equalTo: myImageView.trailingAnchor, constant: 4),
+                    myTextField.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+                    myTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2)
+                ]
+            }
+        } else {
+            // Vertical layout for Icons view: checkbox in top-left corner, icon above label
+            myTextField.alignment = .center
+            // Scale icon size with zoom level but ensure label space is maintained
+            let iconSize = max(32, 64 * zoomLevel) // Minimum 32pt to keep visible
+            let topPadding = max(3, 5 * zoomLevel)
+            let labelSpacing = max(2, 5 * zoomLevel)
+
+            if showCheckbox {
+                currentConstraints = [
+                    myCheckbox.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
+                    myCheckbox.topAnchor.constraint(equalTo: view.topAnchor, constant: 2),
+                    myCheckbox.widthAnchor.constraint(equalToConstant: 18),
+
+                    myImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                    myImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: topPadding),
+                    myImageView.widthAnchor.constraint(equalToConstant: iconSize),
+                    myImageView.heightAnchor.constraint(equalToConstant: iconSize),
+
+                    myTextField.topAnchor.constraint(equalTo: myImageView.bottomAnchor, constant: labelSpacing),
+                    myTextField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
+                    myTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
+                    myTextField.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -3)
+                ]
+            } else {
+                currentConstraints = [
+                    myImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+                    myImageView.topAnchor.constraint(equalTo: view.topAnchor, constant: topPadding),
+                    myImageView.widthAnchor.constraint(equalToConstant: iconSize),
+                    myImageView.heightAnchor.constraint(equalToConstant: iconSize),
+
+                    myTextField.topAnchor.constraint(equalTo: myImageView.bottomAnchor, constant: labelSpacing),
+                    myTextField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
+                    myTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
+                    myTextField.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -3)
+                ]
+            }
         }
-        
+
         NSLayoutConstraint.activate(currentConstraints)
     }
 
@@ -164,9 +243,11 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
     override var isSelected: Bool {
         didSet {
             updateSelectionAppearance()
+            // Sync checkbox state with selection
+            myCheckbox?.state = isSelected ? .on : .off
         }
     }
-    
+
     private func updateSelectionAppearance() {
         // Update visual appearance based on selection state
         if isSelected {

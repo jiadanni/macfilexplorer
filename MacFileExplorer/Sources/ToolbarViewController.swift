@@ -18,6 +18,7 @@ protocol ToolbarDelegate: AnyObject {
     func toolbarDidChangeViewMode(_ viewMode: ViewMode)
     func toolbarDidRequestSplitVertically()
     func toolbarDidRequestSplitHorizontally()
+    func toolbarDidRequestClosePane()
 }
 
 class ToolbarViewController: NSViewController {
@@ -34,6 +35,7 @@ class ToolbarViewController: NSViewController {
     private var splitVerticalButton: NSButton!
     private var splitHorizontalButton: NSButton!
     private var newFolderButton: NSButton!
+    private var closePaneButton: NSButton!
 
     private var currentURL: URL?
     private var canGoBack: Bool = false
@@ -51,6 +53,14 @@ class ToolbarViewController: NSViewController {
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
 
+        // Load toolbar visibility settings from UserDefaults
+        let showBackForward = UserDefaults.standard.object(forKey: UserDefaults.Keys.showBackForwardButtons.rawValue) as? Bool ?? true
+        let showViewMode = UserDefaults.standard.object(forKey: UserDefaults.Keys.showViewModeButton.rawValue) as? Bool ?? true
+        let showHiddenFiles = UserDefaults.standard.object(forKey: UserDefaults.Keys.showHiddenFilesButton.rawValue) as? Bool ?? true
+        let showSplit = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSplitButtons.rawValue) as? Bool ?? true
+        let showNewFolder = UserDefaults.standard.object(forKey: UserDefaults.Keys.showNewFolderButton.rawValue) as? Bool ?? true
+        let showSort = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSortButton.rawValue) as? Bool ?? true
+
         // Back button
         backButton = NSButton()
         backButton.translatesAutoresizingMaskIntoConstraints = false
@@ -60,6 +70,7 @@ class ToolbarViewController: NSViewController {
         backButton.action = #selector(backButtonClicked(_:))
         backButton.isEnabled = false
         backButton.sendAction(on: [.leftMouseDown, .rightMouseDown])
+        backButton.isHidden = !showBackForward
         view.addSubview(backButton)
 
         // Forward button
@@ -71,6 +82,7 @@ class ToolbarViewController: NSViewController {
         forwardButton.action = #selector(forwardButtonClicked(_:))
         forwardButton.isEnabled = false
         forwardButton.sendAction(on: [.leftMouseDown, .rightMouseDown])
+        forwardButton.isHidden = !showBackForward
         view.addSubview(forwardButton)
 
         // Breadcrumb scroll view (for address bar)
@@ -104,6 +116,7 @@ class ToolbarViewController: NSViewController {
             viewModeButton.menu?.addItem(menuItem)
         }
         viewModeButton.menu?.items.forEach { $0.target = self }
+        viewModeButton.isHidden = !showViewMode
         view.addSubview(viewModeButton)
         
         // Hidden Files toggle button
@@ -113,6 +126,7 @@ class ToolbarViewController: NSViewController {
         hiddenFilesButton.image = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: "Show Hidden Files")
         hiddenFilesButton.target = self
         hiddenFilesButton.action = #selector(toggleHiddenFiles(_:))
+        hiddenFilesButton.isHidden = !showHiddenFiles
         view.addSubview(hiddenFilesButton)
         
         // Split Vertical button
@@ -122,6 +136,7 @@ class ToolbarViewController: NSViewController {
         splitVerticalButton.image = NSImage(systemSymbolName: "rectangle.split.2x1", accessibilityDescription: "Split Vertically")
         splitVerticalButton.target = self
         splitVerticalButton.action = #selector(splitVerticallyClicked(_:))
+        splitVerticalButton.isHidden = !showSplit
         view.addSubview(splitVerticalButton)
         
         // Split Horizontal button
@@ -131,6 +146,7 @@ class ToolbarViewController: NSViewController {
         splitHorizontalButton.image = NSImage(systemSymbolName: "rectangle.split.1x2", accessibilityDescription: "Split Horizontally")
         splitHorizontalButton.target = self
         splitHorizontalButton.action = #selector(splitHorizontallyClicked(_:))
+        splitHorizontalButton.isHidden = !showSplit
         view.addSubview(splitHorizontalButton)
 
         // Sort button
@@ -154,6 +170,7 @@ class ToolbarViewController: NSViewController {
         sortButton.menu?.addItem(withTitle: "Type ↓", action: #selector(sortByTypeDescending(_:)), keyEquivalent: "")
 
         sortButton.menu?.items.forEach { $0.target = self }
+        sortButton.isHidden = !showSort
         view.addSubview(sortButton)
 
         // New Folder button
@@ -163,7 +180,18 @@ class ToolbarViewController: NSViewController {
         newFolderButton.image = NSImage(systemSymbolName: "folder.badge.plus", accessibilityDescription: "New Folder")
         newFolderButton.target = self
         newFolderButton.action = #selector(newFolderButtonClicked(_:))
+        newFolderButton.isHidden = !showNewFolder
         view.addSubview(newFolderButton)
+
+        // Close Pane button
+        closePaneButton = NSButton()
+        closePaneButton.translatesAutoresizingMaskIntoConstraints = false
+        closePaneButton.bezelStyle = .texturedRounded
+        closePaneButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close Pane")
+        closePaneButton.target = self
+        closePaneButton.action = #selector(closePaneButtonClicked(_:))
+        closePaneButton.isHidden = true // Hidden by default, shown when there are multiple panes
+        view.addSubview(closePaneButton)
 
         // Layout constraints
         NSLayoutConstraint.activate([
@@ -212,10 +240,15 @@ class ToolbarViewController: NSViewController {
             newFolderButton.widthAnchor.constraint(equalToConstant: 30),
             newFolderButton.heightAnchor.constraint(equalToConstant: 26),
 
-            sortButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
+            sortButton.trailingAnchor.constraint(equalTo: closePaneButton.leadingAnchor, constant: -8),
             sortButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             sortButton.widthAnchor.constraint(equalToConstant: 44),
-            sortButton.heightAnchor.constraint(equalToConstant: 26)
+            sortButton.heightAnchor.constraint(equalToConstant: 26),
+
+            closePaneButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
+            closePaneButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            closePaneButton.widthAnchor.constraint(equalToConstant: 30),
+            closePaneButton.heightAnchor.constraint(equalToConstant: 26)
         ])
     }
 
@@ -279,6 +312,10 @@ class ToolbarViewController: NSViewController {
 
         sortButton.title = title
         sortButton.image = image
+    }
+
+    func setClosePaneButtonVisible(_ visible: Bool) {
+        closePaneButton.isHidden = !visible
     }
 
     private func updateBreadcrumbs(for url: URL) {
@@ -465,5 +502,9 @@ class ToolbarViewController: NSViewController {
 
     @objc private func splitHorizontallyClicked(_ sender: Any) {
         delegate?.toolbarDidRequestSplitHorizontally()
+    }
+
+    @objc private func closePaneButtonClicked(_ sender: Any) {
+        delegate?.toolbarDidRequestClosePane()
     }
 }

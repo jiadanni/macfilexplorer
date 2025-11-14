@@ -73,6 +73,9 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
 
         // Update active pane
         activePaneIndex = panes.count - 1
+
+        // Update close button visibility for all panes
+        updateClosePaneButtonVisibility()
     }
 
     func removeActivePane() {
@@ -94,6 +97,9 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
         if activePaneIndex < panes.count {
             delegate?.splitPaneDirectoryDidChange(to: panes[activePaneIndex].currentPath)
         }
+
+        // Update close button visibility for all remaining panes
+        updateClosePaneButtonVisibility()
     }
 
     func splitVertically() {
@@ -139,6 +145,11 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
         panes[activePaneIndex].pasteSelection()
     }
     
+    func changeFolderColor() {
+        guard activePaneIndex < panes.count else { return }
+        panes[activePaneIndex].changeFolderColor()
+    }
+    
     func setViewMode(_ viewMode: ViewMode) {
         guard activePaneIndex < panes.count else { return }
         panes[activePaneIndex].toolbarDidChangeViewMode(viewMode)
@@ -152,6 +163,16 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
     func updateZoomLevel(to level: Double) {
         guard activePaneIndex < panes.count else { return }
         panes[activePaneIndex].setZoomLevel(level)
+    }
+
+    // MARK: - Private Methods
+
+    private func updateClosePaneButtonVisibility() {
+        // Show close button only when there are multiple panes
+        let shouldShowCloseButton = panes.count > 1
+        for pane in panes {
+            pane.setClosePaneButtonVisible(shouldShowCloseButton)
+        }
     }
 
     // MARK: - FileBrowserDelegate
@@ -246,6 +267,9 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
                 // If all panes are closed (should be prevented by guard), report empty path
                 delegate?.splitPaneDirectoryDidChange(to: "/")
             }
+
+            // Update close button visibility for all remaining panes
+            updateClosePaneButtonVisibility()
             }
         }
     }

@@ -162,6 +162,13 @@
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="VML-Sep-2"/>
+                            <menuItem title="Change Folder Colors..." keyEquivalent="C" id="VML-CF-Col">
+                                <modifierMask key="keyEquivalentModifierMask" shift="YES" command="YES"/>
+                                <connections>
+                                    <action selector="changeFolderColors:" target="Voe-Tx-rLC" id="VML-CF-Act"/>
+                                </connections>
+                            </menuItem>
+                            <menuItem isSeparatorItem="YES" id="VML-Sep-3"/>
                             <menuItem title="Split Vertically" id="VML-SV-Btn">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>

@@ -203,6 +203,11 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         tabs[currentTabIndex].pasteSelection()
     }
     
+    func changeFolderColor() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].changeFolderColor()
+    }
+    
     func setViewMode(_ viewMode: ViewMode) {
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].setViewMode(viewMode)

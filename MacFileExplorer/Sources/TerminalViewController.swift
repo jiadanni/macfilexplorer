@@ -1,7 +1,16 @@
 import Cocoa
 
+protocol TerminalViewControllerDelegate: AnyObject {
+    func terminalViewControllerDidRequestClose(_ controller: TerminalViewController)
+}
+
 class TerminalViewController: NSViewController {
 
+    weak var delegate: TerminalViewControllerDelegate?
+
+    private var headerView: NSView!
+    private var closeButton: NSButton!
+    private var titleLabel: NSTextField!
     private var scrollView: NSScrollView!
     private var textView: NSTextView!
     private var inputField: NSTextField!
@@ -25,6 +34,7 @@ class TerminalViewController: NSViewController {
         if textView.string.isEmpty || !textView.string.contains("$") {
             displayPrompt()
         }
+        updateInputPlaceholder()
         focusInput()
         inputField.becomeFirstResponder()
     }
@@ -32,6 +42,30 @@ class TerminalViewController: NSViewController {
     private func setupUI() {
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor(white: 0.1, alpha: 1.0).cgColor
+
+        // Create header view
+        headerView = NSView()
+        headerView.translatesAutoresizingMaskIntoConstraints = false
+        headerView.wantsLayer = true
+        headerView.layer?.backgroundColor = NSColor(white: 0.15, alpha: 1.0).cgColor
+        view.addSubview(headerView)
+
+        // Create title label
+        titleLabel = NSTextField(labelWithString: "Terminal")
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.textColor = NSColor(white: 0.9, alpha: 1.0)
+        titleLabel.font = NSFont.boldSystemFont(ofSize: 12)
+        headerView.addSubview(titleLabel)
+
+        // Create close button
+        closeButton = NSButton()
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        closeButton.bezelStyle = .texturedRounded
+        closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close Terminal")
+        closeButton.target = self
+        closeButton.action = #selector(closeButtonClicked(_:))
+        closeButton.isBordered = false
+        headerView.addSubview(closeButton)
 
         // Create scroll view for terminal output
         scrollView = NSScrollView()
@@ -61,11 +95,26 @@ class TerminalViewController: NSViewController {
         inputField.focusRingType = .none
         inputField.placeholderString = ""
         inputField.delegate = self
+        inputField.target = self
+        inputField.action = #selector(handleEnterKey(_:))
         view.addSubview(inputField)
 
         // Set up constraints
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+            headerView.topAnchor.constraint(equalTo: view.topAnchor),
+            headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            headerView.heightAnchor.constraint(equalToConstant: 26),
+
+            titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 8),
+            titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+
+            closeButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -8),
+            closeButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            closeButton.widthAnchor.constraint(equalToConstant: 20),
+            closeButton.heightAnchor.constraint(equalToConstant: 20),
+
+            scrollView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: inputField.topAnchor, constant: -1),
@@ -104,6 +153,7 @@ class TerminalViewController: NSViewController {
         currentDirectory = path
         appendOutput("📁 Changed directory to: \(path)\n")
         displayPrompt()
+        updateInputPlaceholder()
     }
 
     func focusInput() {
@@ -111,6 +161,10 @@ class TerminalViewController: NSViewController {
     }
 
     // MARK: - Private Methods
+    
+    private func updateInputPlaceholder() {
+        inputField.placeholderString = getPromptString()
+    }
 
     private func getPromptString() -> String {
         let dirName = (currentDirectory as NSString).lastPathComponent
@@ -344,23 +398,25 @@ class TerminalViewController: NSViewController {
             appendErrorOutput("Error executing command: \(error.localizedDescription)\n")
         }
     }
+    
+    @objc private func handleEnterKey(_ sender: NSTextField) {
+        let command = sender.stringValue
+        executeCommand(command)
+        sender.stringValue = ""
+    }
+
+    @objc private func closeButtonClicked(_ sender: Any) {
+        delegate?.terminalViewControllerDidRequestClose(self)
+    }
 }
 
 // MARK: - NSTextFieldDelegate
 
 extension TerminalViewController: NSTextFieldDelegate {
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-        print("control(_:textView:doCommandBy:) called with selector: \(commandSelector)")
-        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
-            // Enter key pressed
-            print("Enter key pressed")
-            let command = inputField.stringValue
-            executeCommand(command)
-            inputField.stringValue = ""
-            return true
-        } else if commandSelector == #selector(NSResponder.moveUp(_:)) {
+        // This handles special keys like up/down arrows
+        if commandSelector == #selector(NSResponder.moveUp(_:)) {
             // Up arrow - previous command
-            print("Up arrow pressed")
             if historyIndex > 0 {
                 historyIndex -= 1
                 inputField.stringValue = commandHistory[historyIndex]
@@ -368,7 +424,6 @@ extension TerminalViewController: NSTextFieldDelegate {
             return true
         } else if commandSelector == #selector(NSResponder.moveDown(_:)) {
             // Down arrow - next command
-            print("Down arrow pressed")
             if historyIndex < commandHistory.count - 1 {
                 historyIndex += 1
                 inputField.stringValue = commandHistory[historyIndex]

@@ -20,6 +20,7 @@ class SettingsSidebarViewController: NSViewController, NSTableViewDelegate, NSTa
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        tableView.reloadData()
         tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
         delegate?.settingsSidebarDidSelectSection(sections[0])
     }
@@ -32,8 +33,12 @@ class SettingsSidebarViewController: NSViewController, NSTableViewDelegate, NSTa
         tableView.backgroundColor = .clear
         tableView.intercellSpacing = NSSize(width: 0, height: 5)
         tableView.style = .sourceList
+        tableView.allowsEmptySelection = false
+        tableView.allowsMultipleSelection = false
+        tableView.rowHeight = 30
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("SectionColumn"))
+        column.width = 200
         tableView.addTableColumn(column)
 
         scrollView = NSScrollView()

@@ -5,7 +5,7 @@ protocol SplitViewControllerDelegate: AnyObject {
     func splitViewController(_ splitViewController: SplitViewController, didUpdateDiskSpace diskSpace: String?)
 }
 
-class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControllerDelegate {
+class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControllerDelegate, TerminalViewControllerDelegate {
 
     weak var delegate: SplitViewControllerDelegate?
 
@@ -52,6 +52,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
         // Create terminal view controller (initially hidden)
         terminalViewController = TerminalViewController()
+        terminalViewController?.delegate = self
         terminalSplitItem = NSSplitViewItem(viewController: terminalViewController!)
         terminalSplitItem?.minimumThickness = 150
         terminalSplitItem?.maximumThickness = 500
@@ -114,6 +115,10 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         tabBarController?.pasteSelection()
     }
     
+    func changeFolderColor() {
+        tabBarController?.changeFolderColor()
+    }
+    
     func setViewMode(_ viewMode: ViewMode) {
         tabBarController?.setViewMode(viewMode)
     }
@@ -163,5 +168,11 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     
     func tabBarController(_ tabBarController: TabBarController, didUpdateDiskSpace diskSpace: String?) {
         delegate?.splitViewController(self, didUpdateDiskSpace: diskSpace)
+    }
+
+    // MARK: - TerminalViewControllerDelegate
+
+    func terminalViewControllerDidRequestClose(_ controller: TerminalViewController) {
+        toggleTerminal()
     }
 }

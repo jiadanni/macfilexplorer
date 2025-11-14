@@ -103,6 +103,10 @@ class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewCont
         splitViewController?.pasteSelection()
     }
     
+    func changeFolderColor() {
+        splitViewController?.changeFolderColor()
+    }
+    
     func setViewMode(_ viewMode: ViewMode) {
         splitViewController?.setViewMode(viewMode)
     }

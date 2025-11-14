@@ -80,11 +80,26 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
     override func keyDown(with event: NSEvent) {
         if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "x" {
             cutSelection()
+        } else if event.keyCode == 53 { // Escape key
+            clearSelection()
         } else if event.keyCode == 120 { // F2 key
             renameSelection()
         } else {
             super.keyDown(with: event)
         }
+    }
+    
+    private func clearSelection() {
+        switch currentViewMode {
+        case .list:
+            outlineView.deselectAll(nil)
+        case .icons, .windowsList:
+            collectionView?.deselectAll(nil)
+        case .columns:
+            browserView?.selectionIndexPaths = []
+        }
+        delegate?.fileBrowser(self, didSelectFile: nil)
+        updateStatusBar()
     }
 
     private func renameSelection() {
@@ -417,6 +432,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
         // Set the cell class that NSBrowser will use
         newBrowser.setCellClass(NSBrowserCell.self)
 
+        // Set up context menu
+        newBrowser.menu = createContextMenu()
+
         browserView = newBrowser
         print("BrowserView setup completed with minColumnWidth: 180")
     }
@@ -464,7 +482,19 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
 
     private func loadDirectory(_ url: URL, addToHistory: Bool = true) {
         print("FileBrowserViewController: loadDirectory - Loading URL: \(url.path)")
-        currentDirectory = url
+
+        // Special handling for Google Drive CloudStorage root - redirect to "My Drive"
+        var targetURL = url
+        if url.path.contains("/Library/CloudStorage/GoogleDrive-") &&
+           url.lastPathComponent.hasPrefix("GoogleDrive-") {
+            let myDriveURL = url.appendingPathComponent("My Drive")
+            if FileManager.default.fileExists(atPath: myDriveURL.path) {
+                print("  → Redirecting to My Drive: \(myDriveURL.path)")
+                targetURL = myDriveURL
+            }
+        }
+
+        currentDirectory = targetURL
 
         // Update navigation history
         if addToHistory {
@@ -472,14 +502,14 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
             if currentHistoryIndex < navigationHistory.count - 1 {
                 navigationHistory.removeSubrange((currentHistoryIndex + 1)...)
             }
-            navigationHistory.append(url)
+            navigationHistory.append(targetURL)
             currentHistoryIndex = navigationHistory.count - 1
         }
 
         // Update toolbar
         let canGoBack = currentHistoryIndex > 0
         let canGoForward = currentHistoryIndex < navigationHistory.count - 1
-        toolbarViewController?.updatePath(url, canGoBack: canGoBack, canGoForward: canGoForward, history: navigationHistory, currentIndex: currentHistoryIndex)
+        toolbarViewController?.updatePath(targetURL, canGoBack: canGoBack, canGoForward: canGoForward, history: navigationHistory, currentIndex: currentHistoryIndex)
 
         // Set delegate and dataSource if not already set
         if outlineView.delegate == nil {
@@ -491,7 +521,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
 
-            let item = FileItem(url: url)
+            let item = FileItem(url: targetURL)
             let success = item.loadChildren(showsHiddenFiles: self.showsHiddenFiles) { [weak self] errorMessage in
                 // Handle error on main thread
                 DispatchQueue.main.async {
@@ -515,7 +545,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
 
                 // Set up file system monitoring (correctly handled)
 
-                self.delegate?.directoryDidChange(to: url.path)
+                self.delegate?.directoryDidChange(to: targetURL.path)
                 self.updateStatusBar()
             }
         }
@@ -662,10 +692,14 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
     }
 
     // MARK: - Public Methods
-    
+
     func setZoomLevel(_ level: Double) {
         zoomLevel = max(0.5, min(2.0, level)) // Clamp between 0.5 and 2.0
         applyZoomToCurrentView()
+    }
+
+    func setClosePaneButtonVisible(_ visible: Bool) {
+        toolbarViewController?.setClosePaneButtonVisible(visible)
     }
     
     private func applyZoomToCurrentView() {
@@ -736,6 +770,76 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
     func pasteSelection() {
         contextMenuPaste(self)
     }
+    
+    @objc func changeFolderColor() {
+        // Get selected folder items
+        let selectedRows = outlineView.selectedRowIndexes
+        var selectedFolders: [FileItem] = []
+        
+        selectedRows.forEach { row in
+            if let item = outlineView.item(atRow: row) as? FileItem, item.isDirectory {
+                selectedFolders.append(item)
+            }
+        }
+        
+        guard !selectedFolders.isEmpty else {
+            let alert = NSAlert()
+            alert.messageText = "No Folders Selected"
+            alert.informativeText = "Please select one or more folders to change their colors."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+            return
+        }
+        
+        // Show the color picker
+        let colorPanel = NSColorPanel.shared
+        colorPanel.showsAlpha = false
+        colorPanel.mode = .wheel
+        
+        // Set a target-action callback for when color changes
+        // We'll use a notification approach instead
+        colorPanel.isContinuous = false
+        
+        // Store the selected folders temporarily
+        var tempFolders = selectedFolders
+        
+        // Create a completion handler
+        let completionHandler: (NSColorPanel) -> Void = { [weak self] panel in
+            let selectedColor = panel.color
+            
+            // Apply color to all selected folders by name
+            let folderNames = Set(tempFolders.map { $0.name })
+            folderNames.forEach { folderName in
+                ColorManager.shared.setColor(selectedColor, forFolderName: folderName)
+            }
+            
+            // Reload the view to show the new colors
+            self?.outlineView.reloadData()
+            if self?.currentViewMode == .icons || self?.currentViewMode == .windowsList {
+                self?.collectionView.reloadData()
+            } else if self?.currentViewMode == .columns {
+                self?.browserView.loadColumnZero()
+            }
+        }
+        
+        // Use a one-shot notification observer
+        var observer: NSObjectProtocol?
+        observer = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: colorPanel,
+            queue: .main
+        ) { [weak self] notification in
+            if let colorPanel = notification.object as? NSColorPanel {
+                completionHandler(colorPanel)
+            }
+            if let obs = observer {
+                NotificationCenter.default.removeObserver(obs)
+            }
+        }
+        
+        colorPanel.orderFront(nil)
+    }
 
     // MARK: - Context Menu
 
@@ -749,11 +853,16 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
         menu.addItem(withTitle: "Get Info", action: #selector(contextMenuGetInfo(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Copy", action: #selector(contextMenuCopy(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Copy To...", action: #selector(contextMenuCopyTo(_:)), keyEquivalent: "")
         menu.addItem(withTitle: "Cut", action: #selector(contextMenuCut(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Move To...", action: #selector(contextMenuMoveTo(_:)), keyEquivalent: "")
         menu.addItem(withTitle: "Paste", action: #selector(contextMenuPaste(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Rename", action: #selector(contextMenuRename(_:)), keyEquivalent: "")
         menu.addItem(withTitle: "Move to Trash", action: #selector(contextMenuDelete(_:)), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(withTitle: "New Folder", action: #selector(contextMenuNewFolder(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Change Folder Color...", action: #selector(changeFolderColor), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Show in Finder", action: #selector(contextMenuShowInFinder(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
@@ -767,32 +876,106 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
         // Get the selected items to determine if we should show/hide certain menu items
         let selectedItems = getSelectedItems()
 
-        // Find the "Open With..." menu item
+        // Apply context menu visibility settings from UserDefaults
         if let openWithItem = menu.items.first(where: { $0.title == "Open With..." }) {
-            // Hide "Open With..." for folders or when multiple items are selected
-            let shouldHideOpenWith = selectedItems.isEmpty ||
+            // Hide "Open With..." for folders, when multiple items are selected, or if disabled in settings
+            let shouldHideOpenWith = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hideOpenWith.rawValue) ||
+                                     selectedItems.isEmpty ||
                                      selectedItems.count > 1 ||
                                      selectedItems.first?.isDirectory == true
             openWithItem.isHidden = shouldHideOpenWith
+        }
+
+        if let getInfoItem = menu.items.first(where: { $0.title == "Get Info" }) {
+            getInfoItem.isHidden = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hideGetInfo.rawValue)
+        }
+
+        if let copyItem = menu.items.first(where: { $0.title == "Copy" }) {
+            copyItem.isHidden = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hideCopy.rawValue)
+        }
+
+        if let cutItem = menu.items.first(where: { $0.title == "Cut" }) {
+            cutItem.isHidden = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hideCut.rawValue)
+        }
+
+        if let pasteItem = menu.items.first(where: { $0.title == "Paste" }) {
+            pasteItem.isHidden = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hidePaste.rawValue)
+        }
+
+        if let renameItem = menu.items.first(where: { $0.title == "Rename" }) {
+            renameItem.isHidden = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hideRename.rawValue)
+        }
+
+        if let deleteItem = menu.items.first(where: { $0.title == "Move to Trash" }) {
+            deleteItem.isHidden = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hideMoveToTrash.rawValue)
+        }
+
+        if let showInFinderItem = menu.items.first(where: { $0.title == "Show in Finder" }) {
+            showInFinderItem.isHidden = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hideShowInFinder.rawValue)
+        }
+
+        // Hide "Change Folder Color..." if settings say so or if not a folder
+        if let changeFolderColorItem = menu.items.first(where: { $0.title == "Change Folder Color..." }) {
+            let shouldHide = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hideChangeFolderColor.rawValue) ||
+                           selectedItems.isEmpty ||
+                           selectedItems.first?.isDirectory != true
+            changeFolderColorItem.isHidden = shouldHide
+        }
+
+        // Hide "New Folder" if settings say so
+        if let newFolderItem = menu.items.first(where: { $0.title == "New Folder" }) {
+            newFolderItem.isHidden = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hideNewFolder.rawValue)
         }
     }
 
     private func getSelectedItems() -> [FileItem] {
         var items: [FileItem] = []
-        let selectedRows = outlineView.selectedRowIndexes
 
-        // If there are selected rows, use those
-        if !selectedRows.isEmpty {
-            selectedRows.forEach { row in
-                if let item = outlineView.item(atRow: row) as? FileItem {
+        switch currentViewMode {
+        case .list:
+            let selectedRows = outlineView.selectedRowIndexes
+
+            // If there are selected rows, use those
+            if !selectedRows.isEmpty {
+                selectedRows.forEach { row in
+                    if let item = outlineView.item(atRow: row) as? FileItem {
+                        items.append(item)
+                    }
+                }
+            } else {
+                // If no selection, check if there's a clicked row (for context menu)
+                let clickedRow = outlineView.clickedRow
+                if clickedRow >= 0, let item = outlineView.item(atRow: clickedRow) as? FileItem {
                     items.append(item)
                 }
             }
-        } else {
-            // If no selection, check if there's a clicked row (for context menu)
-            let clickedRow = outlineView.clickedRow
-            if clickedRow >= 0, let item = outlineView.item(atRow: clickedRow) as? FileItem {
-                items.append(item)
+
+        case .icons, .windowsList:
+            guard let collectionView = collectionView else { return items }
+            let selectedIndexPaths = collectionView.selectionIndexPaths
+
+            if !selectedIndexPaths.isEmpty {
+                selectedIndexPaths.forEach { indexPath in
+                    if let item = collectionView.item(at: indexPath) as? FileIconItem,
+                       let fileItem = item.fileItem {
+                        items.append(fileItem)
+                    }
+                }
+            }
+
+        case .columns:
+            guard let browserView = browserView else { return items }
+            let selectedColumn = browserView.selectedColumn
+
+            if selectedColumn >= 0 {
+                let selectedRows = browserView.selectedRowIndexes(inColumn: selectedColumn)
+                selectedRows?.forEach { row in
+                    if let item = fileItemForColumn(selectedColumn),
+                       let children = item.children,
+                       row < children.count {
+                        items.append(children[row])
+                    }
+                }
             }
         }
 
@@ -886,6 +1069,56 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
         outlineView.reloadData()
         collectionView.reloadData()
         browserView.reloadColumn(browserView.lastColumn)
+    }
+
+    @objc private func contextMenuCopyTo(_ sender: Any) {
+        let items = getSelectedItems()
+        guard !items.isEmpty else { return }
+
+        // Show folder selection dialog
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose destination folder to copy \(items.count) item(s)"
+
+        if panel.runModal() == .OK, let destinationURL = panel.url {
+            let fileManager = FileManager.default
+            for item in items {
+                let destinationItemURL = destinationURL.appendingPathComponent(item.name)
+                do {
+                    try fileManager.copyItem(at: item.url, to: destinationItemURL)
+                } catch {
+                    showError("Failed to copy '\(item.name)': \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    @objc private func contextMenuMoveTo(_ sender: Any) {
+        let items = getSelectedItems()
+        guard !items.isEmpty else { return }
+
+        // Show folder selection dialog
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose destination folder to move \(items.count) item(s)"
+
+        if panel.runModal() == .OK, let destinationURL = panel.url {
+            let fileManager = FileManager.default
+            for item in items {
+                let destinationItemURL = destinationURL.appendingPathComponent(item.name)
+                do {
+                    try fileManager.moveItem(at: item.url, to: destinationItemURL)
+                } catch {
+                    showError("Failed to move '\(item.name)': \(error.localizedDescription)")
+                }
+            }
+            // Refresh after moving files
+            refreshCurrentDirectory()
+        }
     }
 
     // Helper method to check if a file is in the cut state
@@ -1021,6 +1254,21 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
         delegate?.fileBrowserDidRequestClosePane(self)
     }
 
+    @objc private func checkboxToggled(_ sender: NSButton) {
+        let row = sender.tag
+        guard row >= 0, row < outlineView.numberOfRows else { return }
+
+        if sender.state == .on {
+            // Add to selection
+            outlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: true)
+        } else {
+            // Remove from selection
+            var currentSelection = outlineView.selectedRowIndexes
+            currentSelection.remove(row)
+            outlineView.selectRowIndexes(currentSelection, byExtendingSelection: false)
+        }
+    }
+
     private func showError(_ message: String) {
         let alert = NSAlert()
         alert.messageText = "Error"
@@ -1030,7 +1278,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
         alert.runModal()
     }
     private func globalFolderColorDidChange() {
+        // Reload all views to apply the new global folder color
         outlineView.reloadData()
+        collectionView?.reloadData()
+        browserView?.reloadColumn(browserView?.lastColumn ?? 0)
     }
     
     private func updateStatusBar() {
@@ -1087,24 +1338,55 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
             imageView.image = fileItem.icon
             imageView.imageScaling = .scaleProportionallyDown
 
-
-
-            cellView.addSubview(imageView)
-            cellView.addSubview(textField)
+            // Check if Easy Select is enabled
+            let easySelectEnabled = UserDefaults.standard.bool(forKey: UserDefaults.Keys.enableEasySelect.rawValue)
 
             imageView.translatesAutoresizingMaskIntoConstraints = false
             textField.translatesAutoresizingMaskIntoConstraints = false
 
-            NSLayoutConstraint.activate([
-                imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                imageView.widthAnchor.constraint(equalToConstant: 16),
-                imageView.heightAnchor.constraint(equalToConstant: 16),
+            if easySelectEnabled {
+                // Add checkbox for Easy Select mode
+                let checkbox = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+                checkbox.translatesAutoresizingMaskIntoConstraints = false
+                checkbox.state = outlineView.selectedRowIndexes.contains(outlineView.row(forItem: item)) ? .on : .off
+                checkbox.tag = outlineView.row(forItem: item)
+                checkbox.target = self
+                checkbox.action = #selector(checkboxToggled(_:))
 
-                textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
-                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
-            ])
+                cellView.addSubview(checkbox)
+                cellView.addSubview(imageView)
+                cellView.addSubview(textField)
+
+                NSLayoutConstraint.activate([
+                    checkbox.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
+                    checkbox.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                    checkbox.widthAnchor.constraint(equalToConstant: 18),
+
+                    imageView.leadingAnchor.constraint(equalTo: checkbox.trailingAnchor, constant: 4),
+                    imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                    imageView.widthAnchor.constraint(equalToConstant: 16),
+                    imageView.heightAnchor.constraint(equalToConstant: 16),
+
+                    textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
+                    textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                    textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
+                ])
+            } else {
+                // Standard layout without checkbox
+                cellView.addSubview(imageView)
+                cellView.addSubview(textField)
+
+                NSLayoutConstraint.activate([
+                    imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
+                    imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                    imageView.widthAnchor.constraint(equalToConstant: 16),
+                    imageView.heightAnchor.constraint(equalToConstant: 16),
+
+                    textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
+                    textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                    textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
+                ])
+            }
 
             cellView.imageView = imageView
             cellView.textField = textField
@@ -1181,7 +1463,9 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
             textField.backgroundColor = .clear
             textField.isEditable = false
             textField.stringValue = fileItem.kind
-            textField.lineBreakMode = .byCharWrapping
+            textField.lineBreakMode = .byTruncatingTail
+            textField.cell?.truncatesLastVisibleLine = true
+            textField.maximumNumberOfLines = 1
 
             cellView.addSubview(textField)
             textField.translatesAutoresizingMaskIntoConstraints = false
@@ -1342,6 +1626,10 @@ extension FileBrowserViewController: ToolbarDelegate {
     func toolbarDidRequestSplitHorizontally() {
         delegate?.fileBrowserDidRequestSplit(self, orientation: .horizontal)
     }
+
+    func toolbarDidRequestClosePane() {
+        delegate?.fileBrowserDidRequestClosePane(self)
+    }
 }
 
 // MARK: - NSOutlineViewDataSource
@@ -1414,14 +1702,16 @@ extension FileBrowserViewController: NSCollectionViewDataSource {
         // This avoids NSCollectionView's complex instantiation which doesn't work well
         // with our custom loadView() implementation
         let item = FileIconItem(nibName: nil, bundle: nil)
-        
-        // Set the layout mode before loading the view
+
+        // Set the layout mode, zoom level, and checkbox visibility before loading the view
         item.isListMode = (currentViewMode == .windowsList)
-        
+        item.zoomLevel = zoomLevel
+        item.showCheckbox = UserDefaults.standard.bool(forKey: UserDefaults.Keys.enableEasySelect.rawValue)
+
         item.loadView() // Explicitly load the view
         item.viewDidLoad() // Explicitly call viewDidLoad to set up UI
         item.fileItem = children[indexPath.item]
-        
+
         print("Successfully created and configured FileIconItem for \(children[indexPath.item].name) in \(item.isListMode ? "list" : "icon") mode")
 
         return item
@@ -1477,17 +1767,64 @@ extension FileBrowserViewController: NSBrowserDelegate {
             print("BrowserDelegate: willDisplayCell guard failed")
             return
         }
-        
+
         let fileItem = children[row]
         cell.title = fileItem.name
         cell.isLeaf = !fileItem.isDirectory
-        
+
         if fileItem.isDirectory {
+            let icon = NSWorkspace.shared.icon(forFile: fileItem.url.path)
+
+            // Apply custom folder color if set
+            if let customColor = ColorManager.shared.getColor(for: fileItem.url) {
+                // Create a tinted version of the icon
+                let tintedIcon = icon.copy() as! NSImage
+                tintedIcon.lockFocus()
+                customColor.set()
+                let imageRect = NSRect(origin: .zero, size: tintedIcon.size)
+                imageRect.fill(using: .sourceAtop)
+                tintedIcon.unlockFocus()
+                cell.image = tintedIcon
+            } else {
+                cell.image = icon
+            }
+        } else {
             cell.image = NSWorkspace.shared.icon(forFile: fileItem.url.path)
         }
     }
     
     func browser(_ browser: NSBrowser, selectRow row: Int, inColumn column: Int) -> Bool {
+        print("BrowserDelegate: selectRow \(row) in column \(column)")
+
+        // Get the item for the current column
+        guard let item = fileItemForColumn(column),
+              let children = item.children,
+              row < children.count else {
+            print("BrowserDelegate: selectRow guard failed")
+            return true
+        }
+
+        let selectedItem = children[row]
+        print("BrowserDelegate: Selected item: \(selectedItem.name), isDirectory: \(selectedItem.isDirectory)")
+
+        // If this is a directory, load its children
+        if selectedItem.isDirectory {
+            // Load children if not already loaded
+            if selectedItem.children == nil || selectedItem.children?.isEmpty == true {
+                print("BrowserDelegate: Loading children for \(selectedItem.name)")
+                selectedItem.loadChildren(showsHiddenFiles: showsHiddenFiles) { [weak self] errorMessage in
+                    DispatchQueue.main.async {
+                        self?.showError(errorMessage)
+                    }
+                }
+                // Sort the children
+                if var childrenToSort = selectedItem.children {
+                    sortChildren(&childrenToSort)
+                    selectedItem.children = childrenToSort
+                }
+            }
+        }
+
         return true
     }
     

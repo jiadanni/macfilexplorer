@@ -88,6 +88,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         windowController?.pasteSelection()
     }
     
+    @IBAction func changeFolderColors(_ sender: Any?) {
+        windowController?.changeFolderColor()
+    }
+    
     // MARK: - View Menu Actions
     
     @IBAction func viewAsList(_ sender: Any?) {

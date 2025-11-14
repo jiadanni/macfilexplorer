@@ -1,5 +1,46 @@
 import Cocoa
 
+// Custom button with hover effect
+class HoverButton: NSButton {
+    private var trackingArea: NSTrackingArea?
+    private var isHovering = false
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+
+        if let trackingArea = trackingArea {
+            removeTrackingArea(trackingArea)
+        }
+
+        let options: NSTrackingArea.Options = [.mouseEnteredAndExited, .activeAlways]
+        trackingArea = NSTrackingArea(rect: bounds, options: options, owner: self, userInfo: nil)
+        addTrackingArea(trackingArea!)
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        super.mouseEntered(with: event)
+        isHovering = true
+        needsDisplay = true
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        isHovering = false
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        // Draw circular background on hover
+        if isHovering {
+            let circlePath = NSBezierPath(ovalIn: bounds.insetBy(dx: 2, dy: 2))
+            NSColor.controlAccentColor.withAlphaComponent(0.2).setFill()
+            circlePath.fill()
+        }
+
+        super.draw(dirtyRect)
+    }
+}
+
 protocol SidebarDelegate: AnyObject {
     func sidebarDidSelectLocation(_ url: URL)
 }
@@ -719,21 +760,80 @@ extension SidebarViewController: NSTableViewDelegate {
             textField.stringValue = item.name
         }
 
-        NSLayoutConstraint.activate([
-            imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-            imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-            imageView.widthAnchor.constraint(equalToConstant: 16),
-            imageView.heightAnchor.constraint(equalToConstant: 16),
+        // Add eject button for removable drives
+        var constraints: [NSLayoutConstraint] = []
+        if tableView == drivesTableView, let item = item, isRemovableDrive(url: item.url) {
+            let ejectButton = HoverButton()
+            ejectButton.translatesAutoresizingMaskIntoConstraints = false
+            ejectButton.bezelStyle = .texturedRounded
+            ejectButton.image = NSImage(systemSymbolName: "eject", accessibilityDescription: "Eject")
+            ejectButton.isBordered = false
+            ejectButton.target = self
+            ejectButton.action = #selector(ejectDrive(_:))
+            ejectButton.tag = row
+            cellView.addSubview(ejectButton)
 
-            textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
-            textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-            textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
-        ])
+            constraints = [
+                imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
+                imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                imageView.widthAnchor.constraint(equalToConstant: 16),
+                imageView.heightAnchor.constraint(equalToConstant: 16),
+
+                textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
+                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                textField.trailingAnchor.constraint(equalTo: ejectButton.leadingAnchor, constant: -4),
+
+                ejectButton.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4),
+                ejectButton.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                ejectButton.widthAnchor.constraint(equalToConstant: 16),
+                ejectButton.heightAnchor.constraint(equalToConstant: 16)
+            ]
+        } else {
+            constraints = [
+                imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
+                imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                imageView.widthAnchor.constraint(equalToConstant: 16),
+                imageView.heightAnchor.constraint(equalToConstant: 16),
+
+                textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
+                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+                textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
+            ]
+        }
+
+        NSLayoutConstraint.activate(constraints)
 
         cellView.imageView = imageView
         cellView.textField = textField
 
         return cellView
+    }
+
+    private func isRemovableDrive(url: URL) -> Bool {
+        // Check if the volume is removable or ejectable
+        do {
+            let resourceValues = try url.resourceValues(forKeys: [.volumeIsEjectableKey, .volumeIsRemovableKey])
+            return resourceValues.volumeIsEjectable == true || resourceValues.volumeIsRemovable == true
+        } catch {
+            return false
+        }
+    }
+
+    @objc private func ejectDrive(_ sender: NSButton) {
+        let row = sender.tag
+        guard row < driveItems.count else { return }
+        let driveItem = driveItems[row]
+
+        do {
+            try NSWorkspace.shared.unmountAndEjectDevice(at: driveItem.url)
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "Eject Failed"
+            alert.informativeText = "Could not eject \(driveItem.name): \(error.localizedDescription)"
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
     }
 
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
