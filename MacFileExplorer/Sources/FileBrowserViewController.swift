@@ -829,9 +829,37 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate {
 
     @objc private func contextMenuGetInfo(_ sender: Any) {
         let items = getSelectedItems()
-        items.forEach { item in
+        guard let item = items.first else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "File Information"
+        alert.informativeText = formatFileInfo(for: item)
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Show in Finder")
+
+        let response = alert.runModal()
+        if response == .alertSecondButtonReturn {
+            // Show in Finder was clicked
             NSWorkspace.shared.activateFileViewerSelecting([item.url])
         }
+    }
+
+    private func formatFileInfo(for item: FileItem) -> String {
+        var info = ""
+        info += "Name: \(item.name)\n"
+        info += "Kind: \(item.kind)\n"
+        info += "Size: \(item.sizeString)\n"
+        info += "Modified: \(item.formattedDate)\n"
+        info += "Created: \(item.formattedCreationDate)\n"
+        info += "Location: \(item.url.deletingLastPathComponent().path)\n"
+        if !item.permissions.isEmpty {
+            info += "Permissions: \(item.permissions)\n"
+        }
+        if !item.owner.isEmpty {
+            info += "Owner: \(item.owner)\n"
+        }
+        return info
     }
 
     @objc private func contextMenuCopy(_ sender: Any) {

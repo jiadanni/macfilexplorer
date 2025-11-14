@@ -6,6 +6,7 @@ extension UserDefaults {
         // General Settings
         case warnOnExtensionChange = "warnOnExtensionChange"
         case globalFolderColor = "globalFolderColor"
+        case enableEasySelect = "enableEasySelect"
 
         // Tabs Settings
         case restoreTabsOnReopen = "restoreTabsOnReopen"
@@ -39,7 +40,7 @@ extension UserDefaults {
         case showStatusBar = "showStatusBar"
 
         static var allCases: [Keys] {
-            return [.warnOnExtensionChange, .restoreTabsOnReopen, .showFavorites, .showRecents, .showLocations, .sidebarOrder, .openTerminalByDefault, .showContextMenuHotkeys, .hideOpenWith, .hideGetInfo, .hideCopy, .hideCut, .hidePaste, .hideRename, .hideMoveToTrash, .hideNewFolder, .hideChangeFolderColor, .hideShowInFinder, .expandSidebarToCurrentDirectory, .showStatusBar]
+            return [.warnOnExtensionChange, .enableEasySelect, .restoreTabsOnReopen, .showFavorites, .showRecents, .showLocations, .sidebarOrder, .openTerminalByDefault, .showContextMenuHotkeys, .hideOpenWith, .hideGetInfo, .hideCopy, .hideCut, .hidePaste, .hideRename, .hideMoveToTrash, .hideNewFolder, .hideChangeFolderColor, .hideShowInFinder, .expandSidebarToCurrentDirectory, .showStatusBar]
         }
     }
 }
@@ -148,6 +149,7 @@ class GeneralSettingsViewController: NSViewController {
         ])
 
         addFileExtensionSettings()
+        addSelectionSettings()
         addFolderAppearanceSettings()
     }
 
@@ -164,7 +166,27 @@ class GeneralSettingsViewController: NSViewController {
         descriptionLabel.textColor = .secondaryLabelColor
         stackView.addArrangedSubview(descriptionLabel)
     }
-    
+
+    private func addSelectionSettings() {
+        // Add spacing
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        stackView.addArrangedSubview(spacer)
+
+        let titleLabel = NSTextField(labelWithString: "File Selection:")
+        titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
+        stackView.addArrangedSubview(titleLabel)
+
+        addCheckbox(title: "Use checkboxes to select files (Easy Select)", key: .enableEasySelect, defaultValue: false)
+
+        // Add description
+        let descriptionLabel = NSTextField(labelWithString: "Show checkboxes next to files and folders for easier selection")
+        descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        descriptionLabel.textColor = .secondaryLabelColor
+        stackView.addArrangedSubview(descriptionLabel)
+    }
+
     private func addFolderAppearanceSettings() {
         // Add spacing
         let spacer = NSView()
