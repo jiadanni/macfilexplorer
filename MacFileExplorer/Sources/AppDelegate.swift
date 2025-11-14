@@ -3,19 +3,21 @@ import Cocoa
 @main
 class AppDelegate: NSObject, NSApplicationDelegate {
 
-    var windowController: MainWindowController!
+    var windowController: MainWindowController?
+    var settingsWindowController: SettingsWindowController?
 
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create and show the main window
-        windowController = MainWindowController()
+        let controller = MainWindowController()
+        windowController = controller
 
         // Load the window to trigger windowDidLoad
-        windowController.window?.makeKeyAndOrderFront(nil)
+        controller.window?.makeKeyAndOrderFront(nil)
 
         // Ensure it's visible
         NSApp.activate(ignoringOtherApps: true)
-        
+
         createEditMenu()
     }
 
@@ -74,10 +76,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         windowController?.toggleTerminal()
     }
 
-    @IBAction func showColorPicker(_ sender: Any?) {
-        windowController?.showBulkColorPicker()
-    }
-
     @IBAction func cutSelection(_ sender: Any?) {
         windowController?.cutSelection()
     }
@@ -97,7 +95,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @IBAction func viewAsDetails(_ sender: Any?) {
-        windowController?.setViewMode(.details)
+        // Details view has been removed - redirect to list view
+        windowController?.setViewMode(.list)
     }
     
     @IBAction func viewAsIcons(_ sender: Any?) {
@@ -122,5 +121,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @IBAction func splitHorizontally(_ sender: Any?) {
         windowController?.splitHorizontally()
+    }
+    
+    // MARK: - Settings
+    
+    @IBAction func showPreferences(_ sender: Any?) {
+        if settingsWindowController == nil {
+            settingsWindowController = SettingsWindowController()
+        }
+        settingsWindowController?.showWindow(sender)
+        settingsWindowController?.window?.makeKeyAndOrderFront(sender)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }

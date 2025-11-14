@@ -1,6 +1,13 @@
 import Cocoa
 
+protocol TabBarControllerDelegate: AnyObject {
+    func tabBarController(_ tabBarController: TabBarController, didUpdateSelection selectedCount: Int, totalSize: Int64)
+    func tabBarController(_ tabBarController: TabBarController, didUpdateDiskSpace diskSpace: String?)
+}
+
 class TabBarController: NSViewController, SplitPaneDelegate {
+
+    weak var delegate: TabBarControllerDelegate?
 
     private var tabView: NSTabView!
     private var tabs: [SplitPaneViewController] = []
@@ -33,7 +40,7 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         tabButtonsStackView = NSStackView()
         tabButtonsStackView.translatesAutoresizingMaskIntoConstraints = false
         tabButtonsStackView.orientation = .horizontal
-        tabButtonsStackView.spacing = 8
+        tabButtonsStackView.spacing = 0
         tabButtonsStackView.alignment = .centerY
         tabBarContainer.addSubview(tabButtonsStackView)
 
@@ -48,12 +55,12 @@ class TabBarController: NSViewController, SplitPaneDelegate {
             tabBarContainer.topAnchor.constraint(equalTo: view.topAnchor),
             tabBarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tabBarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tabBarContainer.heightAnchor.constraint(equalToConstant: 32),
+            tabBarContainer.heightAnchor.constraint(equalToConstant: 28),
 
-            tabButtonsStackView.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor, constant: 8),
-            tabButtonsStackView.trailingAnchor.constraint(lessThanOrEqualTo: tabBarContainer.trailingAnchor, constant: -8),
-            tabButtonsStackView.topAnchor.constraint(equalTo: tabBarContainer.topAnchor, constant: 4),
-            tabButtonsStackView.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor, constant: -4),
+            tabButtonsStackView.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor, constant: 4),
+            tabButtonsStackView.trailingAnchor.constraint(lessThanOrEqualTo: tabBarContainer.trailingAnchor, constant: -4),
+            tabButtonsStackView.topAnchor.constraint(equalTo: tabBarContainer.topAnchor),
+            tabButtonsStackView.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor, constant: -1),
 
             separator.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor),
             separator.trailingAnchor.constraint(equalTo: tabBarContainer.trailingAnchor),
@@ -73,35 +80,36 @@ class TabBarController: NSViewController, SplitPaneDelegate {
     private func createTabButton(title: String, index: Int) -> NSButton {
         let button = NSButton()
         button.title = title
-        button.bezelStyle = .rounded
-        button.setButtonType(.pushOnPushOff)
+        button.bezelStyle = .shadowlessSquare
+        button.isBordered = false
+        button.setButtonType(.momentaryChange)
         button.target = self
         button.action = #selector(tabButtonClicked(_:))
         button.tag = index
-        button.font = NSFont.systemFont(ofSize: 12)
+        button.font = NSFont.systemFont(ofSize: 13)
+        button.alignment = .center
 
         // Set minimum width for tabs
-        button.widthAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+        button.widthAnchor.constraint(greaterThanOrEqualToConstant: 120).isActive = true
 
-        // Style the button with custom appearance
+        // Full height tabs with distinct appearance
         button.wantsLayer = true
+        button.layer?.cornerRadius = 0 // No rounding for full height effect
 
         if index == currentTabIndex {
-            // Active tab - subtle highlight
-            button.state = .on
-            button.layer?.backgroundColor = NSColor.unemphasizedSelectedContentBackgroundColor.cgColor // More neutral highlight
-            button.layer?.borderColor = NSColor.separatorColor.cgColor // Subtle border
-            button.layer?.borderWidth = 1
-            button.layer?.cornerRadius = 6
-            button.contentTintColor = NSColor.labelColor // Standard text color
+            // Active tab - distinct darker background with full height
+            if #available(macOS 10.14, *) {
+                button.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.15).cgColor
+            } else {
+                button.layer?.backgroundColor = NSColor.selectedControlColor.withAlphaComponent(0.15).cgColor
+            }
+            button.contentTintColor = NSColor.labelColor
+            button.font = NSFont.systemFont(ofSize: 13, weight: .medium)
         } else {
-            // Inactive tab - subtle appearance
-            button.state = .off
-            button.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.5).cgColor
-            button.layer?.borderColor = NSColor.separatorColor.cgColor
-            button.layer?.borderWidth = 1
-            button.layer?.cornerRadius = 6
+            // Inactive tab - transparent with subtle text
+            button.layer?.backgroundColor = NSColor.clear.cgColor
             button.contentTintColor = NSColor.secondaryLabelColor
+            button.font = NSFont.systemFont(ofSize: 13)
         }
 
         return button
@@ -121,11 +129,6 @@ class TabBarController: NSViewController, SplitPaneDelegate {
             let button = createTabButton(title: tabItem.label, index: index)
             tabButtonsStackView.addArrangedSubview(button)
             tabButtons.append(button)
-
-            // Highlight current tab
-            if index == currentTabIndex {
-                button.state = .on
-            }
         }
 
         // Force visual update
@@ -154,6 +157,9 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         splitPane.delegate = self
         tabs.append(splitPane)
 
+        // Force the view to load
+        _ = splitPane.view
+
         let tabItem = NSTabViewItem(viewController: splitPane)
         tabItem.label = URL(fileURLWithPath: splitPane.currentPath).lastPathComponent // Will be updated when directory loads
         tabView.addTabViewItem(tabItem)
@@ -180,11 +186,6 @@ class TabBarController: NSViewController, SplitPaneDelegate {
     func getCurrentPath() -> String? {
         guard currentTabIndex < tabs.count else { return nil }
         return tabs[currentTabIndex].currentPath
-    }
-
-    func showBulkColorPicker() {
-        guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].showBulkColorPicker()
     }
 
     func cutSelection() {
@@ -278,6 +279,9 @@ extension TabBarController {
             }
         }
 
+        // Update window title to show current directory path
+        view.window?.title = path
+
         // Notify parent to update terminal
         if let splitVC = parent as? SplitViewController {
             splitVC.updateTerminalDirectory()
@@ -288,6 +292,14 @@ extension TabBarController {
         print("TabBarController: splitPaneOpenInNewTab - Received URL: \(url.path)")
         // Delegate to parent TabBarController to handle opening in new tab
         openInNewTab(url: url)
+    }
+
+    func splitPane(_ splitPane: SplitPaneViewController, didUpdateSelection selectedCount: Int, totalSize: Int64) {
+        delegate?.tabBarController(self, didUpdateSelection: selectedCount, totalSize: totalSize)
+    }
+    
+    func splitPane(_ splitPane: SplitPaneViewController, didUpdateDiskSpace diskSpace: String?) {
+        delegate?.tabBarController(self, didUpdateDiskSpace: diskSpace)
     }
 
     func toolbarDidRequestSplitVertically() {

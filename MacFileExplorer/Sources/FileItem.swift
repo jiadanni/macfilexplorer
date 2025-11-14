@@ -114,17 +114,18 @@ class FileItem: Hashable {
 
     // MARK: - Public Methods
 
-    func loadChildren(showsHiddenFiles: Bool = false) {
-        guard isDirectory else { return }
+    @discardableResult
+    func loadChildren(showsHiddenFiles: Bool = false, errorHandler: ((String) -> Void)? = nil) -> Bool {
+        guard isDirectory else { return false }
 
         let fileManager = FileManager.default
-        
+
         // Debug logging for Google Drive
         if url.path.contains("Google Drive") {
             print("📂 loadChildren called for: \(url.path)")
             print("   showsHiddenFiles: \(showsHiddenFiles)")
         }
-        
+
         do {
             var options: FileManager.DirectoryEnumerationOptions = []
             if !showsHiddenFiles {
@@ -137,7 +138,7 @@ class FileItem: Hashable {
                 includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey, .isReadableKey],
                 options: options
             )
-            
+
             if url.path.contains("Google Drive") {
                 print("   ✅ Got \(urls.count) items from contentsOfDirectory")
             }
@@ -151,10 +152,11 @@ class FileItem: Hashable {
                     child.children = []
                 }
             }
-            
+
             if url.path.contains("Google Drive") {
                 print("   Final children count: \(children?.count ?? 0)")
             }
+            return true
         } catch let error as NSError {
             // Log the error with more detail for debugging
             print("❌ Error loading children for \(url.path):")
@@ -162,7 +164,7 @@ class FileItem: Hashable {
             print("  Error domain: \(error.domain)")
             print("  Error description: \(error.localizedDescription)")
             print("  User info: \(error.userInfo)")
-            
+
             // For Google Drive and other cloud storage, try alternative approach
             if error.domain == NSCocoaErrorDomain && (error.code == 257 || error.code == 260) {
                 print("  🔄 Trying enumerator fallback...")
@@ -181,20 +183,34 @@ class FileItem: Hashable {
                     print("  ✅ Enumerator found \(foundURLs.count) items")
                     children = foundURLs.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
                         .map { FileItem(url: $0) }
-                    
+
                     children?.forEach { child in
                         if child.isDirectory && child.children == nil {
                             child.children = []
                         }
                     }
-                    return
+                    return true
                 }
             }
-            
+
+            // Notify caller of the error
+            let userMessage: String
+            if error.code == 257 {
+                userMessage = "Access denied to '\(name)'. You may not have permission to view this folder."
+            } else if error.code == 260 {
+                userMessage = "The folder '\(name)' could not be found or is unavailable."
+            } else {
+                userMessage = "Unable to open '\(name)': \(error.localizedDescription)"
+            }
+            errorHandler?(userMessage)
+
             children = []
+            return false
         } catch {
             print("❌ Unexpected error loading children for \(url.path): \(error)")
+            errorHandler?("An unexpected error occurred while opening '\(name)'.")
             children = []
+            return false
         }
     }
 
@@ -204,7 +220,12 @@ class FileItem: Hashable {
         return NSWorkspace.shared.icon(forFile: url.path)
     }
 
-    var formattedSize: String {
+    var isImage: Bool {
+        let imageExtensions = ["png", "jpg", "jpeg", "gif", "bmp", "tiff", "heic"]
+        return imageExtensions.contains(url.pathExtension.lowercased())
+    }
+
+    var sizeString: String {
         guard !isDirectory else { return "--" }
         return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }

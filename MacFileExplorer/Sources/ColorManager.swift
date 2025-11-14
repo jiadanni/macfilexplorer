@@ -6,7 +6,11 @@ class ColorManager {
     private let userDefaults = UserDefaults.standard
     private let colorKey = "GlobalFolderColors"
 
-    private init() {}
+    private init() {
+        NotificationCenter.default.addObserver(forName: .globalFolderColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.globalFolderColorChanged()
+        }
+    }
 
     // MARK: - Public Methods
 
@@ -19,6 +23,11 @@ class ColorManager {
 
     /// Get color for a folder by its name (not path)
     func getColor(forFolderName name: String) -> NSColor? {
+        // Prioritize global folder color if set
+        if let globalColor = getGlobalFolderColor() {
+            return globalColor
+        }
+        
         let colors = loadColors()
         guard let hexString = colors[name] else { return nil }
         return NSColor(hex: hexString)
@@ -26,8 +35,22 @@ class ColorManager {
 
     /// Get color for a folder by its URL (uses folder name)
     func getColor(for url: URL) -> NSColor? {
+        // Prioritize global folder color if set
+        if let globalColor = getGlobalFolderColor() {
+            return globalColor
+        }
+        
         let folderName = url.lastPathComponent
         return getColor(forFolderName: folderName)
+    }
+    
+    /// Get the globally set folder color from UserDefaults
+    func getGlobalFolderColor() -> NSColor? {
+        if let colorData = userDefaults.data(forKey: UserDefaults.Keys.globalFolderColor.rawValue),
+           let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: colorData) {
+            return color
+        }
+        return nil
     }
 
     /// Remove color assignment for folders with this name
@@ -61,6 +84,13 @@ class ColorManager {
         if let data = try? JSONEncoder().encode(colors) {
             userDefaults.set(data, forKey: colorKey)
         }
+    }
+    
+    private func globalFolderColorChanged() {
+        // This method is called when the global folder color changes.
+        // It doesn't need to do anything here, as FileBrowserViewController will observe this notification
+        // and reload its data to reflect the change.
+        print("Global folder color changed notification received by ColorManager.")
     }
 }
 

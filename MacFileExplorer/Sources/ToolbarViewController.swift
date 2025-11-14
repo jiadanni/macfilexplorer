@@ -2,10 +2,9 @@ import Cocoa
 
 enum ViewMode: String, CaseIterable {
     case list = "List"
-    case details = "Details"
     case icons = "Icons"
     case columns = "Columns"
-    case windowsList = "Windows List" // This will be more complex to implement
+    case windowsList = "List (Win)"
 }
 
 protocol ToolbarDelegate: AnyObject {

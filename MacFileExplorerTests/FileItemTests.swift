@@ -55,7 +55,7 @@ class FileItemTests: XCTestCase {
     
     func testFileItemPath() throws {
         let fileItem = FileItem(url: tempFileURL)
-        XCTAssertEqual(fileItem.path, tempFileURL.path, "Path should match URL path")
+        XCTAssertEqual(fileItem.url.path, tempFileURL.path, "Path should match URL path")
     }
     
     func testDirectoryChildren() throws {
@@ -84,7 +84,7 @@ class FileItemTests: XCTestCase {
     
     func testModificationDate() throws {
         let fileItem = FileItem(url: tempFileURL)
-        XCTAssertNotNil(fileItem.dateModified, "File should have a modification date")
+        XCTAssertNotNil(fileItem.modificationDate, "File should have a modification date")
     }
     
     func testHiddenFileDetection() throws {
@@ -99,7 +99,6 @@ class FileItemTests: XCTestCase {
     func testFileType() throws {
         let fileItem = FileItem(url: tempFileURL)
         XCTAssertNotNil(fileItem.fileType, "File should have a type")
-        XCTAssertTrue(fileItem.fileType.contains("txt") || fileItem.fileType.lowercased().contains("text"), 
-                      "Text file type should contain 'txt' or 'text'")
+        XCTAssertEqual(fileItem.fileType, "TXT", "File type should be TXT")
     }
 }

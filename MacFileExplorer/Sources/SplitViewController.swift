@@ -1,6 +1,13 @@
 import Cocoa
 
-class SplitViewController: NSSplitViewController, SidebarDelegate {
+protocol SplitViewControllerDelegate: AnyObject {
+    func splitViewController(_ splitViewController: SplitViewController, didUpdateSelection selectedCount: Int, totalSize: Int64)
+    func splitViewController(_ splitViewController: SplitViewController, didUpdateDiskSpace diskSpace: String?)
+}
+
+class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControllerDelegate {
+
+    weak var delegate: SplitViewControllerDelegate?
 
     private var sidebarViewController: SidebarViewController?
     private var contentSplitViewController: NSSplitViewController?
@@ -26,7 +33,6 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
         sidebarViewController?.delegate = self
         let sidebarItem = NSSplitViewItem(viewController: sidebarViewController!)
         sidebarItem.minimumThickness = 180
-        sidebarItem.maximumThickness = 300
         sidebarItem.canCollapse = false
         addSplitViewItem(sidebarItem)
 
@@ -37,6 +43,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
 
         // Create tab bar controller for file browsing
         tabBarController = TabBarController()
+        tabBarController?.delegate = self // Set self as the delegate
         let tabBarItem = NSSplitViewItem(viewController: tabBarController!)
         tabBarItem.minimumThickness = 300
         // Don't set maximumThickness - let it grow automatically
@@ -95,10 +102,6 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
         }
     }
 
-    func showBulkColorPicker() {
-        tabBarController?.showBulkColorPicker()
-    }
-
     func cutSelection() {
         tabBarController?.cutSelection()
     }
@@ -149,5 +152,16 @@ class SplitViewController: NSSplitViewController, SidebarDelegate {
     func sidebarDidSelectLocation(_ url: URL) {
         print("SplitViewController: sidebarDidSelectLocation - Received URL: \(url.path)")
         tabBarController?.navigateToLocation(url)
+        sidebarViewController?.expandToCurrentDirectory(url: url)
+    }
+    
+    // MARK: - TabBarControllerDelegate
+    
+    func tabBarController(_ tabBarController: TabBarController, didUpdateSelection selectedCount: Int, totalSize: Int64) {
+        delegate?.splitViewController(self, didUpdateSelection: selectedCount, totalSize: totalSize)
+    }
+    
+    func tabBarController(_ tabBarController: TabBarController, didUpdateDiskSpace diskSpace: String?) {
+        delegate?.splitViewController(self, didUpdateDiskSpace: diskSpace)
     }
 }

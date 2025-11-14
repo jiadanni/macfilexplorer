@@ -25,8 +25,7 @@ class SidebarViewController: NSViewController {
     private var folderExplorerScrollView: NSScrollView!
 
     // Main stack view to hold sections
-    private var stackView: NSStackView!
-
+    
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 600))
         setupUI()
@@ -37,50 +36,86 @@ class SidebarViewController: NSViewController {
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
 
-        // Use a main stack view to arrange sections vertically
-        stackView = NSStackView()
-        stackView.orientation = .vertical
-        stackView.alignment = .leading // Align items to the leading edge
-        stackView.spacing = 0 // No spacing between sections, separators will provide it
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(stackView)
+        // Create the top-level split view
+        let mainSplitView = NSSplitView()
+        mainSplitView.isVertical = false
+        mainSplitView.dividerStyle = .thin
+        mainSplitView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(mainSplitView)
 
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: view.topAnchor),
-            stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            stackView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            stackView.widthAnchor.constraint(equalTo: view.widthAnchor) // Ensure stack view fills width
+            mainSplitView.topAnchor.constraint(equalTo: view.topAnchor),
+            mainSplitView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            mainSplitView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            mainSplitView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
 
+        // Create the nested split view for the bottom sections
+        let bottomSplitView = NSSplitView()
+        bottomSplitView.isVertical = false
+        bottomSplitView.dividerStyle = .thin
+
         // Favorites section
+        let favoritesContainer = NSView()
         setupFavoritesSection()
-        stackView.addArrangedSubview(favoritesHeaderView)
-        stackView.addArrangedSubview(favoritesTableView.enclosingScrollView!) // Add the scroll view
+        guard let favoritesScrollView = favoritesTableView.enclosingScrollView else {
+            print("Error: favoritesTableView has no enclosing scroll view")
+            return
+        }
+        let favoritesStack = NSStackView(views: [favoritesHeaderView, favoritesScrollView])
+        favoritesStack.orientation = .vertical
+        favoritesStack.spacing = 0
+        favoritesStack.translatesAutoresizingMaskIntoConstraints = false
+        favoritesContainer.addSubview(favoritesStack)
+        NSLayoutConstraint.activate([
+            favoritesStack.topAnchor.constraint(equalTo: favoritesContainer.topAnchor),
+            favoritesStack.leadingAnchor.constraint(equalTo: favoritesContainer.leadingAnchor),
+            favoritesStack.trailingAnchor.constraint(equalTo: favoritesContainer.trailingAnchor),
+            favoritesStack.bottomAnchor.constraint(equalTo: favoritesContainer.bottomAnchor),
+        ])
+        mainSplitView.addArrangedSubview(favoritesContainer)
 
-        // Separator
-        let separator1 = NSBox()
-        separator1.boxType = .separator
-        separator1.translatesAutoresizingMaskIntoConstraints = false
-        stackView.addArrangedSubview(separator1)
-        separator1.widthAnchor.constraint(equalTo: stackView.widthAnchor).isActive = true
-
-        // Locations section (formerly Drives)
-        setupLocationsSection() // Renamed method
-        stackView.addArrangedSubview(drivesHeaderView)
-        stackView.addArrangedSubview(drivesTableView.enclosingScrollView!) // Add the scroll view
-
-        // Separator
-        let separator2 = NSBox()
-        separator2.boxType = .separator
-        separator2.translatesAutoresizingMaskIntoConstraints = false
-        stackView.addArrangedSubview(separator2)
-        separator2.widthAnchor.constraint(equalTo: stackView.widthAnchor).isActive = true
+        // Locations section
+        let locationsContainer = NSView()
+        setupLocationsSection()
+        guard let drivesScrollView = drivesTableView.enclosingScrollView else {
+            print("Error: drivesTableView has no enclosing scroll view")
+            return
+        }
+        let locationsStack = NSStackView(views: [drivesHeaderView, drivesScrollView])
+        locationsStack.orientation = .vertical
+        locationsStack.spacing = 0
+        locationsStack.translatesAutoresizingMaskIntoConstraints = false
+        locationsContainer.addSubview(locationsStack)
+        NSLayoutConstraint.activate([
+            locationsStack.topAnchor.constraint(equalTo: locationsContainer.topAnchor),
+            locationsStack.leadingAnchor.constraint(equalTo: locationsContainer.leadingAnchor),
+            locationsStack.trailingAnchor.constraint(equalTo: locationsContainer.trailingAnchor),
+            locationsStack.bottomAnchor.constraint(equalTo: locationsContainer.bottomAnchor),
+        ])
+        bottomSplitView.addArrangedSubview(locationsContainer)
 
         // Folder Explorer section
+        let folderExplorerContainer = NSView()
         setupFolderExplorerSection()
-        stackView.addArrangedSubview(folderExplorerHeaderView)
-        stackView.addArrangedSubview(folderExplorerOutlineView.enclosingScrollView!) // Add the scroll view
+        guard let folderScrollView = folderExplorerOutlineView.enclosingScrollView else {
+            print("Error: folderExplorerOutlineView has no enclosing scroll view")
+            return
+        }
+        let folderExplorerStack = NSStackView(views: [folderExplorerHeaderView, folderScrollView])
+        folderExplorerStack.orientation = .vertical
+        folderExplorerStack.spacing = 0
+        folderExplorerStack.translatesAutoresizingMaskIntoConstraints = false
+        folderExplorerContainer.addSubview(folderExplorerStack)
+        NSLayoutConstraint.activate([
+            folderExplorerStack.topAnchor.constraint(equalTo: folderExplorerContainer.topAnchor),
+            folderExplorerStack.leadingAnchor.constraint(equalTo: folderExplorerContainer.leadingAnchor),
+            folderExplorerStack.trailingAnchor.constraint(equalTo: folderExplorerContainer.trailingAnchor),
+            folderExplorerStack.bottomAnchor.constraint(equalTo: folderExplorerContainer.bottomAnchor),
+        ])
+        bottomSplitView.addArrangedSubview(folderExplorerContainer)
+
+        mainSplitView.addArrangedSubview(bottomSplitView)
     }
 
     private func setupFavoritesSection() {
@@ -100,6 +135,10 @@ class SidebarViewController: NSViewController {
         favoritesTableView.action = #selector(tableViewClicked(_:))
         favoritesTableView.menu = createContextMenu()
         favoritesTableView.menu?.delegate = self
+        
+        // Enable drag and drop for reordering
+        favoritesTableView.registerForDraggedTypes([.string])
+        favoritesTableView.setDraggingSourceOperationMask(.move, forLocal: true)
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("FavoritesColumn"))
         column.width = 180
@@ -400,6 +439,29 @@ class SidebarViewController: NSViewController {
         }
     }
 
+    @objc private func contextMenuEject(_ sender: Any) {
+        guard let menuItem = sender as? NSMenuItem,
+              let menu = menuItem.menu,
+              let item = getClickedItem(from: menu) else { return }
+
+        // Attempt to unmount the volume
+        do {
+            try NSWorkspace.shared.unmountAndEjectDevice(at: item.url)
+            // Refresh the drives list after successful ejection
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.loadSidebarItems()
+            }
+        } catch {
+            // Show error alert
+            let alert = NSAlert()
+            alert.messageText = "Eject Failed"
+            alert.informativeText = "Could not eject '\(item.name)': \(error.localizedDescription)"
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+    }
+
     private func saveFavorites() {
         let favoritePaths = favoriteItems.map { $0.url.path }
         UserDefaults.standard.set(favoritePaths, forKey: "SidebarFavorites")
@@ -419,6 +481,43 @@ class SidebarViewController: NSViewController {
             // Only add if not already in favorites
             if !favoriteItems.contains(where: { $0.url == url }) {
                 favoriteItems.append(SidebarItem(name: name, url: url, icon: icon))
+            }
+        }
+    }
+    
+    // MARK: - Auto-expand Folder Explorer
+    
+    func expandToCurrentDirectory(url: URL) {
+        guard UserDefaults.standard.bool(forKey: UserDefaults.Keys.expandSidebarToCurrentDirectory.rawValue) else { return }
+        
+        // Find the path components from the root to the target URL
+        var pathComponents: [URL] = []
+        var currentURL = url
+        while currentURL.path != "/" && currentURL.path != folderExplorerRootItem.url.path {
+            pathComponents.insert(currentURL, at: 0)
+            currentURL = currentURL.deletingLastPathComponent()
+        }
+        
+        // Start expanding from the root
+        var currentItem: FileItem? = folderExplorerRootItem
+        for componentURL in pathComponents {
+            if let children = currentItem?.children {
+                for child in children {
+                    if child.url == componentURL {
+                        folderExplorerOutlineView.expandItem(currentItem)
+                        currentItem = child
+                        break
+                    }
+                }
+            }
+        }
+        
+        // Select the final item
+        if let finalItem = currentItem {
+            let row = folderExplorerOutlineView.row(forItem: finalItem)
+            if row >= 0 {
+                folderExplorerOutlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+                folderExplorerOutlineView.scrollRowToVisible(row)
             }
         }
     }
@@ -500,6 +599,9 @@ extension SidebarViewController: NSMenuDelegate {
         if let removeItem = menu.item(withTitle: "Remove from Favorites") {
             menu.removeItem(removeItem)
         }
+        if let ejectItem = menu.item(withTitle: "Eject") {
+            menu.removeItem(ejectItem)
+        }
 
         // Check if item is in favorites and add the correct menu item
         let isInFavorites = favoriteItems.contains(where: { $0.url == selectedItem.url })
@@ -507,6 +609,21 @@ extension SidebarViewController: NSMenuDelegate {
             menu.addItem(withTitle: "Remove from Favorites", action: #selector(contextMenuRemoveFromFavorites(_:)), keyEquivalent: "")
         } else {
             menu.addItem(withTitle: "Add to Favorites", action: #selector(contextMenuAddToFavorites(_:)), keyEquivalent: "")
+        }
+
+        // Add eject option for volumes in the Locations section
+        if tv == drivesTableView {
+            // Check if the volume is ejectable
+            do {
+                let resourceValues = try selectedItem.url.resourceValues(forKeys: [.volumeIsEjectableKey, .volumeIsRemovableKey])
+                if let isEjectable = resourceValues.volumeIsEjectable, isEjectable {
+                    menu.addItem(NSMenuItem.separator())
+                    menu.addItem(withTitle: "Eject", action: #selector(contextMenuEject(_:)), keyEquivalent: "")
+                }
+            } catch {
+                // If we can't determine if it's ejectable, don't show the eject option
+                print("Error checking if volume is ejectable: \(error)")
+            }
         }
     }
 }
@@ -521,6 +638,51 @@ extension SidebarViewController: NSTableViewDataSource {
             return driveItems.count
         }
         return 0
+    }
+    
+    // MARK: - Drag and Drop
+    
+    func tableView(_ tableView: NSTableView, writeRowsWith rowIndexes: IndexSet, to pboard: NSPasteboard) -> Bool {
+        if tableView == favoritesTableView {
+            let data = try? NSKeyedArchiver.archivedData(withRootObject: rowIndexes, requiringSecureCoding: false)
+            pboard.declareTypes([.string], owner: self)
+            pboard.setData(data, forType: .string)
+            return true
+        }
+        return false
+    }
+    
+    func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int, proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation {
+        if tableView == favoritesTableView && dropOperation == .above {
+            return .move
+        }
+        return []
+    }
+    
+    func tableView(_ tableView: NSTableView, acceptDrop info: NSDraggingInfo, row: Int, dropOperation: NSTableView.DropOperation) -> Bool {
+        if tableView == favoritesTableView, dropOperation == .above {
+            guard let data = info.draggingPasteboard.data(forType: .string),
+                  let rowIndexes = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [NSIndexSet.self], from: data) as? IndexSet else {
+                return false
+            }
+            
+            let draggedRow = rowIndexes.first!
+            
+            // Perform the reordering
+            let item = favoriteItems[draggedRow]
+            favoriteItems.remove(at: draggedRow)
+            
+            var insertionRow = row
+            if draggedRow < insertionRow {
+                insertionRow -= 1
+            }
+            favoriteItems.insert(item, at: insertionRow)
+            
+            tableView.reloadData()
+            saveFavorites() // Persist the new order
+            return true
+        }
+        return false
     }
 }
 

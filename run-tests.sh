@@ -15,6 +15,9 @@ echo "Creating temporary test environment in: $TEMP_DIR"
 cp -r MacFileExplorer/Sources "$TEMP_DIR/"
 cp -r MacFileExplorerTests "$TEMP_DIR/"
 
+# Remove AppDelegate.swift from the library build (it has @main which conflicts with test runner)
+rm "$TEMP_DIR/Sources/AppDelegate.swift"
+
 cd "$TEMP_DIR"
 
 # Create Package.swift

@@ -17,11 +17,14 @@ class TerminalViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         currentDirectory = FileManager.default.homeDirectoryForCurrentUser.path
-        displayPrompt()
     }
 
     override func viewDidAppear() {
         super.viewDidAppear()
+        // Display prompt after view is fully laid out
+        if textView.string.isEmpty || !textView.string.contains("$") {
+            displayPrompt()
+        }
         focusInput()
         inputField.becomeFirstResponder()
     }
