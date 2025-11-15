@@ -12,8 +12,21 @@ class FileItem: Hashable {
     private(set) var kind: String = ""
     private(set) var permissions: String = ""
     private(set) var owner: String = ""
+    private(set) var tags: [String] = []
 
     var isHidden: Bool = false
+
+    // Display name with or without extension based on user preference
+    var displayName: String {
+        let showExtensions = UserDefaults.standard.object(forKey: UserDefaults.Keys.showFileExtensions.rawValue) as? Bool ?? true
+
+        if showExtensions || isDirectory {
+            return name
+        } else {
+            // Hide extension for files
+            return (name as NSString).deletingPathExtension
+        }
+    }
 
     init(url: URL) {
         self.url = url
@@ -26,7 +39,7 @@ class FileItem: Hashable {
         // For cloud storage (like Google Drive), also check resource values and symlink targets
         var detectedAsDirectory = isDir.boolValue
         
-        if let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .isPackageKey, .contentTypeKey]) {
+        if let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .isPackageKey, .contentTypeKey, .tagNamesKey]) {
             // If content type is public.folder, it's a directory
             if let contentType = resourceValues.contentType, contentType.conforms(to: .folder) {
                 detectedAsDirectory = true
@@ -53,6 +66,9 @@ class FileItem: Hashable {
                 if !detectedAsDirectory {
                     detectedAsDirectory = false
                 }
+            }
+            if let tagNames = resourceValues.tagNames {
+                self.tags = tagNames
             }
         }
         
@@ -115,7 +131,7 @@ class FileItem: Hashable {
     // MARK: - Public Methods
 
     @discardableResult
-    func loadChildren(showsHiddenFiles: Bool = false, errorHandler: ((String) -> Void)? = nil) -> Bool {
+    func loadChildren(showsHiddenFiles: Bool = false, recursive: Bool = false, errorHandler: ((String) -> Void)? = nil) -> Bool {
         guard isDirectory else { return false }
 
         let fileManager = FileManager.default
@@ -131,6 +147,17 @@ class FileItem: Hashable {
             if !showsHiddenFiles {
                 options.insert(.skipsHiddenFiles)
             }
+
+            if recursive {
+                let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey, .isReadableKey], options: options)
+                var urls: [URL] = []
+                while let fileURL = enumerator?.nextObject() as? URL {
+                    urls.append(fileURL)
+                }
+                children = urls.map { FileItem(url: $0) }
+                return true
+            }
+
 
             // Try to get contents - for cloud storage like Google Drive, this might need special handling
             let urls = try fileManager.contentsOfDirectory(

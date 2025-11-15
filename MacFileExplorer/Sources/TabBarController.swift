@@ -5,7 +5,7 @@ protocol TabBarControllerDelegate: AnyObject {
     func tabBarController(_ tabBarController: TabBarController, didUpdateDiskSpace diskSpace: String?)
 }
 
-class TabBarController: NSViewController, SplitPaneDelegate {
+class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
 
     weak var delegate: TabBarControllerDelegate?
 
@@ -19,6 +19,15 @@ class TabBarController: NSViewController, SplitPaneDelegate {
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
         setupUI()
+
+        // Listen for accent color changes
+        NotificationCenter.default.addObserver(forName: .accentColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.updateTabButtons()
+        }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: .accentColorDidChangeNotification, object: nil)
     }
 
     private func setupUI() {
@@ -99,7 +108,7 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         if index == currentTabIndex {
             // Active tab - distinct darker background with full height
             if #available(macOS 10.14, *) {
-                button.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.15).cgColor
+                button.layer?.backgroundColor = NSColor.customAccentColor.withAlphaComponent(0.15).cgColor
             } else {
                 button.layer?.backgroundColor = NSColor.selectedControlColor.withAlphaComponent(0.15).cgColor
             }
@@ -202,12 +211,7 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].pasteSelection()
     }
-    
-    func changeFolderColor() {
-        guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].changeFolderColor()
-    }
-    
+
     func setViewMode(_ viewMode: ViewMode) {
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].setViewMode(viewMode)
@@ -217,12 +221,22 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].toggleHiddenFiles()
     }
-    
+
+    func isShowingHiddenFiles() -> Bool {
+        guard currentTabIndex < tabs.count else { return false }
+        return tabs[currentTabIndex].isShowingHiddenFiles()
+    }
+
+    func togglePreviewPane() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].togglePreviewPane()
+    }
+
     func splitVertically() {
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].splitVertically()
     }
-    
+
     func splitHorizontally() {
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].splitHorizontally()
@@ -238,6 +252,16 @@ class TabBarController: NSViewController, SplitPaneDelegate {
         // Forward zoom level to the current tab/pane
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].updateZoomLevel(to: level)
+    }
+
+    func goBack() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].goBack()
+    }
+
+    func goForward() {
+        guard currentTabIndex < tabs.count else { return }
+        tabs[currentTabIndex].goForward()
     }
 
     public func openInNewTab(url: URL) {
@@ -265,7 +289,7 @@ class TabBarController: NSViewController, SplitPaneDelegate {
     }
 }
 
-// MARK: - SplitPaneDelegate
+// MARK: - SplitPaneViewControllerDelegate
 
 extension TabBarController {
     func splitPaneDirectoryDidChange(to path: String) {
@@ -287,9 +311,10 @@ extension TabBarController {
         // Update window title to show current directory path
         view.window?.title = path
 
-        // Notify parent to update terminal
+        // Notify parent to update terminal and sidebar
         if let splitVC = parent as? SplitViewController {
             splitVC.updateTerminalDirectory()
+            splitVC.updateSidebarSelection(url: url)
         }
     }
 
@@ -315,5 +340,11 @@ extension TabBarController {
     func toolbarDidRequestSplitHorizontally() {
         guard currentTabIndex < tabs.count else { return }
         tabs[currentTabIndex].splitHorizontally()
+    }
+    
+    func splitPaneDidRequestAddToFavorites(item: FileItem) {
+        if let splitVC = parent as? SplitViewController {
+            splitVC.sidebarViewController?.addFavorite(item: item)
+        }
     }
 }

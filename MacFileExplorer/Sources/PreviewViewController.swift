@@ -121,21 +121,3 @@ class PreviewViewController: NSViewController {
         }
     }
 }
-
-extension FileItem {
-    var isImage: Bool {
-        let imageExtensions = ["png", "jpg", "jpeg", "gif", "bmp", "tiff", "heic"]
-        return imageExtensions.contains(url.pathExtension.lowercased())
-    }
-    
-    var sizeString: String {
-        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
-              let fileSize = attributes[.fileSize] as? UInt64 else {
-            return "N/A"
-        }
-        
-        let byteCountFormatter = ByteCountFormatter()
-        byteCountFormatter.countStyle = .file
-        return byteCountFormatter.string(fromByteCount: Int64(fileSize))
-    }
-}

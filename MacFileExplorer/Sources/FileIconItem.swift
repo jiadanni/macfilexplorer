@@ -211,7 +211,7 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
     private func updateView() {
         guard let fileItem = fileItem else { return }
         myImageView?.image = fileItem.icon
-        myTextField?.stringValue = fileItem.name
+        myTextField?.stringValue = fileItem.displayName
 
         // Apply custom folder color if set
         if fileItem.isDirectory, let customColor = ColorManager.shared.getColor(for: fileItem.url) {

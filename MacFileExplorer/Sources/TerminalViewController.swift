@@ -365,7 +365,27 @@ class TerminalViewController: NSViewController {
         // Use the system's default shell
         let shellPath = getShellPath()
         task.executableURL = URL(fileURLWithPath: shellPath)
-        task.arguments = ["-c", command]
+
+        // Use login shell with -l flag to load full environment
+        task.arguments = ["-l", "-c", command]
+
+        // Set up environment variables
+        var environment = ProcessInfo.processInfo.environment
+        environment["HOME"] = FileManager.default.homeDirectoryForCurrentUser.path
+        environment["USER"] = NSUserName()
+        environment["PWD"] = currentDirectory
+
+        // Ensure PATH includes common locations
+        var pathComponents = (environment["PATH"] ?? "").split(separator: ":").map(String.init)
+        let commonPaths = ["/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin", "/opt/homebrew/bin"]
+        for commonPath in commonPaths {
+            if !pathComponents.contains(commonPath) {
+                pathComponents.append(commonPath)
+            }
+        }
+        environment["PATH"] = pathComponents.joined(separator: ":")
+
+        task.environment = environment
 
         let outputPipe = Pipe()
         let errorPipe = Pipe()

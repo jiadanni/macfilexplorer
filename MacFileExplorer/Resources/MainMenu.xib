@@ -162,10 +162,10 @@
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="VML-Sep-2"/>
-                            <menuItem title="Change Folder Colors..." keyEquivalent="C" id="VML-CF-Col">
-                                <modifierMask key="keyEquivalentModifierMask" shift="YES" command="YES"/>
+                            <menuItem title="Show Preview Pane" keyEquivalent="p" id="VML-PP-Shw">
+                                <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 <connections>
-                                    <action selector="changeFolderColors:" target="Voe-Tx-rLC" id="VML-CF-Act"/>
+                                    <action selector="togglePreviewPane:" target="Voe-Tx-rLC" id="VML-PP-Act"/>
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="VML-Sep-3"/>

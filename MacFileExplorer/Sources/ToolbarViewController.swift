@@ -19,6 +19,8 @@ protocol ToolbarDelegate: AnyObject {
     func toolbarDidRequestSplitVertically()
     func toolbarDidRequestSplitHorizontally()
     func toolbarDidRequestClosePane()
+    func toolbarDidSearchTextChange(_ searchText: String)
+    func toolbarDidTogglePreviewPane()
 }
 
 class ToolbarViewController: NSViewController {
@@ -30,12 +32,17 @@ class ToolbarViewController: NSViewController {
     private var breadcrumbStackView: NSStackView!
     private var breadcrumbScrollView: NSScrollView!
     private var sortButton: NSPopUpButton!
-    private var viewModeButton: NSPopUpButton!
+    private var listModeButton: NSButton!
+    private var iconsModeButton: NSButton!
+    private var columnsModeButton: NSButton!
+    private var windowsListModeButton: NSButton!
     private var hiddenFilesButton: NSButton!
     private var splitVerticalButton: NSButton!
     private var splitHorizontalButton: NSButton!
     private var newFolderButton: NSButton!
     private var closePaneButton: NSButton!
+    private var searchField: NSSearchField!
+    private var previewPaneButton: NSButton!
 
     private var currentURL: URL?
     private var canGoBack: Bool = false
@@ -58,6 +65,7 @@ class ToolbarViewController: NSViewController {
         let showViewMode = UserDefaults.standard.object(forKey: UserDefaults.Keys.showViewModeButton.rawValue) as? Bool ?? true
         let showHiddenFiles = UserDefaults.standard.object(forKey: UserDefaults.Keys.showHiddenFilesButton.rawValue) as? Bool ?? true
         let showSplit = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSplitButtons.rawValue) as? Bool ?? true
+        let showPreviewPane = UserDefaults.standard.object(forKey: UserDefaults.Keys.showPreviewPaneButton.rawValue) as? Bool ?? true
         let showNewFolder = UserDefaults.standard.object(forKey: UserDefaults.Keys.showNewFolderButton.rawValue) as? Bool ?? true
         let showSort = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSortButton.rawValue) as? Bool ?? true
 
@@ -103,21 +111,42 @@ class ToolbarViewController: NSViewController {
         breadcrumbStackView.translatesAutoresizingMaskIntoConstraints = false
         breadcrumbScrollView.documentView = breadcrumbStackView
 
-        // View Mode button
-        viewModeButton = NSPopUpButton()
-        viewModeButton.translatesAutoresizingMaskIntoConstraints = false
-        viewModeButton.bezelStyle = .texturedRounded
-        viewModeButton.pullsDown = false
-        
-        // Add view mode options
-        for mode in ViewMode.allCases {
-            let menuItem = NSMenuItem(title: mode.rawValue, action: #selector(changeViewMode(_:)), keyEquivalent: "")
-            menuItem.representedObject = mode.rawValue
-            viewModeButton.menu?.addItem(menuItem)
-        }
-        viewModeButton.menu?.items.forEach { $0.target = self }
-        viewModeButton.isHidden = !showViewMode
-        view.addSubview(viewModeButton)
+        // View Mode buttons
+        listModeButton = NSButton()
+        listModeButton.translatesAutoresizingMaskIntoConstraints = false
+        listModeButton.bezelStyle = .texturedRounded
+        listModeButton.image = NSImage(systemSymbolName: "list.bullet", accessibilityDescription: "List View")
+        listModeButton.target = self
+        listModeButton.action = #selector(listViewModeClicked(_:))
+        listModeButton.isHidden = !showViewMode
+        view.addSubview(listModeButton)
+
+        iconsModeButton = NSButton()
+        iconsModeButton.translatesAutoresizingMaskIntoConstraints = false
+        iconsModeButton.bezelStyle = .texturedRounded
+        iconsModeButton.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "Icons View")
+        iconsModeButton.target = self
+        iconsModeButton.action = #selector(iconsViewModeClicked(_:))
+        iconsModeButton.isHidden = !showViewMode
+        view.addSubview(iconsModeButton)
+
+        columnsModeButton = NSButton()
+        columnsModeButton.translatesAutoresizingMaskIntoConstraints = false
+        columnsModeButton.bezelStyle = .texturedRounded
+        columnsModeButton.image = NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Columns View")
+        columnsModeButton.target = self
+        columnsModeButton.action = #selector(columnsViewModeClicked(_:))
+        columnsModeButton.isHidden = !showViewMode
+        view.addSubview(columnsModeButton)
+
+        windowsListModeButton = NSButton()
+        windowsListModeButton.translatesAutoresizingMaskIntoConstraints = false
+        windowsListModeButton.bezelStyle = .texturedRounded
+        windowsListModeButton.image = NSImage(systemSymbolName: "list.bullet.rectangle", accessibilityDescription: "Windows List View")
+        windowsListModeButton.target = self
+        windowsListModeButton.action = #selector(windowsListViewModeClicked(_:))
+        windowsListModeButton.isHidden = !showViewMode
+        view.addSubview(windowsListModeButton)
         
         // Hidden Files toggle button
         hiddenFilesButton = NSButton()
@@ -148,6 +177,16 @@ class ToolbarViewController: NSViewController {
         splitHorizontalButton.action = #selector(splitHorizontallyClicked(_:))
         splitHorizontalButton.isHidden = !showSplit
         view.addSubview(splitHorizontalButton)
+
+        // Preview Pane button
+        previewPaneButton = NSButton()
+        previewPaneButton.translatesAutoresizingMaskIntoConstraints = false
+        previewPaneButton.bezelStyle = .texturedRounded
+        previewPaneButton.image = NSImage(systemSymbolName: "sidebar.right", accessibilityDescription: "Toggle Preview Pane")
+        previewPaneButton.target = self
+        previewPaneButton.action = #selector(togglePreviewPaneClicked(_:))
+        previewPaneButton.isHidden = !showPreviewPane
+        view.addSubview(previewPaneButton)
 
         // Sort button
         sortButton = NSPopUpButton()
@@ -193,6 +232,16 @@ class ToolbarViewController: NSViewController {
         closePaneButton.isHidden = true // Hidden by default, shown when there are multiple panes
         view.addSubview(closePaneButton)
 
+        // Search Field
+        searchField = NSSearchField()
+        searchField.translatesAutoresizingMaskIntoConstraints = false
+        searchField.placeholderString = "Search"
+        searchField.target = self
+        searchField.action = #selector(searchFieldChanged(_:))
+        searchField.sendsWholeSearchString = false
+        searchField.sendsSearchStringImmediately = true
+        view.addSubview(searchField)
+
         // Layout constraints
         NSLayoutConstraint.activate([
             backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
@@ -209,16 +258,31 @@ class ToolbarViewController: NSViewController {
             breadcrumbScrollView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             breadcrumbScrollView.heightAnchor.constraint(equalToConstant: 26),
             breadcrumbScrollView.widthAnchor.constraint(lessThanOrEqualToConstant: 400),
-            breadcrumbScrollView.trailingAnchor.constraint(lessThanOrEqualTo: viewModeButton.leadingAnchor, constant: -8),
+            breadcrumbScrollView.trailingAnchor.constraint(lessThanOrEqualTo: listModeButton.leadingAnchor, constant: -8),
 
             breadcrumbStackView.leadingAnchor.constraint(equalTo: breadcrumbScrollView.leadingAnchor),
             breadcrumbStackView.topAnchor.constraint(equalTo: breadcrumbScrollView.topAnchor),
             breadcrumbStackView.bottomAnchor.constraint(equalTo: breadcrumbScrollView.bottomAnchor),
 
-            viewModeButton.trailingAnchor.constraint(equalTo: hiddenFilesButton.leadingAnchor, constant: -4),
-            viewModeButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            viewModeButton.widthAnchor.constraint(equalToConstant: 70),
-            viewModeButton.heightAnchor.constraint(equalToConstant: 26),
+            listModeButton.trailingAnchor.constraint(equalTo: iconsModeButton.leadingAnchor, constant: -4),
+            listModeButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            listModeButton.widthAnchor.constraint(equalToConstant: 30),
+            listModeButton.heightAnchor.constraint(equalToConstant: 26),
+
+            iconsModeButton.trailingAnchor.constraint(equalTo: columnsModeButton.leadingAnchor, constant: -4),
+            iconsModeButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            iconsModeButton.widthAnchor.constraint(equalToConstant: 30),
+            iconsModeButton.heightAnchor.constraint(equalToConstant: 26),
+
+            columnsModeButton.trailingAnchor.constraint(equalTo: windowsListModeButton.leadingAnchor, constant: -4),
+            columnsModeButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            columnsModeButton.widthAnchor.constraint(equalToConstant: 30),
+            columnsModeButton.heightAnchor.constraint(equalToConstant: 26),
+
+            windowsListModeButton.trailingAnchor.constraint(equalTo: hiddenFilesButton.leadingAnchor, constant: -8),
+            windowsListModeButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            windowsListModeButton.widthAnchor.constraint(equalToConstant: 30),
+            windowsListModeButton.heightAnchor.constraint(equalToConstant: 26),
             
             hiddenFilesButton.trailingAnchor.constraint(equalTo: splitVerticalButton.leadingAnchor, constant: -4),
             hiddenFilesButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -230,20 +294,30 @@ class ToolbarViewController: NSViewController {
             splitVerticalButton.widthAnchor.constraint(equalToConstant: 30),
             splitVerticalButton.heightAnchor.constraint(equalToConstant: 26),
             
-            splitHorizontalButton.trailingAnchor.constraint(equalTo: newFolderButton.leadingAnchor, constant: -8),
+            splitHorizontalButton.trailingAnchor.constraint(equalTo: previewPaneButton.leadingAnchor, constant: -4),
             splitHorizontalButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             splitHorizontalButton.widthAnchor.constraint(equalToConstant: 30),
             splitHorizontalButton.heightAnchor.constraint(equalToConstant: 26),
+
+            previewPaneButton.trailingAnchor.constraint(equalTo: newFolderButton.leadingAnchor, constant: -8),
+            previewPaneButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            previewPaneButton.widthAnchor.constraint(equalToConstant: 30),
+            previewPaneButton.heightAnchor.constraint(equalToConstant: 26),
 
             newFolderButton.trailingAnchor.constraint(equalTo: sortButton.leadingAnchor, constant: -8),
             newFolderButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             newFolderButton.widthAnchor.constraint(equalToConstant: 30),
             newFolderButton.heightAnchor.constraint(equalToConstant: 26),
 
-            sortButton.trailingAnchor.constraint(equalTo: closePaneButton.leadingAnchor, constant: -8),
+            sortButton.trailingAnchor.constraint(equalTo: searchField.leadingAnchor, constant: -8),
             sortButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             sortButton.widthAnchor.constraint(equalToConstant: 44),
             sortButton.heightAnchor.constraint(equalToConstant: 26),
+
+            searchField.trailingAnchor.constraint(equalTo: closePaneButton.leadingAnchor, constant: -8),
+            searchField.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            searchField.widthAnchor.constraint(equalToConstant: 150),
+            searchField.heightAnchor.constraint(equalToConstant: 22),
 
             closePaneButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
             closePaneButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -268,10 +342,10 @@ class ToolbarViewController: NSViewController {
     }
 
     func updateViewModeDisplay(for viewMode: ViewMode) {
-        // Select the appropriate menu item in the view mode button
-        if let index = ViewMode.allCases.firstIndex(of: viewMode) {
-            viewModeButton.selectItem(at: index)
-        }
+        listModeButton.state = (viewMode == .list) ? .on : .off
+        iconsModeButton.state = (viewMode == .icons) ? .on : .off
+        columnsModeButton.state = (viewMode == .columns) ? .on : .off
+        windowsListModeButton.state = (viewMode == .windowsList) ? .on : .off
     }
     
     func updateHiddenFilesDisplay(showing: Bool) {
@@ -489,11 +563,20 @@ class ToolbarViewController: NSViewController {
         updateHiddenFilesDisplay(showing: showingHiddenFiles)
     }
 
-    @objc private func changeViewMode(_ sender: NSMenuItem) {
-        if let rawValue = sender.representedObject as? String,
-           let selectedMode = ViewMode(rawValue: rawValue) {
-            delegate?.toolbarDidChangeViewMode(selectedMode)
-        }
+    @objc private func listViewModeClicked(_ sender: Any) {
+        delegate?.toolbarDidChangeViewMode(.list)
+    }
+
+    @objc private func iconsViewModeClicked(_ sender: Any) {
+        delegate?.toolbarDidChangeViewMode(.icons)
+    }
+
+    @objc private func columnsViewModeClicked(_ sender: Any) {
+        delegate?.toolbarDidChangeViewMode(.columns)
+    }
+
+    @objc private func windowsListViewModeClicked(_ sender: Any) {
+        delegate?.toolbarDidChangeViewMode(.windowsList)
     }
 
     @objc private func splitVerticallyClicked(_ sender: Any) {
@@ -504,7 +587,15 @@ class ToolbarViewController: NSViewController {
         delegate?.toolbarDidRequestSplitHorizontally()
     }
 
+    @objc private func togglePreviewPaneClicked(_ sender: Any) {
+        delegate?.toolbarDidTogglePreviewPane()
+    }
+
     @objc private func closePaneButtonClicked(_ sender: Any) {
         delegate?.toolbarDidRequestClosePane()
+    }
+
+    @objc private func searchFieldChanged(_ sender: NSSearchField) {
+        delegate?.toolbarDidSearchTextChange(sender.stringValue)
     }
 }

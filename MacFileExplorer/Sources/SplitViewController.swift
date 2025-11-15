@@ -9,7 +9,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
     weak var delegate: SplitViewControllerDelegate?
 
-    private var sidebarViewController: SidebarViewController?
+    var sidebarViewController: SidebarViewController?
     private var contentSplitViewController: NSSplitViewController?
     private var tabBarController: TabBarController?
     private var terminalViewController: TerminalViewController?
@@ -114,11 +114,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     func pasteSelection() {
         tabBarController?.pasteSelection()
     }
-    
-    func changeFolderColor() {
-        tabBarController?.changeFolderColor()
-    }
-    
+
     func setViewMode(_ viewMode: ViewMode) {
         tabBarController?.setViewMode(viewMode)
     }
@@ -126,11 +122,19 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     func toggleHiddenFiles() {
         tabBarController?.toggleHiddenFiles()
     }
-    
+
+    func isShowingHiddenFiles() -> Bool {
+        return tabBarController?.isShowingHiddenFiles() ?? false
+    }
+
+    func togglePreviewPane() {
+        tabBarController?.togglePreviewPane()
+    }
+
     func splitVertically() {
         tabBarController?.splitVertically()
     }
-    
+
     func splitHorizontally() {
         tabBarController?.splitHorizontally()
     }
@@ -142,6 +146,11 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
             terminalViewController?.changeDirectory(to: currentPath)
         }
     }
+    
+    func updateSidebarSelection(url: URL) {
+        // Update sidebar folder explorer to expand and select the current directory
+        sidebarViewController?.expandToCurrentDirectory(url: url)
+    }
 
     func openLocationInNewTab(_ url: URL) {
         // Use the TabBarController's openInNewTab method which handles everything properly
@@ -150,6 +159,14 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
     func updateZoomLevel(to level: Double) {
         tabBarController?.updateZoomLevel(to: level)
+    }
+
+    func goBack() {
+        tabBarController?.goBack()
+    }
+
+    func goForward() {
+        tabBarController?.goForward()
     }
 
     // MARK: - SidebarDelegate

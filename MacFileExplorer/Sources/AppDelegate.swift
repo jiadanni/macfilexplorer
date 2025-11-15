@@ -19,9 +19,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
 
         createEditMenu()
+
+        NotificationCenter.default.addObserver(self, selector: #selector(updatePreviewPaneMenuItem), name: Notification.Name("previewPaneToggled"), object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(updateHiddenFilesMenuItem), name: Notification.Name("hiddenFilesToggled"), object: nil)
     }
 
+    @objc func updateHiddenFilesMenuItem() {
+        if let mainMenu = NSApp.mainMenu {
+            if let viewMenu = mainMenu.item(withTitle: "View")?.submenu {
+                if let hiddenFilesMenuItem = viewMenu.item(withTitle: "Show Hidden Files") ?? viewMenu.item(withTitle: "Hide Hidden Files") {
+                    let isShowing = windowController?.isShowingHiddenFiles() ?? false
+                    hiddenFilesMenuItem.title = isShowing ? "Hide Hidden Files" : "Show Hidden Files"
+                }
+            }
+        }
+    }
 
+    @objc func updatePreviewPaneMenuItem() {
+        if let mainMenu = NSApp.mainMenu {
+            if let viewMenu = mainMenu.item(withTitle: "View")?.submenu {
+                if let previewMenuItem = viewMenu.item(withTitle: "Show Preview Pane") ?? viewMenu.item(withTitle: "Hide Preview Pane") {
+                    let isShowing = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
+                    previewMenuItem.title = isShowing ? "Hide Preview Pane" : "Show Preview Pane"
+                }
+            }
+        }
+    }
 
 
 
@@ -41,12 +64,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let editMenuItem = NSMenuItem()
         editMenuItem.submenu = editMenu
-        
+
         // Find the "Edit" menu and replace it, or add it if it doesn't exist
         if let existingEditMenu = mainMenu.item(withTitle: "Edit") {
             existingEditMenu.submenu = editMenu
         } else {
             mainMenu.insertItem(editMenuItem, at: 2)
+        }
+
+        // Add Go menu with back/forward navigation
+        createGoMenu()
+    }
+
+    func createGoMenu() {
+        guard let mainMenu = NSApp.mainMenu else { return }
+
+        let goMenu = NSMenu(title: "Go")
+        goMenu.addItem(withTitle: "Back", action: #selector(goBack(_:)), keyEquivalent: "[")
+        goMenu.addItem(withTitle: "Forward", action: #selector(goForward(_:)), keyEquivalent: "]")
+
+        let goMenuItem = NSMenuItem()
+        goMenuItem.submenu = goMenu
+
+        // Find the "Go" menu and replace it, or add it after Edit menu
+        if let existingGoMenu = mainMenu.item(withTitle: "Go") {
+            existingGoMenu.submenu = goMenu
+        } else {
+            mainMenu.insertItem(goMenuItem, at: 3)
         }
     }
 
@@ -87,11 +131,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @IBAction func pasteSelection(_ sender: Any?) {
         windowController?.pasteSelection()
     }
-    
-    @IBAction func changeFolderColors(_ sender: Any?) {
-        windowController?.changeFolderColor()
-    }
-    
+
     // MARK: - View Menu Actions
     
     @IBAction func viewAsList(_ sender: Any?) {
@@ -118,17 +158,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @IBAction func toggleHiddenFiles(_ sender: Any?) {
         windowController?.toggleHiddenFiles()
     }
-    
+
+    @IBAction func togglePreviewPane(_ sender: Any?) {
+        windowController?.togglePreviewPane()
+    }
+
     @IBAction func splitVertically(_ sender: Any?) {
         windowController?.splitVertically()
     }
-    
+
     @IBAction func splitHorizontally(_ sender: Any?) {
         windowController?.splitHorizontally()
     }
-    
+
+    // MARK: - Navigation Actions
+
+    @IBAction func goBack(_ sender: Any?) {
+        windowController?.goBack()
+    }
+
+    @IBAction func goForward(_ sender: Any?) {
+        windowController?.goForward()
+    }
+
     // MARK: - Settings
-    
+
     @IBAction func showPreferences(_ sender: Any?) {
         if settingsWindowController == nil {
             settingsWindowController = SettingsWindowController()

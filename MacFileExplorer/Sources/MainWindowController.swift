@@ -1,6 +1,6 @@
 import Cocoa
 
-class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewControllerDelegate {
+class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewControllerDelegate, SplitPaneViewControllerDelegate {
 
     private var splitViewController: SplitViewController?
     private var statusBarViewController: StatusBarViewController?
@@ -31,6 +31,10 @@ class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewCont
         // Force the view to load now
         _ = newSplitViewController.view
         splitViewController = newSplitViewController
+        
+        if let splitVC = splitViewController?.splitViewItems.first?.viewController as? SplitPaneViewController {
+            splitVC.delegate = self
+        }
 
         // Setup Status Bar Controller
         let newStatusBarViewController = StatusBarViewController()
@@ -102,11 +106,7 @@ class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewCont
     func pasteSelection() {
         splitViewController?.pasteSelection()
     }
-    
-    func changeFolderColor() {
-        splitViewController?.changeFolderColor()
-    }
-    
+
     func setViewMode(_ viewMode: ViewMode) {
         splitViewController?.setViewMode(viewMode)
     }
@@ -114,11 +114,15 @@ class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewCont
     func toggleHiddenFiles() {
         splitViewController?.toggleHiddenFiles()
     }
-    
+
+    func togglePreviewPane() {
+        splitViewController?.togglePreviewPane()
+    }
+
     func splitVertically() {
         splitViewController?.splitVertically()
     }
-    
+
     func splitHorizontally() {
         splitViewController?.splitHorizontally()
     }
@@ -127,7 +131,19 @@ class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewCont
         // Forward zoom level changes to the split view controller
         splitViewController?.updateZoomLevel(to: level)
     }
-    
+
+    func goBack() {
+        splitViewController?.goBack()
+    }
+
+    func goForward() {
+        splitViewController?.goForward()
+    }
+
+    func isShowingHiddenFiles() -> Bool {
+        return splitViewController?.isShowingHiddenFiles() ?? false
+    }
+
     // MARK: - SplitViewControllerDelegate
 
     func splitViewController(_ splitViewController: SplitViewController, didUpdateSelection selectedCount: Int, totalSize: Int64) {
@@ -141,5 +157,27 @@ class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewCont
         // A more robust solution might involve the StatusBarViewController managing its own state.
         // For now, we'll assume if selectedCount is 0, it's safe to update disk space.
         statusBarViewController?.updateFileInformation(selectedCount: 0, totalSize: 0, diskSpace: diskSpace)
+    }
+
+    // MARK: - SplitPaneViewControllerDelegate
+
+    func splitPaneDirectoryDidChange(to path: String) {
+        window?.title = path
+    }
+
+    func splitPaneOpenInNewTab(url: URL) {
+        splitViewController?.addNewTab()
+    }
+
+    func splitPane(_ splitPane: SplitPaneViewController, didUpdateSelection selectedCount: Int, totalSize: Int64) {
+        statusBarViewController?.updateFileInformation(selectedCount: selectedCount, totalSize: totalSize, diskSpace: nil)
+    }
+
+    func splitPane(_ splitPane: SplitPaneViewController, didUpdateDiskSpace diskSpace: String?) {
+        statusBarViewController?.updateFileInformation(selectedCount: 0, totalSize: 0, diskSpace: diskSpace)
+    }
+
+    func splitPaneDidRequestAddToFavorites(item: FileItem) {
+        splitViewController?.sidebarViewController?.addFavorite(item: item)
     }
 }

@@ -1,10 +1,99 @@
 Features
 
+Dynamic Menu Item Titles
+Change "Show Preview Pane" to "Hide Preview Pane" when it's visible
+Same for "Show Hidden Files" → "Hide Hidden Files"
+This provides better visual feedback about the current state
 
-[] Item preview On right side 
-Build a Superior, Persistent Preview Pane: Make it a toggle-able panel (like in Windows File Explorer) that can be shown on the right or bottom of any view (List, Column, or your new dual-pane view).
+Toolbar Customization
+Add toolbar items for common actions (preview pane toggle, view modes, etc.)
+Allow users to customize which buttons appear in the toolbar
+Quick Look Integration
+Add spacebar Quick Look support like Finder (press space on selected file)
+This is in addition to the preview pane
+ 
+Search Functionality
+Add a search bar to filter/find files in current directory
+Support for search in subdirectories
+Filter by file type, size, date modified
+ 
 
-Make it Smarter: Your preview pane could show:
+ Advanced filters: ❌ Not Implemented (0%)
+
+❌ File type filters
+❌ Size filters
+❌ Date filters
+
+ ************
+File Tags Support
+Read and display macOS file tags (color labels)
+Allow adding/removing tags from context menu
+
+Breadcrumb Navigation
+Show current path as clickable breadcrumbs
+Quick navigation to parent folders
+*****
+
+Favorites/Bookmarks
+Quick access to frequently used folders
+Custom folder bookmarks in sidebar
+
+Dual Pane Operations
+Copy/move files between split panes with drag & drop
+Show size comparison when copying
+
+What's NOT Implemented:
+1. ❌ Cross-Pane Drag & Drop
+
+Cannot drag files from one split pane to another split pane
+Drag & drop only works within the same pane or to external destinations
+No visual feedback when dragging between panes
+2. ❌ Size Comparison When Copying
+
+No display showing source vs destination size
+No warning when destination has less free space
+No comparison of total file sizes between panes
+No "Available space: X / Required space: Y" indicator
+3. ❌ Enhanced Dual Pane Features
+
+No synchronized scrolling option
+No "Copy to other pane" quick action
+No "Move to other pane" quick action
+No visual indication of active pane during drag operations
+
+**********
+
+Performance & Polish
+File Operations Feedback
+Progress indicators for copy/move/delete operations
+Confirmation dialogs with file counts and sizes
+
+⚠️ Partially Implemented (15%):
+
+Advanced FileCopyMoveDialog exists but unused
+Move To has progress but no confirmation
+Paste has no confirmation or progress
+❌ Not Implemented (5%):
+
+Drag & drop progress indicators
+Paste operation confirmation
+***********
+
+Keyboard Shortcuts
+Add more keyboard shortcuts (arrow keys for navigation, Enter to open, etc.)
+Show shortcuts in context menus (you have the setting but not implemented)
+
+Recent Folders
+Track recently visited folders
+Add to sidebar or Go menu
+
+Smart Sorting
+Remember sort preferences per folder
+Natural sorting for numbers in filenames
+
+
+[x] Item preview On right side 
+ Persistent Preview Pane: Make it a toggle-able panel (like in Windows File Explorer) that can be shown on the right or bottom of any view (List, Column, or your new dual-pane view).
 
 High-quality image previews.
 
@@ -43,14 +132,15 @@ settings export
 
 [] Advanced Copy/Move Dialog: A dialog with a progress graph, transfer speed, pause button, and a detailed file queue.
 [x] delayed click and f2 to rename
-[] Indicate percentage on Zoom Slider.
+[x] Indicate percentage on Zoom Slider.
 [x] Context menu configuration. Ability to hide options - Implemented in Settings
 [x] Easy Select/Checkboxes - Implemented with UserDefaults toggle
 [x] Toolbar customization - Implemented: Settings to show/hide toolbar buttons
 [x] View Options dialog - Implemented: Finder-style View Options with grouping, sorting, icon size, etc.
 [x] Eject icon hover effect - Implemented: Circular background appears on hover
+[x] Improved folder color picker - Implemented: Preset color palette with instant feedback (replaces confusing color well)
 []Storage Analyzer
-[]Color should not be folder-specific but an option within settings.
+[x] Color should not be folder-specific but an option within settings - Implemented: Global folder color in General settings
 [] app icon
 
 Bugs

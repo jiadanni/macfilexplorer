@@ -5,8 +5,11 @@ extension UserDefaults {
     enum Keys: String, CaseIterable {
         // General Settings
         case warnOnExtensionChange = "warnOnExtensionChange"
+        case showFileExtensions = "showFileExtensions"
         case globalFolderColor = "globalFolderColor"
+        case accentColor = "accentColor"
         case enableEasySelect = "enableEasySelect"
+        case startupFolder = "startupFolder"
 
         // Tabs Settings
         case restoreTabsOnReopen = "restoreTabsOnReopen"
@@ -39,19 +42,25 @@ extension UserDefaults {
         // Status Bar Settings
         case showStatusBar = "showStatusBar"
 
+        // Preview Pane Settings
+        case showPreviewPane = "showPreviewPane"
+        case previewPanePosition = "previewPanePosition" // "right" or "bottom"
+
         // File Operations Settings
         case autoRenameOnConflict = "autoRenameOnConflict"
+        case deleteWithBackspaceOnly = "deleteWithBackspaceOnly"
 
         // Toolbar Settings
         case showBackForwardButtons = "showBackForwardButtons"
         case showViewModeButton = "showViewModeButton"
         case showHiddenFilesButton = "showHiddenFilesButton"
         case showSplitButtons = "showSplitButtons"
+        case showPreviewPaneButton = "showPreviewPaneButton"
         case showNewFolderButton = "showNewFolderButton"
         case showSortButton = "showSortButton"
 
         static var allCases: [Keys] {
-            return [.warnOnExtensionChange, .enableEasySelect, .restoreTabsOnReopen, .showFavorites, .showRecents, .showLocations, .sidebarOrder, .openTerminalByDefault, .showContextMenuHotkeys, .hideOpenWith, .hideGetInfo, .hideCopy, .hideCut, .hidePaste, .hideRename, .hideMoveToTrash, .hideNewFolder, .hideChangeFolderColor, .hideShowInFinder, .expandSidebarToCurrentDirectory, .showStatusBar, .autoRenameOnConflict, .showBackForwardButtons, .showViewModeButton, .showHiddenFilesButton, .showSplitButtons, .showNewFolderButton, .showSortButton]
+            return [.warnOnExtensionChange, .enableEasySelect, .restoreTabsOnReopen, .showFavorites, .showRecents, .showLocations, .sidebarOrder, .openTerminalByDefault, .showContextMenuHotkeys, .hideOpenWith, .hideGetInfo, .hideCopy, .hideCut, .hidePaste, .hideRename, .hideMoveToTrash, .hideNewFolder, .hideChangeFolderColor, .hideShowInFinder, .expandSidebarToCurrentDirectory, .showStatusBar, .autoRenameOnConflict, .showBackForwardButtons, .showViewModeButton, .showHiddenFilesButton, .showSplitButtons, .showPreviewPaneButton, .showNewFolderButton, .showSortButton]
         }
     }
 }
@@ -147,7 +156,6 @@ class SettingsViewController: NSSplitViewController, SettingsSidebarDelegate {
 class GeneralSettingsViewController: NSViewController {
 
     private var stackView: NSStackView!
-    private var globalFolderColorWell: NSColorWell!
 
     override func loadView() {
         let view = NSView()
@@ -168,10 +176,111 @@ class GeneralSettingsViewController: NSViewController {
             stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
         ])
 
+        addStartupFolderSettings()
         addFileExtensionSettings()
         addSelectionSettings()
         addFileOperationsSettings()
         addFolderAppearanceSettings()
+        addAccentColorSettings()
+    }
+
+    private func addStartupFolderSettings() {
+        let titleLabel = NSTextField(labelWithString: "Startup Folder:")
+        titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
+        stackView.addArrangedSubview(titleLabel)
+
+        // Create horizontal container for path display and change button
+        let pathContainer = NSView()
+        pathContainer.translatesAutoresizingMaskIntoConstraints = false
+        stackView.addArrangedSubview(pathContainer)
+
+        // Current path label
+        let pathLabel = NSTextField(labelWithString: getStartupFolderPath())
+        pathLabel.translatesAutoresizingMaskIntoConstraints = false
+        pathLabel.isEditable = false
+        pathLabel.isBordered = false
+        pathLabel.backgroundColor = .clear
+        pathLabel.textColor = .secondaryLabelColor
+        pathLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        pathLabel.lineBreakMode = .byTruncatingMiddle
+        pathLabel.tag = 9001 // Tag to find this label later
+        pathContainer.addSubview(pathLabel)
+
+        // Change button
+        let changeButton = NSButton(title: "Choose...", target: self, action: #selector(chooseStartupFolder(_:)))
+        changeButton.translatesAutoresizingMaskIntoConstraints = false
+        changeButton.bezelStyle = .rounded
+        pathContainer.addSubview(changeButton)
+
+        // Reset button
+        let resetButton = NSButton(title: "Reset to Home", target: self, action: #selector(resetStartupFolder(_:)))
+        resetButton.translatesAutoresizingMaskIntoConstraints = false
+        resetButton.bezelStyle = .rounded
+        pathContainer.addSubview(resetButton)
+
+        NSLayoutConstraint.activate([
+            pathContainer.heightAnchor.constraint(greaterThanOrEqualToConstant: 30),
+
+            pathLabel.leadingAnchor.constraint(equalTo: pathContainer.leadingAnchor),
+            pathLabel.centerYAnchor.constraint(equalTo: pathContainer.centerYAnchor),
+            pathLabel.trailingAnchor.constraint(equalTo: changeButton.leadingAnchor, constant: -12),
+
+            resetButton.trailingAnchor.constraint(equalTo: pathContainer.trailingAnchor),
+            resetButton.centerYAnchor.constraint(equalTo: pathContainer.centerYAnchor),
+            resetButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 120),
+
+            changeButton.trailingAnchor.constraint(equalTo: resetButton.leadingAnchor, constant: -8),
+            changeButton.centerYAnchor.constraint(equalTo: pathContainer.centerYAnchor),
+            changeButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 100)
+        ])
+
+        // Add description
+        let descriptionLabel = NSTextField(labelWithString: "The folder that opens when the app launches")
+        descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        descriptionLabel.textColor = .secondaryLabelColor
+        stackView.addArrangedSubview(descriptionLabel)
+
+        // Add spacing
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        stackView.addArrangedSubview(spacer)
+    }
+
+    private func getStartupFolderPath() -> String {
+        if let path = UserDefaults.standard.string(forKey: UserDefaults.Keys.startupFolder.rawValue) {
+            return path
+        }
+        return NSHomeDirectory()
+    }
+
+    @objc private func chooseStartupFolder(_ sender: Any) {
+        let openPanel = NSOpenPanel()
+        openPanel.canChooseFiles = false
+        openPanel.canChooseDirectories = true
+        openPanel.allowsMultipleSelection = false
+        openPanel.directoryURL = URL(fileURLWithPath: getStartupFolderPath())
+
+        openPanel.begin { [weak self] response in
+            guard response == .OK, let url = openPanel.url else { return }
+
+            UserDefaults.standard.set(url.path, forKey: UserDefaults.Keys.startupFolder.rawValue)
+
+            // Update the path label
+            if let pathLabel = self?.view.viewWithTag(9001) as? NSTextField {
+                pathLabel.stringValue = url.path
+            }
+        }
+    }
+
+    @objc private func resetStartupFolder(_ sender: Any) {
+        let homePath = NSHomeDirectory()
+        UserDefaults.standard.set(homePath, forKey: UserDefaults.Keys.startupFolder.rawValue)
+
+        // Update the path label
+        if let pathLabel = view.viewWithTag(9001) as? NSTextField {
+            pathLabel.stringValue = homePath
+        }
     }
 
     private func addFileExtensionSettings() {
@@ -179,8 +288,22 @@ class GeneralSettingsViewController: NSViewController {
         titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stackView.addArrangedSubview(titleLabel)
 
+        addCheckbox(title: "Show all file extensions", key: .showFileExtensions, defaultValue: true)
+
+        // Add description
+        let showExtDescriptionLabel = NSTextField(labelWithString: "Display file extensions for all files (requires reload)")
+        showExtDescriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        showExtDescriptionLabel.textColor = .secondaryLabelColor
+        stackView.addArrangedSubview(showExtDescriptionLabel)
+
+        // Add small spacer
+        let smallSpacer = NSView()
+        smallSpacer.translatesAutoresizingMaskIntoConstraints = false
+        smallSpacer.heightAnchor.constraint(equalToConstant: 10).isActive = true
+        stackView.addArrangedSubview(smallSpacer)
+
         addCheckbox(title: "Warn on extension change", key: .warnOnExtensionChange, defaultValue: true)
-        
+
         // Add description
         let descriptionLabel = NSTextField(labelWithString: "Display a warning when changing a file's extension")
         descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
@@ -226,6 +349,20 @@ class GeneralSettingsViewController: NSViewController {
         descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         descriptionLabel.textColor = .secondaryLabelColor
         stackView.addArrangedSubview(descriptionLabel)
+
+        // Add small spacer
+        let smallSpacer = NSView()
+        smallSpacer.translatesAutoresizingMaskIntoConstraints = false
+        smallSpacer.heightAnchor.constraint(equalToConstant: 10).isActive = true
+        stackView.addArrangedSubview(smallSpacer)
+
+        addCheckbox(title: "Delete files with Backspace key only (disable Command+Delete)", key: .deleteWithBackspaceOnly, defaultValue: false)
+
+        // Add description
+        let deleteDescriptionLabel = NSTextField(labelWithString: "Press Backspace to move files to trash. Command+Delete will be disabled.")
+        deleteDescriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        deleteDescriptionLabel.textColor = .secondaryLabelColor
+        stackView.addArrangedSubview(deleteDescriptionLabel)
     }
 
     private func addFolderAppearanceSettings() {
@@ -383,24 +520,171 @@ class GeneralSettingsViewController: NSViewController {
 
     @objc func checkboxChanged(_ sender: NSButton) {
         // Find the UserDefaults.Keys enum value from the tag
-        if let keyRawValue = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag })?.rawValue {
-            UserDefaults.standard.set(sender.state == .on, forKey: keyRawValue)
+        if let key = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag }) {
+            UserDefaults.standard.set(sender.state == .on, forKey: key.rawValue)
+
+            // Post notifications for settings that need immediate UI updates
+            switch key {
+            case .showFileExtensions:
+                NotificationCenter.default.post(name: .showFileExtensionsDidChangeNotification, object: nil)
+            case .enableEasySelect:
+                NotificationCenter.default.post(name: .easySelectDidChangeNotification, object: nil)
+            case .deleteWithBackspaceOnly:
+                // This setting doesn't need a notification, it's checked on keyDown
+                break
+            default:
+                break
+            }
         }
     }
-    
-    @objc private func globalFolderColorChanged(_ sender: NSColorWell) {
+
+    private func addAccentColorSettings() {
+        // Add spacing
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        stackView.addArrangedSubview(spacer)
+
+        let titleLabel = NSTextField(labelWithString: "Accent Color:")
+        titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
+        stackView.addArrangedSubview(titleLabel)
+
+        let descriptionLabel = NSTextField(labelWithString: "Choose an accent color for UI elements like active tabs and sidebar highlights:")
+        descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        descriptionLabel.textColor = .secondaryLabelColor
+        stackView.addArrangedSubview(descriptionLabel)
+
+        // Create color palette with preset colors
+        let paletteContainer = NSView()
+        paletteContainer.translatesAutoresizingMaskIntoConstraints = false
+        stackView.addArrangedSubview(paletteContainer)
+
+        let presetAccentColors: [(String, NSColor)] = [
+            ("System Default", .controlAccentColor),
+            ("Blue", NSColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0)),
+            ("Purple", NSColor(red: 0.69, green: 0.32, blue: 0.87, alpha: 1.0)),
+            ("Pink", NSColor(red: 1.0, green: 0.18, blue: 0.33, alpha: 1.0)),
+            ("Red", NSColor(red: 1.0, green: 0.27, blue: 0.23, alpha: 1.0)),
+            ("Orange", NSColor(red: 1.0, green: 0.58, blue: 0.0, alpha: 1.0)),
+            ("Yellow", NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0)),
+            ("Green", NSColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1.0)),
+            ("Gray", NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0)),
+            ("Indigo", NSColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1.0))
+        ]
+
+        var xOffset: CGFloat = 0
+        var yOffset: CGFloat = 0
+        let buttonSize: CGFloat = 36
+        let spacing: CGFloat = 8
+        let buttonsPerRow = 5
+
+        // Load currently selected accent color
+        var currentAccentColor = NSColor.controlAccentColor
+        if let colorData = UserDefaults.standard.data(forKey: UserDefaults.Keys.accentColor.rawValue),
+           let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: colorData) {
+            currentAccentColor = color
+        }
+
+        for (index, (name, color)) in presetAccentColors.enumerated() {
+            let colorButton = NSButton()
+            colorButton.translatesAutoresizingMaskIntoConstraints = false
+            colorButton.bezelStyle = .regularSquare
+            colorButton.isBordered = true
+            colorButton.wantsLayer = true
+            colorButton.layer?.backgroundColor = color.cgColor
+            colorButton.layer?.cornerRadius = 4
+            colorButton.layer?.borderWidth = 2
+            colorButton.title = ""
+            colorButton.target = self
+            colorButton.action = #selector(accentColorButtonClicked(_:))
+            colorButton.tag = index + 1000  // Offset to differentiate from folder colors
+            colorButton.toolTip = name
+
+            // Highlight selected color
+            if colorsAreEqual(color, currentAccentColor) {
+                colorButton.layer?.borderColor = NSColor.selectedContentBackgroundColor.cgColor
+            } else {
+                colorButton.layer?.borderColor = NSColor.separatorColor.cgColor
+            }
+
+            paletteContainer.addSubview(colorButton)
+
+            NSLayoutConstraint.activate([
+                colorButton.widthAnchor.constraint(equalToConstant: buttonSize),
+                colorButton.heightAnchor.constraint(equalToConstant: buttonSize),
+                colorButton.leadingAnchor.constraint(equalTo: paletteContainer.leadingAnchor, constant: xOffset),
+                colorButton.topAnchor.constraint(equalTo: paletteContainer.topAnchor, constant: yOffset)
+            ])
+
+            xOffset += buttonSize + spacing
+            if (index + 1) % buttonsPerRow == 0 {
+                xOffset = 0
+                yOffset += buttonSize + spacing
+            }
+        }
+
+        // Set palette container height
+        let totalRows = CGFloat((presetAccentColors.count + buttonsPerRow - 1) / buttonsPerRow)
+        NSLayoutConstraint.activate([
+            paletteContainer.heightAnchor.constraint(equalToConstant: totalRows * (buttonSize + spacing) - spacing),
+            paletteContainer.widthAnchor.constraint(equalToConstant: CGFloat(buttonsPerRow) * (buttonSize + spacing) - spacing)
+        ])
+    }
+
+    @objc private func accentColorButtonClicked(_ sender: NSButton) {
+        let presetAccentColors: [NSColor] = [
+            .controlAccentColor,
+            NSColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0),
+            NSColor(red: 0.69, green: 0.32, blue: 0.87, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.18, blue: 0.33, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.27, blue: 0.23, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.58, blue: 0.0, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0),
+            NSColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1.0),
+            NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0),
+            NSColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1.0)
+        ]
+
+        let index = sender.tag - 1000  // Remove offset
+        guard index >= 0 && index < presetAccentColors.count else { return }
+        let selectedColor = presetAccentColors[index]
+
+        // Save the color
         do {
-            let colorData = try NSKeyedArchiver.archivedData(withRootObject: sender.color, requiringSecureCoding: false)
-            UserDefaults.standard.set(colorData, forKey: UserDefaults.Keys.globalFolderColor.rawValue)
-            NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+            let colorData = try NSKeyedArchiver.archivedData(withRootObject: selectedColor, requiringSecureCoding: false)
+            UserDefaults.standard.set(colorData, forKey: UserDefaults.Keys.accentColor.rawValue)
+            NotificationCenter.default.post(name: .accentColorDidChangeNotification, object: nil)
+
+            // Update button borders to show selection
+            if let paletteContainer = sender.superview {
+                for view in paletteContainer.subviews {
+                    if let button = view as? NSButton {
+                        button.layer?.borderColor = NSColor.separatorColor.cgColor
+                    }
+                }
+            }
+            sender.layer?.borderColor = NSColor.selectedContentBackgroundColor.cgColor
         } catch {
-            print("Failed to archive color: \(error)")
+            print("Failed to archive accent color: \(error)")
         }
     }
 }
 
 extension Notification.Name {
     static let globalFolderColorDidChangeNotification = Notification.Name("globalFolderColorDidChangeNotification")
+    static let accentColorDidChangeNotification = Notification.Name("accentColorDidChangeNotification")
+    static let showFileExtensionsDidChangeNotification = Notification.Name("showFileExtensionsDidChangeNotification")
+    static let easySelectDidChangeNotification = Notification.Name("easySelectDidChangeNotification")
+}
+
+extension NSColor {
+    static var customAccentColor: NSColor {
+        if let colorData = UserDefaults.standard.data(forKey: UserDefaults.Keys.accentColor.rawValue),
+           let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: colorData) {
+            return color
+        }
+        return .controlAccentColor
+    }
 }
 
 class TabsSettingsViewController: NSViewController {
@@ -936,6 +1220,7 @@ class ToolbarSettingsViewController: NSViewController {
         addCheckbox(title: "Show View Mode button", key: .showViewModeButton, defaultValue: true)
         addCheckbox(title: "Show Hidden Files toggle button", key: .showHiddenFilesButton, defaultValue: true)
         addCheckbox(title: "Show Split Pane buttons", key: .showSplitButtons, defaultValue: true)
+        addCheckbox(title: "Show Preview Pane button", key: .showPreviewPaneButton, defaultValue: true)
         addCheckbox(title: "Show New Folder button", key: .showNewFolderButton, defaultValue: true)
         addCheckbox(title: "Show Sort button", key: .showSortButton, defaultValue: true)
 

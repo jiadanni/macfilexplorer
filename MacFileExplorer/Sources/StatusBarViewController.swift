@@ -92,14 +92,20 @@ class StatusBarViewController: NSViewController {
         if selectedCount > 0 {
             let formattedSize = ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
             let itemText = selectedCount == 1 ? "item" : "items"
-            centerLabel.stringValue = "\(selectedCount) \(itemText) selected, \(formattedSize)"
-            statusLabel.stringValue = diskSpace ?? ""
-        } else {
-            centerLabel.stringValue = ""
+            statusLabel.stringValue = "\(selectedCount) \(itemText) selected, \(formattedSize)"
+            // Show disk space in center when files are selected
             if let diskSpace = diskSpace {
-                statusLabel.stringValue = "\(diskSpace) available"
+                centerLabel.stringValue = "\(diskSpace) available"
             } else {
-                statusLabel.stringValue = "Ready"
+                centerLabel.stringValue = ""
+            }
+        } else {
+            statusLabel.stringValue = "Ready"
+            // Show disk space in center when no files are selected
+            if let diskSpace = diskSpace {
+                centerLabel.stringValue = "\(diskSpace) available"
+            } else {
+                centerLabel.stringValue = ""
             }
         }
     }

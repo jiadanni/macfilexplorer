@@ -33,11 +33,16 @@ class HoverButton: NSButton {
         // Draw circular background on hover
         if isHovering {
             let circlePath = NSBezierPath(ovalIn: bounds.insetBy(dx: 2, dy: 2))
-            NSColor.controlAccentColor.withAlphaComponent(0.2).setFill()
+            NSColor.customAccentColor.withAlphaComponent(0.2).setFill()
             circlePath.fill()
         }
 
         super.draw(dirtyRect)
+    }
+
+    // Update drawing when accent color changes
+    func accentColorDidChange() {
+        needsDisplay = true
     }
 }
 
@@ -71,6 +76,30 @@ class SidebarViewController: NSViewController {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 600))
         setupUI()
         loadSidebarItems()
+
+        // Listen for accent color changes
+        NotificationCenter.default.addObserver(forName: .accentColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.refreshSidebarButtons()
+        }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: .accentColorDidChangeNotification, object: nil)
+    }
+
+    private func refreshSidebarButtons() {
+        // Refresh all HoverButton instances in the view hierarchy
+        refreshHoverButtons(in: view)
+    }
+
+    private func refreshHoverButtons(in view: NSView) {
+        for subview in view.subviews {
+            if let hoverButton = subview as? HoverButton {
+                hoverButton.accentColorDidChange()
+            }
+            // Recursively check subviews
+            refreshHoverButtons(in: subview)
+        }
     }
 
     private func setupUI() {
@@ -177,8 +206,8 @@ class SidebarViewController: NSViewController {
         favoritesTableView.menu = createContextMenu()
         favoritesTableView.menu?.delegate = self
         
-        // Enable drag and drop for reordering
-        favoritesTableView.registerForDraggedTypes([.string])
+        // Enable drag and drop for reordering and file drops
+        favoritesTableView.registerForDraggedTypes([.string, .fileURL])
         favoritesTableView.setDraggingSourceOperationMask(.move, forLocal: true)
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("FavoritesColumn"))
@@ -215,6 +244,9 @@ class SidebarViewController: NSViewController {
         drivesTableView.action = #selector(tableViewClicked(_:))
         drivesTableView.menu = createContextMenu()
         drivesTableView.menu?.delegate = self
+        
+        // Enable drag and drop for file drops
+        drivesTableView.registerForDraggedTypes([.fileURL])
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("DrivesColumn"))
         column.width = 180
@@ -250,6 +282,9 @@ class SidebarViewController: NSViewController {
         folderExplorerOutlineView.doubleAction = #selector(outlineViewDoubleClicked(_:))
         folderExplorerOutlineView.menu = createContextMenu() // Reuse context menu
         folderExplorerOutlineView.menu?.delegate = self
+        
+        // Enable drag and drop for folder explorer
+        folderExplorerOutlineView.registerForDraggedTypes([.fileURL])
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("FolderExplorerColumn"))
         column.width = 180
@@ -539,27 +574,70 @@ class SidebarViewController: NSViewController {
             currentURL = currentURL.deletingLastPathComponent()
         }
         
-        // Start expanding from the root
-        var currentItem: FileItem? = folderExplorerRootItem
-        for componentURL in pathComponents {
-            if let children = currentItem?.children {
-                for child in children {
-                    if child.url == componentURL {
-                        folderExplorerOutlineView.expandItem(currentItem)
-                        currentItem = child
-                        break
-                    }
-                }
-            }
-        }
+        // Recursively expand and load children as needed
+        expandAndSelectPath(pathComponents: pathComponents, currentItem: folderExplorerRootItem, index: 0)
+    }
+    
+    private func expandAndSelectPath(pathComponents: [URL], currentItem: FileItem?, index: Int) {
+        guard let item = currentItem else { return }
         
-        // Select the final item
-        if let finalItem = currentItem {
-            let row = folderExplorerOutlineView.row(forItem: finalItem)
+        // If we've reached the target
+        if index >= pathComponents.count {
+            // We've reached the final target - select it
+            let row = folderExplorerOutlineView.row(forItem: item)
             if row >= 0 {
                 folderExplorerOutlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
                 folderExplorerOutlineView.scrollRowToVisible(row)
             }
+            return
+        }
+        
+        let targetURL = pathComponents[index]
+        
+        // First, expand the current item so we can see its children
+        folderExplorerOutlineView.expandItem(item)
+        
+        // Load children if not loaded
+        if item.children == nil {
+            item.loadChildren(showsHiddenFiles: false) { _ in
+                DispatchQueue.main.async { [weak self] in
+                    self?.folderExplorerOutlineView.reloadItem(item, reloadChildren: true)
+                    // Expand again after loading
+                    self?.folderExplorerOutlineView.expandItem(item)
+                    self?.continueExpandingPath(pathComponents: pathComponents, currentItem: item, targetURL: targetURL, index: index)
+                }
+            }
+        } else {
+            continueExpandingPath(pathComponents: pathComponents, currentItem: item, targetURL: targetURL, index: index)
+        }
+    }
+    
+    private func continueExpandingPath(pathComponents: [URL], currentItem: FileItem, targetURL: URL, index: Int) {
+        // Find the child that matches the target URL
+        if let children = currentItem.children {
+            for child in children {
+                if child.url == targetURL {
+                    // Continue to the next level
+                    expandAndSelectPath(pathComponents: pathComponents, currentItem: child, index: index + 1)
+                    return
+                }
+            }
+        }
+        
+        // If we couldn't find the child, just select the current item
+        let row = folderExplorerOutlineView.row(forItem: currentItem)
+        if row >= 0 {
+            folderExplorerOutlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+            folderExplorerOutlineView.scrollRowToVisible(row)
+        }
+    }
+
+    func addFavorite(item: FileItem) {
+        let sidebarItem = SidebarItem(name: item.name, url: item.url, icon: item.icon)
+        if !favoriteItems.contains(where: { $0.url == sidebarItem.url }) {
+            favoriteItems.append(sidebarItem)
+            favoritesTableView.reloadData()
+            saveFavorites()
         }
     }
 }
@@ -694,6 +772,15 @@ extension SidebarViewController: NSTableViewDataSource {
     }
     
     func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int, proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation {
+        // Check if dragging files/folders
+        if info.draggingPasteboard.types?.contains(.fileURL) == true {
+            // Allow dropping on specific rows to move/copy to that location
+            if dropOperation == .on && row >= 0 {
+                return .copy
+            }
+        }
+        
+        // Check if reordering favorites
         if tableView == favoritesTableView && dropOperation == .above {
             return .move
         }
@@ -701,6 +788,45 @@ extension SidebarViewController: NSTableViewDataSource {
     }
     
     func tableView(_ tableView: NSTableView, acceptDrop info: NSDraggingInfo, row: Int, dropOperation: NSTableView.DropOperation) -> Bool {
+        // Handle file/folder drops
+        if dropOperation == .on, let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] {
+            // Determine the destination
+            let destinationURL: URL?
+            if tableView == favoritesTableView && row < favoriteItems.count {
+                destinationURL = favoriteItems[row].url
+            } else if tableView == drivesTableView && row < driveItems.count {
+                destinationURL = driveItems[row].url
+            } else {
+                return false
+            }
+            
+            guard let destination = destinationURL else { return false }
+            
+            // Move files to the destination
+            let fileManager = FileManager.default
+            var allSucceeded = true
+            
+            for sourceURL in urls {
+                let fileName = sourceURL.lastPathComponent
+                let targetURL = destination.appendingPathComponent(fileName)
+                
+                // Skip if source and destination are the same
+                if sourceURL == targetURL {
+                    continue
+                }
+                
+                do {
+                    try fileManager.moveItem(at: sourceURL, to: targetURL)
+                } catch {
+                    print("Failed to move \(sourceURL) to \(targetURL): \(error)")
+                    allSucceeded = false
+                }
+            }
+            
+            return allSucceeded
+        }
+        
+        // Handle favorites reordering
         if tableView == favoritesTableView, dropOperation == .above {
             guard let data = info.draggingPasteboard.data(forType: .string),
                   let rowIndexes = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [NSIndexSet.self], from: data) as? IndexSet else {
@@ -874,6 +1000,55 @@ extension SidebarViewController: NSOutlineViewDataSource {
         guard let fileItem = item as? FileItem else { return false }
         return fileItem.isDirectory
     }
+    
+    // MARK: - Drag and Drop for Folder Explorer
+    
+    func outlineView(_ outlineView: NSOutlineView, validateDrop info: NSDraggingInfo, proposedItem item: Any?, proposedChildIndex index: Int) -> NSDragOperation {
+        // Only allow dropping on folders
+        guard let targetItem = item as? FileItem, targetItem.isDirectory else {
+            return []
+        }
+        return .copy
+    }
+    
+    func outlineView(_ outlineView: NSOutlineView, acceptDrop info: NSDraggingInfo, item: Any?, childIndex index: Int) -> Bool {
+        guard let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
+              let targetItem = item as? FileItem else {
+            return false
+        }
+        
+        let destinationURL = targetItem.url
+        let fileManager = FileManager.default
+        var allSucceeded = true
+        
+        for sourceURL in urls {
+            let fileName = sourceURL.lastPathComponent
+            let targetURL = destinationURL.appendingPathComponent(fileName)
+            
+            // Skip if source and destination are the same
+            if sourceURL == targetURL {
+                continue
+            }
+            
+            do {
+                try fileManager.moveItem(at: sourceURL, to: targetURL)
+            } catch {
+                print("Failed to move \\(sourceURL) to \\(targetURL): \\(error)")
+                allSucceeded = false
+            }
+        }
+        
+        // Reload the folder explorer to show changes
+        if allSucceeded {
+            targetItem.loadChildren(showsHiddenFiles: false) { _ in
+                DispatchQueue.main.async { [weak self] in
+                    self?.folderExplorerOutlineView.reloadItem(targetItem, reloadChildren: true)
+                }
+            }
+        }
+        
+        return allSucceeded
+    }
 }
 
 // MARK: - NSOutlineViewDelegate
@@ -896,7 +1071,7 @@ extension SidebarViewController: NSOutlineViewDelegate {
         textField.font = NSFont.systemFont(ofSize: 13)
         textField.lineBreakMode = .byTruncatingTail
         textField.translatesAutoresizingMaskIntoConstraints = false
-        textField.stringValue = fileItem.name
+        textField.stringValue = fileItem.displayName
 
         cellView.addSubview(imageView)
         cellView.addSubview(textField)
