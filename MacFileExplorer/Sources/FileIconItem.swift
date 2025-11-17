@@ -137,7 +137,8 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
         if isListMode {
             // Horizontal layout for Windows List view: [checkbox?] [icon] [label]
             myTextField.alignment = .left
-            let iconSize = max(12, 16 * zoomLevel) // Scale icon but keep minimum size
+            let iconSize = max(12, CGFloat(16 * zoomLevel)) // Scale icon but keep minimum size
+            let spacing = max(2, CGFloat(4 * zoomLevel)) // Scale spacing with zoom
 
             if showCheckbox {
                 currentConstraints = [
@@ -150,7 +151,7 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
                     myImageView.widthAnchor.constraint(equalToConstant: iconSize),
                     myImageView.heightAnchor.constraint(equalToConstant: iconSize),
 
-                    myTextField.leadingAnchor.constraint(equalTo: myImageView.trailingAnchor, constant: 4),
+                    myTextField.leadingAnchor.constraint(equalTo: myImageView.trailingAnchor, constant: spacing),
                     myTextField.centerYAnchor.constraint(equalTo: view.centerYAnchor),
                     myTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2)
                 ]
@@ -161,7 +162,7 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
                     myImageView.widthAnchor.constraint(equalToConstant: iconSize),
                     myImageView.heightAnchor.constraint(equalToConstant: iconSize),
 
-                    myTextField.leadingAnchor.constraint(equalTo: myImageView.trailingAnchor, constant: 4),
+                    myTextField.leadingAnchor.constraint(equalTo: myImageView.trailingAnchor, constant: spacing),
                     myTextField.centerYAnchor.constraint(equalTo: view.centerYAnchor),
                     myTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2)
                 ]
@@ -169,10 +170,13 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
         } else {
             // Vertical layout for Icons view: checkbox in top-left corner, icon above label
             myTextField.alignment = .center
-            // Scale icon size with zoom level but ensure label space is maintained
-            let iconSize = max(32, 64 * zoomLevel) // Minimum 32pt to keep visible
-            let topPadding = max(3, 5 * zoomLevel)
-            let labelSpacing = max(2, 5 * zoomLevel)
+            // Scale icon size with zoom level - base size should be 85pt for better visibility
+            let iconSize = max(32, CGFloat(85 * zoomLevel)) // At 100% = 85pt, at 200% = 170pt
+            let topPadding = max(2, CGFloat(5 * zoomLevel))
+            let labelSpacing = max(2, CGFloat(4 * zoomLevel))
+
+            // Ensure label remains visible by adjusting its minimum height
+            let minLabelHeight: CGFloat = 14 // Minimum height for label visibility
 
             if showCheckbox {
                 currentConstraints = [
@@ -188,7 +192,8 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
                     myTextField.topAnchor.constraint(equalTo: myImageView.bottomAnchor, constant: labelSpacing),
                     myTextField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
                     myTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
-                    myTextField.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -3)
+                    myTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: minLabelHeight),
+                    myTextField.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -2)
                 ]
             } else {
                 currentConstraints = [
@@ -200,7 +205,8 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
                     myTextField.topAnchor.constraint(equalTo: myImageView.bottomAnchor, constant: labelSpacing),
                     myTextField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 2),
                     myTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -2),
-                    myTextField.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -3)
+                    myTextField.heightAnchor.constraint(greaterThanOrEqualToConstant: minLabelHeight),
+                    myTextField.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -2)
                 ]
             }
         }

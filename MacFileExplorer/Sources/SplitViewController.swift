@@ -169,6 +169,10 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         tabBarController?.goForward()
     }
 
+    func navigateToURL(_ url: URL) {
+        tabBarController?.navigateToLocation(url)
+    }
+
     // MARK: - SidebarDelegate
 
     func sidebarDidSelectLocation(_ url: URL) {

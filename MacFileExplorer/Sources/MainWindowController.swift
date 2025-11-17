@@ -1,9 +1,8 @@
 import Cocoa
 
-class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewControllerDelegate, SplitPaneViewControllerDelegate {
+class MainWindowController: NSWindowController, SplitViewControllerDelegate, SplitPaneViewControllerDelegate {
 
     private var splitViewController: SplitViewController?
-    private var statusBarViewController: StatusBarViewController?
 
     init() {
         // Create the window
@@ -31,39 +30,24 @@ class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewCont
         // Force the view to load now
         _ = newSplitViewController.view
         splitViewController = newSplitViewController
-        
+
         if let splitVC = splitViewController?.splitViewItems.first?.viewController as? SplitPaneViewController {
             splitVC.delegate = self
         }
 
-        // Setup Status Bar Controller
-        let newStatusBarViewController = StatusBarViewController()
-        newStatusBarViewController.delegate = self // Set delegate
-        // Force the view to load now
-        _ = newStatusBarViewController.view
-        statusBarViewController = newStatusBarViewController
-
-        // Add split view and status bar to the window's content view
+        // Add split view to the window's content view
         if let contentView = window.contentView,
-           let splitView = splitViewController?.view,
-           let statusBarView = statusBarViewController?.view {
+           let splitView = splitViewController?.view {
             contentView.addSubview(splitView)
-            contentView.addSubview(statusBarView)
 
             // Set up constraints
             splitView.translatesAutoresizingMaskIntoConstraints = false
-            statusBarView.translatesAutoresizingMaskIntoConstraints = false
 
             NSLayoutConstraint.activate([
                 splitView.topAnchor.constraint(equalTo: contentView.topAnchor),
                 splitView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
                 splitView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-                splitView.bottomAnchor.constraint(equalTo: statusBarView.topAnchor),
-
-                statusBarView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-                statusBarView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-                statusBarView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-                statusBarView.heightAnchor.constraint(equalToConstant: 22) // Standard status bar height
+                splitView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
             ])
         }
     }
@@ -127,17 +111,16 @@ class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewCont
         splitViewController?.splitHorizontally()
     }
 
-    func zoomLevelDidChange(to level: Double) {
-        // Forward zoom level changes to the split view controller
-        splitViewController?.updateZoomLevel(to: level)
-    }
-
     func goBack() {
         splitViewController?.goBack()
     }
 
     func goForward() {
         splitViewController?.goForward()
+    }
+
+    func navigateToURL(_ url: URL) {
+        splitViewController?.navigateToURL(url)
     }
 
     func isShowingHiddenFiles() -> Bool {
@@ -147,16 +130,11 @@ class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewCont
     // MARK: - SplitViewControllerDelegate
 
     func splitViewController(_ splitViewController: SplitViewController, didUpdateSelection selectedCount: Int, totalSize: Int64) {
-        statusBarViewController?.updateFileInformation(selectedCount: selectedCount, totalSize: totalSize, diskSpace: nil)
+        // Status bar is now managed by each FileBrowserViewController
     }
 
     func splitViewController(_ splitViewController: SplitViewController, didUpdateDiskSpace diskSpace: String?) {
-        // Only update disk space if no files are currently selected.
-        // If there's an active selection, the selection info takes precedence.
-        // We can infer this by checking if the last update was for a selection.
-        // A more robust solution might involve the StatusBarViewController managing its own state.
-        // For now, we'll assume if selectedCount is 0, it's safe to update disk space.
-        statusBarViewController?.updateFileInformation(selectedCount: 0, totalSize: 0, diskSpace: diskSpace)
+        // Status bar is now managed by each FileBrowserViewController
     }
 
     // MARK: - SplitPaneViewControllerDelegate
@@ -170,11 +148,11 @@ class MainWindowController: NSWindowController, StatusBarDelegate, SplitViewCont
     }
 
     func splitPane(_ splitPane: SplitPaneViewController, didUpdateSelection selectedCount: Int, totalSize: Int64) {
-        statusBarViewController?.updateFileInformation(selectedCount: selectedCount, totalSize: totalSize, diskSpace: nil)
+        // Status bar is now managed by each FileBrowserViewController
     }
 
     func splitPane(_ splitPane: SplitPaneViewController, didUpdateDiskSpace diskSpace: String?) {
-        statusBarViewController?.updateFileInformation(selectedCount: 0, totalSize: 0, diskSpace: diskSpace)
+        // Status bar is now managed by each FileBrowserViewController
     }
 
     func splitPaneDidRequestAddToFavorites(item: FileItem) {

@@ -1,0 +1,25 @@
+# Example .swiftlint.yml
+
+opt_in_rules:          # Enable optional rules by default
+  - empty_count
+  - trailing_comma
+
+disabled_rules:        # Disable rules you don’t want to enforce
+  - line_length
+  - trailing_whitespace
+
+# Custom rule examples
+rule: 
+  name: "No Force Cast"
+  regex: '!\s*as\s+'
+  message: "Avoid force casting, use conditional casts instead."
+  severity: warning
+
+# Customizable per-file overrides
+excluded:
+  - Carthage/Checkouts   # Exclude generated files
+  - Pods                 # Exclude CocoaPods
+
+# SwiftLint can be run on specific paths:
+# swiftlint lint --path ./Sources
+

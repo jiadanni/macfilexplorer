@@ -215,6 +215,10 @@ extension FileCopyMoveDialog: FileOperationDelegate {
             self.progressIndicator.doubleValue = 100
             self.pauseButton.isEnabled = false
 
+            if let start = self.startTime {
+                OperationMetricsManager.append(type: self.operation?.type == .copy ? "advanced-copy" : "advanced-move", bytes: self.totalBytesProcessed, files: self.operation?.sourceFiles.count ?? 0, start: start, end: Date())
+            }
+
             // Auto-close after 2 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                 self.close()
@@ -262,8 +266,8 @@ protocol FileOperationDelegate: AnyObject {
 
 class FileOperation {
 
-    private let type: FileCopyMoveDialog.OperationType
-    private let sourceFiles: [URL]
+    let type: FileCopyMoveDialog.OperationType
+    let sourceFiles: [URL]
     private let destination: URL
     private weak var delegate: FileOperationDelegate?
 

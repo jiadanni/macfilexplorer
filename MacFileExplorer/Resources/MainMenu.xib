@@ -23,7 +23,7 @@
                             <menuItem title="About MacFileExplorer" id="5kV-Vb-QxS">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <connections>
-                                    <action selector="orderFrontStandardAboutPanel:" target="-1" id="Exp-CZ-Vem"/>
+                                    <action selector="showAbout:" target="-1" id="Exp-CZ-Vem"/>
                                 </connections>
                             </menuItem>
                             <menuItem isSeparatorItem="YES" id="VOq-y0-SEH"/>
@@ -128,12 +128,6 @@
                                 <modifierMask key="keyEquivalentModifierMask" command="YES"/>
                                 <connections>
                                     <action selector="viewAsList:" target="Voe-Tx-rLC" id="VML-1-Act"/>
-                                </connections>
-                            </menuItem>
-                            <menuItem title="as Details" keyEquivalent="2" id="VML-2-Det">
-                                <modifierMask key="keyEquivalentModifierMask" command="YES"/>
-                                <connections>
-                                    <action selector="viewAsDetails:" target="Voe-Tx-rLC" id="VML-2-Act"/>
                                 </connections>
                             </menuItem>
                             <menuItem title="as Icons" keyEquivalent="3" id="VML-3-Icn">

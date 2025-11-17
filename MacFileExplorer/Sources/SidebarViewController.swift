@@ -186,6 +186,34 @@ class SidebarViewController: NSViewController {
         bottomSplitView.addArrangedSubview(folderExplorerContainer)
 
         mainSplitView.addArrangedSubview(bottomSplitView)
+
+        // Set equal proportions for all three sections
+        // Give each section equal space (1/3 of total height)
+        mainSplitView.setHoldingPriority(.defaultLow, forSubviewAt: 0) // Favorites
+        bottomSplitView.setHoldingPriority(.defaultLow, forSubviewAt: 0) // Locations
+        bottomSplitView.setHoldingPriority(.defaultLow, forSubviewAt: 1) // Folder Explorer
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+
+        // Set equal heights for all three sections after initial layout
+        if let mainSplitView = view.subviews.first as? NSSplitView,
+           mainSplitView.arrangedSubviews.count == 2,
+           let bottomSplitView = mainSplitView.arrangedSubviews[1] as? NSSplitView,
+           bottomSplitView.arrangedSubviews.count == 2 {
+
+            let totalHeight = mainSplitView.bounds.height
+            let dividerThickness = mainSplitView.dividerThickness
+            let sectionHeight = (totalHeight - (dividerThickness * 2)) / 3.0
+
+            // Set favorites to 1/3
+            mainSplitView.setPosition(sectionHeight, ofDividerAt: 0)
+
+            // Set locations and folder explorer each to 1/3
+            let bottomHeight = totalHeight - sectionHeight - dividerThickness
+            bottomSplitView.setPosition(bottomHeight / 2.0, ofDividerAt: 0)
+        }
     }
 
     private func setupFavoritesSection() {

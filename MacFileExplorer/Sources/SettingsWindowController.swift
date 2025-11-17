@@ -6,7 +6,7 @@ protocol SettingsWindowDelegate: AnyObject {
     func settingsWindowDidReset()
 }
 
-class SettingsWindowController: NSWindowController {
+class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
 
     weak var settingsDelegate: SettingsWindowDelegate?
     private var settingsViewController: SettingsViewController?
@@ -42,7 +42,14 @@ class SettingsWindowController: NSWindowController {
         self.init(window: window)
 
         self.settingsViewController = settingsVC
+        settingsVC.changeDelegate = self
         setupButtonBar(in: containerView, settingsVC: settingsVC)
+    }
+
+    // MARK: - SettingsChangeDelegate
+
+    func settingsDidChange() {
+        enableApplyButton()
     }
 
     override func windowDidLoad() {

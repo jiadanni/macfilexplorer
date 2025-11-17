@@ -54,6 +54,15 @@ class ToolbarViewController: NSViewController {
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 40))
         setupUI()
+        // Observe preview pane visibility changes to update toggle button state
+        NotificationCenter.default.addObserver(self, selector: #selector(handlePreviewPaneToggled(_:)), name: .previewPaneToggled, object: nil)
+        // Initial state update based on persisted preference
+        let initiallyShowingPreview = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
+        updatePreviewPaneDisplay(showing: initiallyShowingPreview)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: .previewPaneToggled, object: nil)
     }
 
     private func setupUI() {
@@ -78,6 +87,7 @@ class ToolbarViewController: NSViewController {
         backButton.action = #selector(backButtonClicked(_:))
         backButton.isEnabled = false
         backButton.sendAction(on: [.leftMouseDown, .rightMouseDown])
+        backButton.toolTip = "Back (⌘[)"
         backButton.isHidden = !showBackForward
         view.addSubview(backButton)
 
@@ -90,6 +100,7 @@ class ToolbarViewController: NSViewController {
         forwardButton.action = #selector(forwardButtonClicked(_:))
         forwardButton.isEnabled = false
         forwardButton.sendAction(on: [.leftMouseDown, .rightMouseDown])
+        forwardButton.toolTip = "Forward (⌘])"
         forwardButton.isHidden = !showBackForward
         view.addSubview(forwardButton)
 
@@ -118,6 +129,7 @@ class ToolbarViewController: NSViewController {
         listModeButton.image = NSImage(systemSymbolName: "list.bullet", accessibilityDescription: "List View")
         listModeButton.target = self
         listModeButton.action = #selector(listViewModeClicked(_:))
+        listModeButton.toolTip = "List View (⌘1)"
         listModeButton.isHidden = !showViewMode
         view.addSubview(listModeButton)
 
@@ -127,6 +139,7 @@ class ToolbarViewController: NSViewController {
         iconsModeButton.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "Icons View")
         iconsModeButton.target = self
         iconsModeButton.action = #selector(iconsViewModeClicked(_:))
+        iconsModeButton.toolTip = "Icons View (⌘2)"
         iconsModeButton.isHidden = !showViewMode
         view.addSubview(iconsModeButton)
 
@@ -136,6 +149,7 @@ class ToolbarViewController: NSViewController {
         columnsModeButton.image = NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Columns View")
         columnsModeButton.target = self
         columnsModeButton.action = #selector(columnsViewModeClicked(_:))
+        columnsModeButton.toolTip = "Columns View (⌘3)"
         columnsModeButton.isHidden = !showViewMode
         view.addSubview(columnsModeButton)
 
@@ -145,6 +159,7 @@ class ToolbarViewController: NSViewController {
         windowsListModeButton.image = NSImage(systemSymbolName: "list.bullet.rectangle", accessibilityDescription: "Windows List View")
         windowsListModeButton.target = self
         windowsListModeButton.action = #selector(windowsListViewModeClicked(_:))
+        windowsListModeButton.toolTip = "Windows List View (⌘4)"
         windowsListModeButton.isHidden = !showViewMode
         view.addSubview(windowsListModeButton)
         
@@ -155,6 +170,7 @@ class ToolbarViewController: NSViewController {
         hiddenFilesButton.image = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: "Show Hidden Files")
         hiddenFilesButton.target = self
         hiddenFilesButton.action = #selector(toggleHiddenFiles(_:))
+        hiddenFilesButton.toolTip = "Show Hidden Files (⇧⌘.)"
         hiddenFilesButton.isHidden = !showHiddenFiles
         view.addSubview(hiddenFilesButton)
         
@@ -165,6 +181,7 @@ class ToolbarViewController: NSViewController {
         splitVerticalButton.image = NSImage(systemSymbolName: "rectangle.split.2x1", accessibilityDescription: "Split Vertically")
         splitVerticalButton.target = self
         splitVerticalButton.action = #selector(splitVerticallyClicked(_:))
+        splitVerticalButton.toolTip = "Split View Vertically"
         splitVerticalButton.isHidden = !showSplit
         view.addSubview(splitVerticalButton)
         
@@ -175,6 +192,7 @@ class ToolbarViewController: NSViewController {
         splitHorizontalButton.image = NSImage(systemSymbolName: "rectangle.split.1x2", accessibilityDescription: "Split Horizontally")
         splitHorizontalButton.target = self
         splitHorizontalButton.action = #selector(splitHorizontallyClicked(_:))
+        splitHorizontalButton.toolTip = "Split View Horizontally"
         splitHorizontalButton.isHidden = !showSplit
         view.addSubview(splitHorizontalButton)
 
@@ -185,6 +203,7 @@ class ToolbarViewController: NSViewController {
         previewPaneButton.image = NSImage(systemSymbolName: "sidebar.right", accessibilityDescription: "Toggle Preview Pane")
         previewPaneButton.target = self
         previewPaneButton.action = #selector(togglePreviewPaneClicked(_:))
+        previewPaneButton.toolTip = "Show Preview Pane"
         previewPaneButton.isHidden = !showPreviewPane
         view.addSubview(previewPaneButton)
 
@@ -209,6 +228,7 @@ class ToolbarViewController: NSViewController {
         sortButton.menu?.addItem(withTitle: "Type ↓", action: #selector(sortByTypeDescending(_:)), keyEquivalent: "")
 
         sortButton.menu?.items.forEach { $0.target = self }
+        sortButton.toolTip = "Sort Options"
         sortButton.isHidden = !showSort
         view.addSubview(sortButton)
 
@@ -219,6 +239,7 @@ class ToolbarViewController: NSViewController {
         newFolderButton.image = NSImage(systemSymbolName: "folder.badge.plus", accessibilityDescription: "New Folder")
         newFolderButton.target = self
         newFolderButton.action = #selector(newFolderButtonClicked(_:))
+        newFolderButton.toolTip = "New Folder (⇧⌘N)"
         newFolderButton.isHidden = !showNewFolder
         view.addSubview(newFolderButton)
 
@@ -229,6 +250,7 @@ class ToolbarViewController: NSViewController {
         closePaneButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close Pane")
         closePaneButton.target = self
         closePaneButton.action = #selector(closePaneButtonClicked(_:))
+        closePaneButton.toolTip = "Close Pane (⌘W)"
         closePaneButton.isHidden = true // Hidden by default, shown when there are multiple panes
         view.addSubview(closePaneButton)
 
@@ -240,6 +262,7 @@ class ToolbarViewController: NSViewController {
         searchField.action = #selector(searchFieldChanged(_:))
         searchField.sendsWholeSearchString = false
         searchField.sendsSearchStringImmediately = true
+        searchField.toolTip = "Search (⌘F)"
         view.addSubview(searchField)
 
         // Layout constraints
@@ -257,7 +280,8 @@ class ToolbarViewController: NSViewController {
             breadcrumbScrollView.leadingAnchor.constraint(equalTo: forwardButton.trailingAnchor, constant: 8),
             breadcrumbScrollView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             breadcrumbScrollView.heightAnchor.constraint(equalToConstant: 26),
-            breadcrumbScrollView.widthAnchor.constraint(lessThanOrEqualToConstant: 400),
+            breadcrumbScrollView.widthAnchor.constraint(lessThanOrEqualToConstant: 600),
+            breadcrumbScrollView.widthAnchor.constraint(greaterThanOrEqualToConstant: 120),
             breadcrumbScrollView.trailingAnchor.constraint(lessThanOrEqualTo: listModeButton.leadingAnchor, constant: -8),
 
             breadcrumbStackView.leadingAnchor.constraint(equalTo: breadcrumbScrollView.leadingAnchor),
@@ -352,8 +376,10 @@ class ToolbarViewController: NSViewController {
         showingHiddenFiles = showing
         if showing {
             hiddenFilesButton.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "Hide Hidden Files")
+            hiddenFilesButton.toolTip = "Hide Hidden Files (⇧⌘.)"
         } else {
             hiddenFilesButton.image = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: "Show Hidden Files")
+            hiddenFilesButton.toolTip = "Show Hidden Files (⇧⌘.)"
         }
     }
 
@@ -388,8 +414,38 @@ class ToolbarViewController: NSViewController {
         sortButton.image = image
     }
 
+    func updateSplitButtonsState(canAddMore: Bool) {
+        splitVerticalButton.isEnabled = canAddMore
+        splitHorizontalButton.isEnabled = canAddMore
+
+        if !canAddMore {
+            let maxPanes = UserDefaults.standard.integer(forKey: UserDefaults.Keys.maximumPanes.rawValue)
+            let limit = maxPanes > 0 ? maxPanes : 2
+            splitVerticalButton.toolTip = "Maximum panes reached (\(limit)). Increase in Settings > Advanced."
+            splitHorizontalButton.toolTip = "Maximum panes reached (\(limit)). Increase in Settings > Advanced."
+        } else {
+            splitVerticalButton.toolTip = "Split View Vertically"
+            splitHorizontalButton.toolTip = "Split View Horizontally"
+        }
+    }
+
     func setClosePaneButtonVisible(_ visible: Bool) {
         closePaneButton.isHidden = !visible
+    }
+
+    private func updatePreviewPaneDisplay(showing: Bool) {
+        NSAnimationContext.runAnimationGroup { _ in
+            NSAnimationContext.current.duration = 0.15
+            if showing {
+                previewPaneButton.image = NSImage(systemSymbolName: "sidebar.right", accessibilityDescription: "Hide Preview Pane")
+                previewPaneButton.contentTintColor = .systemBlue
+                previewPaneButton.toolTip = "Hide Preview Pane"
+            } else {
+                previewPaneButton.image = NSImage(systemSymbolName: "sidebar.right", accessibilityDescription: "Show Preview Pane")
+                previewPaneButton.contentTintColor = nil
+                previewPaneButton.toolTip = "Show Preview Pane"
+            }
+        }
     }
 
     private func updateBreadcrumbs(for url: URL) {
@@ -432,12 +488,24 @@ class ToolbarViewController: NSViewController {
 
             // Create breadcrumb button
             let button = NSButton()
-            button.title = component
+            let originalComponent = component
+            // Truncate long path segments for display, keep tooltip full
+            var displayTitle = originalComponent
+            if originalComponent.count > 22 {
+                let prefix = originalComponent.prefix(10)
+                let suffix = originalComponent.suffix(8)
+                displayTitle = String(prefix) + "…" + String(suffix)
+            }
+            button.title = displayTitle
             button.bezelStyle = .roundRect
             button.isBordered = false
             button.font = NSFont.systemFont(ofSize: 12)
             button.target = self
             button.action = #selector(breadcrumbClicked(_:))
+            button.toolTip = originalComponent
+            button.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            button.lineBreakMode = .byTruncatingMiddle
             
             // Set the URL for this component
             if index < breadcrumbURLs.count {
@@ -597,5 +665,14 @@ class ToolbarViewController: NSViewController {
 
     @objc private func searchFieldChanged(_ sender: NSSearchField) {
         delegate?.toolbarDidSearchTextChange(sender.stringValue)
+    }
+}
+
+// MARK: - Notification Handling
+extension ToolbarViewController {
+    @objc private func handlePreviewPaneToggled(_ notification: Notification) {
+        // Determine current visibility from UserDefaults (since notification carries no userInfo)
+        let showing = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
+        updatePreviewPaneDisplay(showing: showing)
     }
 }

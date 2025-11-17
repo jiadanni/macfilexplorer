@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		617E78C00A3B9EE92A79BE33 /* PermissionsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25571C2C8395C0D079C08C7 /* PermissionsManager.swift */; };
 		AA0000010000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000020000000000000001 /* AppDelegate.swift */; };
 		AA0000030000000000000001 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000040000000000000001 /* MainWindowController.swift */; };
 		AA0000050000000000000001 /* SplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000060000000000000001 /* SplitViewController.swift */; };
@@ -27,6 +28,13 @@
 		AA0000420000000000000001 /* FileIconItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000430000000000000001 /* FileIconItem.swift */; };
 		AA0000440000000000000001 /* SettingsSidebarCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000450000000000000001 /* SettingsSidebarCellView.swift */; };
 		AA0000460000000000000001 /* StatusBarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000470000000000000001 /* StatusBarViewController.swift */; };
+		C357D9E02ECA0ECB001BA891 /* AboutWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9DF2ECA0ECB001BA891 /* AboutWindowController.swift */; };
+		C357D9E72ECA0EDF001BA891 /* NotificationNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */; };
+		C357D9E82ECA0EDF001BA891 /* ProgressViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */; };
+		C357D9E92ECA0EDF001BA891 /* FileCopyMoveDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E12ECA0EDF001BA891 /* FileCopyMoveDialog.swift */; };
+		C357D9EA2ECA0EDF001BA891 /* ViewOptionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E62ECA0EDF001BA891 /* ViewOptionsViewController.swift */; };
+		C357D9EB2ECA0EDF001BA891 /* ViewOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E52ECA0EDF001BA891 /* ViewOptions.swift */; };
+		C357D9EC2ECA0EDF001BA891 /* PreviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */; };
 		CCCBA794A1A1D994A87C8115 /* PreviewPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65E9B8A3D560CC7CD32E7587 /* PreviewPaneViewController.swift */; };
 /* End PBXBuildFile section */
 
@@ -55,6 +63,14 @@
 		AA0000430000000000000001 /* FileIconItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileIconItem.swift; sourceTree = "<group>"; };
 		AA0000450000000000000001 /* SettingsSidebarCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSidebarCellView.swift; sourceTree = "<group>"; };
 		AA0000470000000000000001 /* StatusBarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarViewController.swift; sourceTree = "<group>"; };
+		C357D9DF2ECA0ECB001BA891 /* AboutWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutWindowController.swift; sourceTree = "<group>"; };
+		C357D9E12ECA0EDF001BA891 /* FileCopyMoveDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCopyMoveDialog.swift; sourceTree = "<group>"; };
+		C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationNames.swift; sourceTree = "<group>"; };
+		C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewViewController.swift; sourceTree = "<group>"; };
+		C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressViewController.swift; sourceTree = "<group>"; };
+		C357D9E52ECA0EDF001BA891 /* ViewOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewOptions.swift; sourceTree = "<group>"; };
+		C357D9E62ECA0EDF001BA891 /* ViewOptionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewOptionsViewController.swift; sourceTree = "<group>"; };
+		D25571C2C8395C0D079C08C7 /* PermissionsManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PermissionsManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +105,13 @@
 		AA0000270000000000000001 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				C357D9E12ECA0EDF001BA891 /* FileCopyMoveDialog.swift */,
+				C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */,
+				C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */,
+				C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */,
+				C357D9E52ECA0EDF001BA891 /* ViewOptions.swift */,
+				C357D9E62ECA0EDF001BA891 /* ViewOptionsViewController.swift */,
+				C357D9DF2ECA0ECB001BA891 /* AboutWindowController.swift */,
 				AA0000020000000000000001 /* AppDelegate.swift */,
 				AA0000040000000000000001 /* MainWindowController.swift */,
 				AA0000060000000000000001 /* SplitViewController.swift */,
@@ -108,6 +131,7 @@
 				AA0000160000000000000001 /* ColorManager.swift */,
 				AA0000180000000000000001 /* FileSystemMonitor.swift */,
 				65E9B8A3D560CC7CD32E7587 /* PreviewPaneViewController.swift */,
+				D25571C2C8395C0D079C08C7 /* PermissionsManager.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -127,7 +151,6 @@
 				AA0000230000000000000001 /* Info.plist */,
 				AA0000240000000000000001 /* MacFileExplorer.entitlements */,
 			);
-			name = "Supporting Files";
 			path = "Supporting Files";
 			sourceTree = "<group>";
 		};
@@ -210,6 +233,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA0000010000000000000001 /* AppDelegate.swift in Sources */,
+				C357D9E02ECA0ECB001BA891 /* AboutWindowController.swift in Sources */,
 				AA0000030000000000000001 /* MainWindowController.swift in Sources */,
 				AA0000050000000000000001 /* SplitViewController.swift in Sources */,
 				AA0000070000000000000001 /* FileBrowserViewController.swift in Sources */,
@@ -228,6 +252,13 @@
 				AA0000150000000000000001 /* ColorManager.swift in Sources */,
 				AA0000170000000000000001 /* FileSystemMonitor.swift in Sources */,
 				CCCBA794A1A1D994A87C8115 /* PreviewPaneViewController.swift in Sources */,
+				C357D9E72ECA0EDF001BA891 /* NotificationNames.swift in Sources */,
+				C357D9E82ECA0EDF001BA891 /* ProgressViewController.swift in Sources */,
+				C357D9E92ECA0EDF001BA891 /* FileCopyMoveDialog.swift in Sources */,
+				C357D9EA2ECA0EDF001BA891 /* ViewOptionsViewController.swift in Sources */,
+				C357D9EB2ECA0EDF001BA891 /* ViewOptions.swift in Sources */,
+				C357D9EC2ECA0EDF001BA891 /* PreviewViewController.swift in Sources */,
+				617E78C00A3B9EE92A79BE33 /* PermissionsManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
