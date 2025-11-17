@@ -27,12 +27,17 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         // Main split view is vertical (left-right)
         splitView.isVertical = true
         splitView.dividerStyle = .thin
+        splitView.delegate = self
 
         // Create sidebar
         sidebarViewController = SidebarViewController()
         sidebarViewController?.delegate = self
         let sidebarItem = NSSplitViewItem(viewController: sidebarViewController!)
-        sidebarItem.minimumThickness = 180
+        // Determine fixed width (load saved or default)
+        let savedWidth = UserDefaults.standard.double(forKey: "sidebarFixedWidth")
+        let fixedWidth: CGFloat = savedWidth > 120 ? CGFloat(savedWidth) : 220
+        sidebarItem.minimumThickness = fixedWidth
+        sidebarItem.maximumThickness = fixedWidth
         sidebarItem.canCollapse = false
         addSplitViewItem(sidebarItem)
 
@@ -64,6 +69,12 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         let contentItem = NSSplitViewItem(viewController: contentSplitViewController!)
         contentItem.canCollapse = false
         addSplitViewItem(contentItem)
+
+        // Apply initial divider position to honor fixed width
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.splitView.setPosition(fixedWidth, ofDividerAt: 0)
+        }
     }
 
     override func viewDidAppear() {
@@ -72,7 +83,19 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         // Create initial tab after view hierarchy is fully loaded (only once)
         if !hasInitializedTabs {
             hasInitializedTabs = true
-            addNewTab()
+
+            // Check if we should show Start tab
+            // Default to Start Page if no startup folder is explicitly set
+            let hasLaunchedBefore = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hasLaunchedBefore.rawValue)
+            let showStartOnLaunch = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showStartOnLaunch.rawValue)
+            let hasStartupFolder = UserDefaults.standard.string(forKey: UserDefaults.Keys.startupFolder.rawValue) != nil
+
+            // Show Start Page if: first launch, preference is set, OR no startup folder configured
+            if !hasLaunchedBefore || showStartOnLaunch || !hasStartupFolder {
+                tabBarController?.addStartTab()
+            } else {
+                addNewTab()
+            }
         }
     }
 
@@ -80,6 +103,10 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
     func addNewTab() {
         tabBarController?.addNewTab()
+    }
+
+    func addSettingsTab() {
+        tabBarController?.openSettingsTab()
     }
 
     func closeCurrentTab() {
@@ -113,6 +140,10 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
     func pasteSelection() {
         tabBarController?.pasteSelection()
+    }
+
+    func openStorageAnalyzerTab() {
+        tabBarController?.openStorageAnalyzerTab()
     }
 
     func setViewMode(_ viewMode: ViewMode) {
@@ -177,7 +208,8 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
     func sidebarDidSelectLocation(_ url: URL) {
         print("SplitViewController: sidebarDidSelectLocation - Received URL: \(url.path)")
-        tabBarController?.navigateToLocation(url)
+        // Open in new tab instead of navigating current tab
+        tabBarController?.openInNewTab(url: url)
         sidebarViewController?.expandToCurrentDirectory(url: url)
     }
     
@@ -195,5 +227,20 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
     func terminalViewControllerDidRequestClose(_ controller: TerminalViewController) {
         toggleTerminal()
+    }
+
+    // Maintain fixed sidebar width and persist user adjustments
+    override func splitViewDidResizeSubviews(_ notification: Notification) {
+        guard let sidebarView = sidebarViewController?.view, let sidebarItem = splitViewItems.first else { return }
+        let width = sidebarView.bounds.width
+        if width > 120 { // persist reasonable width
+            UserDefaults.standard.set(Double(width), forKey: "sidebarFixedWidth")
+        }
+        // Only update constraints if they differ; avoid calling setPosition here to prevent recursive notifications
+        let epsilon: CGFloat = 0.5
+        if abs(sidebarItem.minimumThickness - width) > epsilon || abs(sidebarItem.maximumThickness - width) > epsilon {
+            sidebarItem.minimumThickness = width
+            sidebarItem.maximumThickness = width
+        }
     }
 }

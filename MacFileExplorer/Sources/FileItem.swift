@@ -252,8 +252,65 @@ class FileItem: Hashable {
         return imageExtensions.contains(url.pathExtension.lowercased())
     }
 
+    // MARK: - Folder Size Calculation
+
+    /// Asynchronously calculate the total size of a folder
+    func calculateFolderSize(completion: @escaping (Int64) -> Void) {
+        guard isDirectory else {
+            completion(size)
+            return
+        }
+
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            let totalSize = self.calculateDirectorySize(at: self.url)
+            
+            DispatchQueue.main.async {
+                self.size = totalSize
+                completion(totalSize)
+            }
+        }
+    }
+
+    private func calculateDirectorySize(at url: URL) -> Int64 {
+        var totalSize: Int64 = 0
+        let fileManager = FileManager.default
+        
+        guard let enumerator = fileManager.enumerator(at: url,
+                                                       includingPropertiesForKeys: [.isRegularFileKey, .fileAllocatedSizeKey, .totalFileAllocatedSizeKey],
+                                                       options: [.skipsHiddenFiles]) else {
+            return 0
+        }
+        
+        for case let fileURL as URL in enumerator {
+            do {
+                let resourceValues = try fileURL.resourceValues(forKeys: [.isRegularFileKey, .fileAllocatedSizeKey, .totalFileAllocatedSizeKey])
+                
+                // Only count regular files
+                if resourceValues.isRegularFile == true {
+                    // Use allocated size for better accuracy
+                    if let allocatedSize = resourceValues.totalFileAllocatedSize ?? resourceValues.fileAllocatedSize {
+                        totalSize += Int64(allocatedSize)
+                    }
+                }
+            } catch {
+                // Skip files we can't read
+                continue
+            }
+        }
+        
+        return totalSize
+    }
+
     var sizeString: String {
-        guard !isDirectory else { return "--" }
+        if isDirectory {
+            // Check if user has enabled folder size calculation
+            let showFolderSizes = UserDefaults.standard.bool(forKey: "showFolderSizes")
+            if showFolderSizes && size > 0 {
+                return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+            }
+            return "--"
+        }
         return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }
 

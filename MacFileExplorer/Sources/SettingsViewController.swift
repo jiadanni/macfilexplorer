@@ -44,6 +44,11 @@ extension UserDefaults {
         // Preview Pane Settings
         case showPreviewPane = "showPreviewPane"
         case previewPanePosition = "previewPanePosition" // "right" or "bottom"
+        case previewPaneWidth = "previewPaneWidth" // Stored width (CGFloat)
+        // Granted Directory Permissions (user-approved folder access list)
+        case grantedDirectoriesPaths = "grantedDirectoriesPaths" // [String] of absolute paths
+        case grantedDirectoryBookmarks = "grantedDirectoryBookmarks" // [Data] security-scoped bookmarks
+        case grantedDirectoryBookmarksMigrated = "grantedDirectoryBookmarksMigrated" // Bool migration flag
 
         // File Operations Settings
         case autoRenameOnConflict = "autoRenameOnConflict"
@@ -59,6 +64,12 @@ extension UserDefaults {
         case showPreviewPaneButton = "showPreviewPaneButton"
         case showNewFolderButton = "showNewFolderButton"
         case showSortButton = "showSortButton"
+        
+        // Column Visibility (List View)
+        case columnVisibility = "columnVisibility" // Dictionary: ColumnIdentifier -> Bool (visible)
+        
+        // Settings Placement
+        case openSettingsInTab = "openSettingsInTab" // Bool: open preferences in a tab instead of window
 
         // Sorting Preferences
         case folderSortPreferences = "folderSortPreferences" // Dictionary path -> "Column|asc|desc"
@@ -71,6 +82,9 @@ extension UserDefaults {
 
         // Split Panes Settings
         case maximumPanes = "maximumPanes"                  // Int, default 2, max 8
+
+        // List View Settings
+        case showFolderSizes = "showFolderSizes"            // Bool - calculate and display folder sizes (performance impact)
 
         // Go Menu Settings
         case showGoHome = "showGoHome"                      // Bool, default true
@@ -87,8 +101,14 @@ extension UserDefaults {
         case showGoRecent = "showGoRecent"                  // Bool, default false
         case showGoConnectToServer = "showGoConnectToServer" // Bool, default false
 
+        // Start Page Settings
+        case hasLaunchedBefore = "hasLaunchedBefore"       // Bool - tracks first launch
+        case hasCompletedOnboarding = "hasCompletedOnboarding" // Bool - onboarding complete
+        case showStartOnLaunch = "showStartOnLaunch"       // Bool - show Start tab on launch
+        case dismissedWelcome = "dismissedWelcome"         // Bool - user dismissed welcome widget
+
         static var allCases: [Keys] {
-            return [.warnOnExtensionChange, .enableEasySelect, .restoreTabsOnReopen, .showFavorites, .showRecents, .showLocations, .sidebarOrder, .openTerminalByDefault, .showContextMenuHotkeys, .hideOpenWith, .hideGetInfo, .hideCopy, .hideCut, .hidePaste, .hideRename, .hideMoveToTrash, .hideNewFolder, .hideShowInFinder, .expandSidebarToCurrentDirectory, .showStatusBar, .autoRenameOnConflict, .deleteWithBackspaceOnly, .confirmFileOperations, .showOperationProgress, .showBackForwardButtons, .showViewModeButton, .showHiddenFilesButton, .showSplitButtons, .showPreviewPaneButton, .showNewFolderButton, .showSortButton, .folderSortPreferences, .hiddenFilesState, .defaultViewMode, .defaultSortColumn, .defaultSortAscending, .maximumPanes, .showGoHome, .showGoDesktop, .showGoDocuments, .showGoDownloads, .showGoApplications, .showGoUtilities, .showGoLibrary, .showGoComputer, .showGoAirDrop, .showGoNetwork, .showGoiCloudDrive, .showGoRecent, .showGoConnectToServer]
+            return [.warnOnExtensionChange, .enableEasySelect, .restoreTabsOnReopen, .showFavorites, .showRecents, .showLocations, .sidebarOrder, .openTerminalByDefault, .showContextMenuHotkeys, .hideOpenWith, .hideGetInfo, .hideCopy, .hideCut, .hidePaste, .hideRename, .hideMoveToTrash, .hideNewFolder, .hideShowInFinder, .expandSidebarToCurrentDirectory, .showStatusBar, .autoRenameOnConflict, .deleteWithBackspaceOnly, .confirmFileOperations, .showOperationProgress, .showBackForwardButtons, .showViewModeButton, .showHiddenFilesButton, .showSplitButtons, .showPreviewPaneButton, .showNewFolderButton, .showSortButton, .columnVisibility, .openSettingsInTab, .folderSortPreferences, .hiddenFilesState, .defaultViewMode, .defaultSortColumn, .defaultSortAscending, .maximumPanes, .showFolderSizes, .showGoHome, .showGoDesktop, .showGoDocuments, .showGoDownloads, .showGoApplications, .showGoUtilities, .showGoLibrary, .showGoComputer, .showGoAirDrop, .showGoNetwork, .showGoiCloudDrive, .showGoRecent, .showGoConnectToServer, .previewPaneWidth, .grantedDirectoriesPaths, .grantedDirectoryBookmarks, .grantedDirectoryBookmarksMigrated, .hasLaunchedBefore, .hasCompletedOnboarding, .showStartOnLaunch, .dismissedWelcome]
         }
     }
 }
@@ -109,8 +129,11 @@ protocol SettingsChangeDelegate: AnyObject {
 
 enum SettingsSection: String, CaseIterable {
     case general = "General"
+    case appearance = "Appearance"
     case tabs = "Tabs"
     case toolbar = "Toolbar"
+    case storage = "Storage"
+    case fileOperations = "File Operations"
     case goMenu = "Go Menu"
     case terminal = "Terminal"
     case permissions = "Permissions"
@@ -164,10 +187,16 @@ class SettingsViewController: NSSplitViewController, SettingsSidebarDelegate {
             let vc = GeneralSettingsViewController()
             vc.changeDelegate = changeDelegate
             newContentVC = vc
+        case .appearance:
+            newContentVC = AppearanceSettingsViewController()
         case .tabs:
             newContentVC = TabsSettingsViewController()
         case .toolbar:
             newContentVC = ToolbarSettingsViewController()
+        case .storage:
+            newContentVC = StorageSettingsViewController()
+        case .fileOperations:
+            newContentVC = FileOperationsSettingsViewController()
         case .goMenu:
             newContentVC = GoMenuSettingsViewController()
         case .terminal:
@@ -237,25 +266,23 @@ class GeneralSettingsViewController: NSViewController {
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
         ])
+        stackView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        stackView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         addStartupFolderSettings()
         addFileExtensionSettings()
         addSelectionSettings()
-        addFileOperationsSettings()
-        addFolderAppearanceSettings()
-        addAccentColorSettings()
         addDefaultViewAndSortSettings()
     }
 
     private func addStartupFolderSettings() {
-        let titleLabel = NSTextField(labelWithString: "Startup Folder:")
+        let titleLabel = NSTextField(labelWithString: "Startup Location:")
         titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stackView.addArrangedSubview(titleLabel)
 
-        // Create horizontal container for path display and change button
+        // Create horizontal container for path display and buttons
         let pathContainer = NSView()
         pathContainer.translatesAutoresizingMaskIntoConstraints = false
         stackView.addArrangedSubview(pathContainer)
@@ -273,13 +300,13 @@ class GeneralSettingsViewController: NSViewController {
         pathContainer.addSubview(pathLabel)
 
         // Change button
-        let changeButton = NSButton(title: "Choose...", target: self, action: #selector(chooseStartupFolder(_:)))
+        let changeButton = NSButton(title: "Choose Folder...", target: self, action: #selector(chooseStartupFolder(_:)))
         changeButton.translatesAutoresizingMaskIntoConstraints = false
         changeButton.bezelStyle = .rounded
         pathContainer.addSubview(changeButton)
 
-        // Reset button
-        let resetButton = NSButton(title: "Reset to Home", target: self, action: #selector(resetStartupFolder(_:)))
+        // Reset to Start Page button
+        let resetButton = NSButton(title: "Use Start Page", target: self, action: #selector(resetStartupFolder(_:)))
         resetButton.translatesAutoresizingMaskIntoConstraints = false
         resetButton.bezelStyle = .rounded
         pathContainer.addSubview(resetButton)
@@ -297,11 +324,11 @@ class GeneralSettingsViewController: NSViewController {
 
             changeButton.trailingAnchor.constraint(equalTo: resetButton.leadingAnchor, constant: -8),
             changeButton.centerYAnchor.constraint(equalTo: pathContainer.centerYAnchor),
-            changeButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 100)
+            changeButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 130)
         ])
 
         // Add description
-        let descriptionLabel = NSTextField(labelWithString: "The folder that opens when the app launches")
+        let descriptionLabel = NSTextField(labelWithString: "Choose what opens when the app launches: Start Page or a specific folder")
         descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         descriptionLabel.textColor = .secondaryLabelColor
         descriptionLabel.lineBreakMode = .byWordWrapping
@@ -320,7 +347,7 @@ class GeneralSettingsViewController: NSViewController {
         if let path = UserDefaults.standard.string(forKey: UserDefaults.Keys.startupFolder.rawValue) {
             return path
         }
-        return NSHomeDirectory()
+        return "Start Page (default)"
     }
 
     @objc private func chooseStartupFolder(_ sender: Any) {
@@ -328,12 +355,18 @@ class GeneralSettingsViewController: NSViewController {
         openPanel.canChooseFiles = false
         openPanel.canChooseDirectories = true
         openPanel.allowsMultipleSelection = false
-        openPanel.directoryURL = URL(fileURLWithPath: getStartupFolderPath())
+        openPanel.canCreateDirectories = false
+        
+        // Set initial directory to a safe location to avoid permission dialogs
+        // Only navigate to existing path if user explicitly wants to
+        openPanel.directoryURL = URL(fileURLWithPath: NSHomeDirectory())
 
         openPanel.begin { [weak self] response in
             guard response == .OK, let url = openPanel.url else { return }
 
             UserDefaults.standard.set(url.path, forKey: UserDefaults.Keys.startupFolder.rawValue)
+            // Disable Start Page when a folder is chosen
+            UserDefaults.standard.set(false, forKey: UserDefaults.Keys.showStartOnLaunch.rawValue)
 
             // Update the path label
             if let pathLabel = self?.view.viewWithTag(9001) as? NSTextField {
@@ -343,12 +376,13 @@ class GeneralSettingsViewController: NSViewController {
     }
 
     @objc private func resetStartupFolder(_ sender: Any) {
-        let homePath = NSHomeDirectory()
-        UserDefaults.standard.set(homePath, forKey: UserDefaults.Keys.startupFolder.rawValue)
+        // Remove the setting to default to Start Page
+        UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.startupFolder.rawValue)
+        UserDefaults.standard.set(true, forKey: UserDefaults.Keys.showStartOnLaunch.rawValue)
 
         // Update the path label
         if let pathLabel = view.viewWithTag(9001) as? NSTextField {
-            pathLabel.stringValue = homePath
+            pathLabel.stringValue = "Start Page (default)"
         }
     }
 
@@ -407,71 +441,6 @@ class GeneralSettingsViewController: NSViewController {
         descriptionLabel.maximumNumberOfLines = 0
         descriptionLabel.preferredMaxLayoutWidth = 400
         stackView.addArrangedSubview(descriptionLabel)
-    }
-
-    private func addFileOperationsSettings() {
-        // Add spacing
-        let spacer = NSView()
-        spacer.translatesAutoresizingMaskIntoConstraints = false
-        spacer.heightAnchor.constraint(equalToConstant: 20).isActive = true
-        stackView.addArrangedSubview(spacer)
-
-        let titleLabel = NSTextField(labelWithString: "File Operations:")
-        titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
-        stackView.addArrangedSubview(titleLabel)
-
-        addCheckbox(title: "Auto-rename on file conflict", key: .autoRenameOnConflict, defaultValue: false)
-
-        // Add description
-        let descriptionLabel = NSTextField(labelWithString: "Automatically rename files when copying/moving to a location with an existing file of the same name")
-        descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
-        descriptionLabel.textColor = .secondaryLabelColor
-        descriptionLabel.lineBreakMode = .byWordWrapping
-        descriptionLabel.maximumNumberOfLines = 0
-        descriptionLabel.preferredMaxLayoutWidth = 400
-        stackView.addArrangedSubview(descriptionLabel)
-
-        // Add small spacer
-        let smallSpacer = NSView()
-        smallSpacer.translatesAutoresizingMaskIntoConstraints = false
-        smallSpacer.heightAnchor.constraint(equalToConstant: 10).isActive = true
-        stackView.addArrangedSubview(smallSpacer)
-
-        addCheckbox(title: "Delete files with Backspace key only (disable Command+Delete)", key: .deleteWithBackspaceOnly, defaultValue: false)
-
-        // Add description
-        let deleteDescriptionLabel = NSTextField(labelWithString: "Press Backspace to move files to trash. Command+Delete will be disabled.")
-        deleteDescriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
-        deleteDescriptionLabel.textColor = .secondaryLabelColor
-        deleteDescriptionLabel.lineBreakMode = .byWordWrapping
-        deleteDescriptionLabel.maximumNumberOfLines = 0
-        deleteDescriptionLabel.preferredMaxLayoutWidth = 400
-        stackView.addArrangedSubview(deleteDescriptionLabel)
-
-        // Spacer
-        let spacer2 = NSView()
-        spacer2.translatesAutoresizingMaskIntoConstraints = false
-        spacer2.heightAnchor.constraint(equalToConstant: 10).isActive = true
-        stackView.addArrangedSubview(spacer2)
-
-        // New settings: confirmations & progress visibility
-        addCheckbox(title: "Confirm file operations (copy/move/paste/delete)", key: .confirmFileOperations, defaultValue: true)
-        let confirmDesc = NSTextField(labelWithString: "Show confirmation dialogs with item counts, sizes, and available space before executing operations.")
-        confirmDesc.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
-        confirmDesc.textColor = .secondaryLabelColor
-        confirmDesc.lineBreakMode = .byWordWrapping
-        confirmDesc.maximumNumberOfLines = 0
-        confirmDesc.preferredMaxLayoutWidth = 400
-        stackView.addArrangedSubview(confirmDesc)
-
-        addCheckbox(title: "Show progress sheets during operations", key: .showOperationProgress, defaultValue: true)
-        let progressDesc = NSTextField(labelWithString: "Display a progress dialog for multi-file copy, move, paste, and delete operations.")
-        progressDesc.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
-        progressDesc.textColor = .secondaryLabelColor
-        progressDesc.lineBreakMode = .byWordWrapping
-        progressDesc.maximumNumberOfLines = 0
-        progressDesc.preferredMaxLayoutWidth = 400
-        stackView.addArrangedSubview(progressDesc)
     }
 
     private func addFolderAppearanceSettings() {
@@ -715,7 +684,7 @@ class GeneralSettingsViewController: NSViewController {
             colorButton.title = ""
             colorButton.target = self
             colorButton.action = #selector(accentColorButtonClicked(_:))
-            colorButton.tag = index + 1000  // Offset to differentiate from folder colors
+            colorButton.tag = index
             colorButton.toolTip = name
 
             // Highlight selected color
@@ -763,9 +732,8 @@ class GeneralSettingsViewController: NSViewController {
             NSColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1.0)
         ]
 
-        let index = sender.tag - 1000  // Remove offset
-        guard index >= 0 && index < presetAccentColors.count else { return }
-        let selectedColor = presetAccentColors[index]
+        guard sender.tag < presetAccentColors.count else { return }
+        let selectedColor = presetAccentColors[sender.tag]
 
         // Save the color
         do {
@@ -877,13 +845,6 @@ class GeneralSettingsViewController: NSViewController {
     }
 }
 
-extension Notification.Name {
-    static let globalFolderColorDidChangeNotification = Notification.Name("globalFolderColorDidChangeNotification")
-    static let accentColorDidChangeNotification = Notification.Name("accentColorDidChangeNotification")
-    static let showFileExtensionsDidChangeNotification = Notification.Name("showFileExtensionsDidChangeNotification")
-    static let easySelectDidChangeNotification = Notification.Name("easySelectDidChangeNotification")
-}
-
 extension NSColor {
     static var customAccentColor: NSColor {
         if let colorData = UserDefaults.standard.data(forKey: UserDefaults.Keys.accentColor.rawValue),
@@ -914,7 +875,8 @@ class TabsSettingsViewController: NSViewController {
         NSLayoutConstraint.activate([
             stackView.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
+            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            stackView.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -20)
         ])
 
         addTabsSettings()
@@ -953,27 +915,457 @@ class TabsSettingsViewController: NSViewController {
     }
 }
 
-class TerminalSettingsViewController: NSViewController {
+class AppearanceSettingsViewController: NSViewController {
 
     private var stackView: NSStackView!
 
     override func loadView() {
-        let view = NSView()
-        view.wantsLayer = true
-        view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-        self.view = view
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = NSColor.controlBackgroundColor
+        self.view = scrollView
+
+        let contentView = NSView()
+        contentView.wantsLayer = true
+        contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        contentView.translatesAutoresizingMaskIntoConstraints = false
 
         stackView = NSStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.orientation = .vertical
         stackView.alignment = .leading
         stackView.spacing = 10
-        view.addSubview(stackView)
+        contentView.addSubview(stackView)
+
+        scrollView.documentView = contentView
 
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
-            stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
+            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+
+            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
+        ])
+
+        addFolderAppearanceSettings()
+        addAccentColorSettings()
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        // Scroll to top when view appears
+        if let scrollView = view as? NSScrollView {
+            scrollView.contentView.scroll(to: NSPoint.zero)
+        }
+    }
+
+    private func addFolderAppearanceSettings() {
+        let titleLabel = NSTextField(labelWithString: "Folder Color:")
+        titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize + 2)
+        stackView.addArrangedSubview(titleLabel)
+
+        let descriptionLabel = NSTextField(labelWithString: "Choose a global color for all folder icons:")
+        descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        descriptionLabel.textColor = .secondaryLabelColor
+        descriptionLabel.lineBreakMode = .byWordWrapping
+        descriptionLabel.maximumNumberOfLines = 0
+        descriptionLabel.preferredMaxLayoutWidth = 450
+        stackView.addArrangedSubview(descriptionLabel)
+
+        // Add spacing
+        let spacer1 = NSView()
+        spacer1.translatesAutoresizingMaskIntoConstraints = false
+        spacer1.heightAnchor.constraint(equalToConstant: 10).isActive = true
+        stackView.addArrangedSubview(spacer1)
+
+        // Create color palette
+        createColorPalette(forAccent: false)
+    }
+
+    private func addAccentColorSettings() {
+        // Add spacing
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        stackView.addArrangedSubview(spacer)
+
+        let titleLabel = NSTextField(labelWithString: "Accent Color:")
+        titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize + 2)
+        stackView.addArrangedSubview(titleLabel)
+
+        let descriptionLabel = NSTextField(labelWithString: "Choose an accent color for UI elements like active tabs and sidebar highlights:")
+        descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        descriptionLabel.textColor = .secondaryLabelColor
+        descriptionLabel.lineBreakMode = .byWordWrapping
+        descriptionLabel.maximumNumberOfLines = 0
+        descriptionLabel.preferredMaxLayoutWidth = 450
+        stackView.addArrangedSubview(descriptionLabel)
+
+        // Add spacing
+        let spacer1 = NSView()
+        spacer1.translatesAutoresizingMaskIntoConstraints = false
+        spacer1.heightAnchor.constraint(equalToConstant: 10).isActive = true
+        stackView.addArrangedSubview(spacer1)
+
+        // Create accent color palette
+        createColorPalette(forAccent: true)
+    }
+
+    private func createColorPalette(forAccent: Bool) {
+        let paletteContainer = NSView()
+        paletteContainer.translatesAutoresizingMaskIntoConstraints = false
+        stackView.addArrangedSubview(paletteContainer)
+
+        let presetColors: [(String, NSColor)] = forAccent ? [
+            ("System Default", .controlAccentColor),
+            ("Blue", NSColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0)),
+            ("Purple", NSColor(red: 0.69, green: 0.32, blue: 0.87, alpha: 1.0)),
+            ("Pink", NSColor(red: 1.0, green: 0.18, blue: 0.33, alpha: 1.0)),
+            ("Red", NSColor(red: 1.0, green: 0.27, blue: 0.23, alpha: 1.0)),
+            ("Orange", NSColor(red: 1.0, green: 0.58, blue: 0.0, alpha: 1.0)),
+            ("Yellow", NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0)),
+            ("Green", NSColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1.0)),
+            ("Gray", NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0)),
+            ("Indigo", NSColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1.0))
+        ] : [
+            ("Default", .controlAccentColor),
+            ("Blue", NSColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0)),
+            ("Purple", NSColor(red: 0.69, green: 0.32, blue: 0.87, alpha: 1.0)),
+            ("Pink", NSColor(red: 1.0, green: 0.18, blue: 0.33, alpha: 1.0)),
+            ("Red", NSColor(red: 1.0, green: 0.27, blue: 0.23, alpha: 1.0)),
+            ("Orange", NSColor(red: 1.0, green: 0.58, blue: 0.0, alpha: 1.0)),
+            ("Yellow", NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0)),
+            ("Green", NSColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1.0)),
+            ("Gray", NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0)),
+            ("None", .clear)
+        ]
+
+        var xOffset: CGFloat = 0
+        var yOffset: CGFloat = 0
+        let buttonSize: CGFloat = 40
+        let spacing: CGFloat = 10
+        let buttonsPerRow = 5
+
+        // Load currently selected color
+        let settingsKey = forAccent ? UserDefaults.Keys.accentColor.rawValue : UserDefaults.Keys.globalFolderColor.rawValue
+        var currentColor = NSColor.controlAccentColor
+        if let colorData = UserDefaults.standard.data(forKey: settingsKey),
+           let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: colorData) {
+            currentColor = color
+        }
+
+        for (index, (name, color)) in presetColors.enumerated() {
+            let colorButton = NSButton()
+            colorButton.translatesAutoresizingMaskIntoConstraints = false
+            colorButton.bezelStyle = .regularSquare
+            colorButton.isBordered = true
+            colorButton.wantsLayer = true
+            colorButton.layer?.backgroundColor = color.cgColor
+            colorButton.layer?.cornerRadius = 6
+            colorButton.layer?.borderWidth = 2
+            colorButton.title = ""
+            colorButton.target = self
+            colorButton.action = forAccent ? #selector(accentColorButtonClicked(_:)) : #selector(folderColorButtonClicked(_:))
+            colorButton.tag = index
+            colorButton.toolTip = name
+
+            // Highlight selected color
+            if colorsAreEqual(color, currentColor) {
+                colorButton.layer?.borderColor = NSColor.selectedContentBackgroundColor.cgColor
+            } else {
+                colorButton.layer?.borderColor = NSColor.separatorColor.cgColor
+            }
+
+            paletteContainer.addSubview(colorButton)
+
+            NSLayoutConstraint.activate([
+                colorButton.widthAnchor.constraint(equalToConstant: buttonSize),
+                colorButton.heightAnchor.constraint(equalToConstant: buttonSize),
+                colorButton.leadingAnchor.constraint(equalTo: paletteContainer.leadingAnchor, constant: xOffset),
+                colorButton.topAnchor.constraint(equalTo: paletteContainer.topAnchor, constant: yOffset)
+            ])
+
+            xOffset += buttonSize + spacing
+            if (index + 1) % buttonsPerRow == 0 {
+                xOffset = 0
+                yOffset += buttonSize + spacing
+            }
+        }
+
+        // Set palette container height
+        let totalRows = CGFloat((presetColors.count + buttonsPerRow - 1) / buttonsPerRow)
+        NSLayoutConstraint.activate([
+            paletteContainer.heightAnchor.constraint(equalToConstant: totalRows * (buttonSize + spacing) - spacing),
+            paletteContainer.widthAnchor.constraint(equalToConstant: CGFloat(buttonsPerRow) * (buttonSize + spacing) - spacing)
+        ])
+    }
+
+    private func colorsAreEqual(_ color1: NSColor, _ color2: NSColor) -> Bool {
+        guard let rgb1 = color1.usingColorSpace(.deviceRGB),
+              let rgb2 = color2.usingColorSpace(.deviceRGB) else {
+            return false
+        }
+        return abs(rgb1.redComponent - rgb2.redComponent) < 0.01 &&
+               abs(rgb1.greenComponent - rgb2.greenComponent) < 0.01 &&
+               abs(rgb1.blueComponent - rgb2.blueComponent) < 0.01
+    }
+
+    @objc private func folderColorButtonClicked(_ sender: NSButton) {
+        let presetColors: [NSColor] = [
+            .controlAccentColor,
+            NSColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0),
+            NSColor(red: 0.69, green: 0.32, blue: 0.87, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.18, blue: 0.33, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.27, blue: 0.23, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.58, blue: 0.0, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0),
+            NSColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1.0),
+            NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0),
+            .clear
+        ]
+
+        guard sender.tag < presetColors.count else { return }
+        let selectedColor = presetColors[sender.tag]
+
+        do {
+            let colorData = try NSKeyedArchiver.archivedData(withRootObject: selectedColor, requiringSecureCoding: false)
+            UserDefaults.standard.set(colorData, forKey: UserDefaults.Keys.globalFolderColor.rawValue)
+            NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+
+            // Update button borders
+            if let paletteContainer = sender.superview {
+                for view in paletteContainer.subviews {
+                    if let button = view as? NSButton {
+                        button.layer?.borderColor = NSColor.separatorColor.cgColor
+                    }
+                }
+            }
+            sender.layer?.borderColor = NSColor.selectedContentBackgroundColor.cgColor
+        } catch {
+            print("Failed to save folder color: \(error)")
+        }
+    }
+
+    @objc private func accentColorButtonClicked(_ sender: NSButton) {
+        let presetAccentColors: [NSColor] = [
+            .controlAccentColor,
+            NSColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0),
+            NSColor(red: 0.69, green: 0.32, blue: 0.87, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.18, blue: 0.33, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.27, blue: 0.23, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.58, blue: 0.0, alpha: 1.0),
+            NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0),
+            NSColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1.0),
+            NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0),
+            NSColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1.0)
+        ]
+
+        guard sender.tag < presetAccentColors.count else { return }
+        let selectedColor = presetAccentColors[sender.tag]
+
+        do {
+            let colorData = try NSKeyedArchiver.archivedData(withRootObject: selectedColor, requiringSecureCoding: false)
+            UserDefaults.standard.set(colorData, forKey: UserDefaults.Keys.accentColor.rawValue)
+            NotificationCenter.default.post(name: .accentColorDidChangeNotification, object: nil)
+
+            // Update button borders
+            if let paletteContainer = sender.superview {
+                for view in paletteContainer.subviews {
+                    if let button = view as? NSButton {
+                        button.layer?.borderColor = NSColor.separatorColor.cgColor
+                    }
+                }
+            }
+            sender.layer?.borderColor = NSColor.selectedContentBackgroundColor.cgColor
+        } catch {
+            print("Failed to save accent color: \(error)")
+        }
+    }
+}
+
+class FileOperationsSettingsViewController: NSViewController {
+
+    private var stackView: NSStackView!
+
+    override func loadView() {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = NSColor.controlBackgroundColor
+        self.view = scrollView
+
+        let contentView = NSView()
+        contentView.wantsLayer = true
+        contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+
+        stackView = NSStackView()
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.orientation = .vertical
+        stackView.alignment = .leading
+        stackView.spacing = 10
+        contentView.addSubview(stackView)
+
+        scrollView.documentView = contentView
+
+        NSLayoutConstraint.activate([
+            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+
+            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
+        ])
+
+        addFileOperationsSettings()
+    }
+
+    private func addFileOperationsSettings() {
+        let titleLabel = NSTextField(labelWithString: "File Operations:")
+        titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize + 2)
+        stackView.addArrangedSubview(titleLabel)
+
+        // Auto-rename setting
+        addCheckbox(title: "Auto-rename on file conflict", key: .autoRenameOnConflict, defaultValue: false)
+
+        let autoRenameDesc = NSTextField(labelWithString: "Automatically rename files when copying/moving to a location with an existing file of the same name")
+        autoRenameDesc.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        autoRenameDesc.textColor = .secondaryLabelColor
+        autoRenameDesc.lineBreakMode = .byWordWrapping
+        autoRenameDesc.maximumNumberOfLines = 0
+        autoRenameDesc.preferredMaxLayoutWidth = 450
+        stackView.addArrangedSubview(autoRenameDesc)
+
+        // Add spacing
+        let spacer1 = NSView()
+        spacer1.translatesAutoresizingMaskIntoConstraints = false
+        spacer1.heightAnchor.constraint(equalToConstant: 15).isActive = true
+        stackView.addArrangedSubview(spacer1)
+
+        // Delete key setting
+        addCheckbox(title: "Delete files with Backspace key only (disable Command+Delete)", key: .deleteWithBackspaceOnly, defaultValue: false)
+
+        let deleteDesc = NSTextField(labelWithString: "Press Backspace to move files to trash. Command+Delete will be disabled.")
+        deleteDesc.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        deleteDesc.textColor = .secondaryLabelColor
+        deleteDesc.lineBreakMode = .byWordWrapping
+        deleteDesc.maximumNumberOfLines = 0
+        deleteDesc.preferredMaxLayoutWidth = 450
+        stackView.addArrangedSubview(deleteDesc)
+
+        // Add spacing
+        let spacer2 = NSView()
+        spacer2.translatesAutoresizingMaskIntoConstraints = false
+        spacer2.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        stackView.addArrangedSubview(spacer2)
+
+        // Confirmations & Progress section
+        let confirmationsTitle = NSTextField(labelWithString: "Confirmations & Progress:")
+        confirmationsTitle.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
+        stackView.addArrangedSubview(confirmationsTitle)
+
+        // Confirm operations
+        addCheckbox(title: "Confirm file operations (copy/move/paste/delete)", key: .confirmFileOperations, defaultValue: true)
+        
+        let confirmDesc = NSTextField(labelWithString: "Show confirmation dialogs with item counts, sizes, and available space before executing operations.")
+        confirmDesc.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        confirmDesc.textColor = .secondaryLabelColor
+        confirmDesc.lineBreakMode = .byWordWrapping
+        confirmDesc.maximumNumberOfLines = 0
+        confirmDesc.preferredMaxLayoutWidth = 450
+        stackView.addArrangedSubview(confirmDesc)
+
+        // Add spacing
+        let spacer3 = NSView()
+        spacer3.translatesAutoresizingMaskIntoConstraints = false
+        spacer3.heightAnchor.constraint(equalToConstant: 15).isActive = true
+        stackView.addArrangedSubview(spacer3)
+
+        // Show progress
+        addCheckbox(title: "Show progress sheets during operations", key: .showOperationProgress, defaultValue: true)
+        
+        let progressDesc = NSTextField(labelWithString: "Display a progress dialog for multi-file copy, move, paste, and delete operations.")
+        progressDesc.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        progressDesc.textColor = .secondaryLabelColor
+        progressDesc.lineBreakMode = .byWordWrapping
+        progressDesc.maximumNumberOfLines = 0
+        progressDesc.preferredMaxLayoutWidth = 450
+        stackView.addArrangedSubview(progressDesc)
+    }
+
+    private func addCheckbox(title: String, key: UserDefaults.Keys, defaultValue: Bool = false) {
+        let checkbox = NSButton(checkboxWithTitle: title, target: self, action: #selector(checkboxChanged(_:)))
+        checkbox.translatesAutoresizingMaskIntoConstraints = false
+        checkbox.tag = key.rawValue.hashValue
+        checkbox.state = UserDefaults.standard.bool(forKey: key.rawValue) ? .on : .off
+        if UserDefaults.standard.object(forKey: key.rawValue) == nil {
+            UserDefaults.standard.set(defaultValue, forKey: key.rawValue)
+            checkbox.state = defaultValue ? .on : .off
+        }
+        stackView.addArrangedSubview(checkbox)
+    }
+
+    @objc func checkboxChanged(_ sender: NSButton) {
+        if let keyRawValue = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag })?.rawValue {
+            UserDefaults.standard.set(sender.state == .on, forKey: keyRawValue)
+        }
+    }
+}
+
+class TerminalSettingsViewController: NSViewController {
+
+    private var stackView: NSStackView!
+
+    override func loadView() {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = NSColor.controlBackgroundColor
+        self.view = scrollView
+
+        let contentView = NSView()
+        contentView.wantsLayer = true
+        contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+
+        stackView = NSStackView()
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.orientation = .vertical
+        stackView.alignment = .leading
+        stackView.spacing = 10
+        contentView.addSubview(stackView)
+
+        scrollView.documentView = contentView
+
+        NSLayoutConstraint.activate([
+            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+
+            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
+            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
         ])
 
         addTerminalSettings()
@@ -1032,7 +1424,8 @@ class AdvancedSettingsViewController: NSViewController {
         NSLayoutConstraint.activate([
             stackView.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
+            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            stackView.bottomAnchor.constraint(lessThanOrEqualTo: view.bottomAnchor, constant: -20)
         ])
 
         addAdvancedSettings()
@@ -1113,6 +1506,28 @@ class AdvancedSettingsViewController: NSViewController {
         spacer1b.translatesAutoresizingMaskIntoConstraints = false
         spacer1b.heightAnchor.constraint(equalToConstant: 20).isActive = true
         stackView.addArrangedSubview(spacer1b)
+
+        // Folder Size Display section
+        let folderSizeTitle = NSTextField(labelWithString: "List View:")
+        folderSizeTitle.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
+        stackView.addArrangedSubview(folderSizeTitle)
+
+        addCheckbox(title: "Calculate and display folder sizes", key: .showFolderSizes, defaultValue: false)
+
+        // Warning label
+        let warningLabel = NSTextField(labelWithString: "⚠️ Warning: Calculating folder sizes may impact performance, especially for folders with many items. Sizes are estimates and may not be up-to-date if folder contents change.")
+        warningLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        warningLabel.textColor = .systemOrange
+        warningLabel.maximumNumberOfLines = 0
+        warningLabel.lineBreakMode = .byWordWrapping
+        warningLabel.preferredMaxLayoutWidth = 450
+        stackView.addArrangedSubview(warningLabel)
+
+        // Add spacing
+        let spacer1c = NSView()
+        spacer1c.translatesAutoresizingMaskIntoConstraints = false
+        spacer1c.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        stackView.addArrangedSubview(spacer1c)
 
         // Settings Export/Import section
         let exportImportTitle = NSTextField(labelWithString: "Settings Export/Import:")
@@ -1386,6 +1801,7 @@ class ContextMenuSettingsViewController: NSViewController {
         let contentView = NSView()
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        contentView.translatesAutoresizingMaskIntoConstraints = false
 
         stackView = NSStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -1397,14 +1813,28 @@ class ContextMenuSettingsViewController: NSViewController {
         scrollView.documentView = contentView
 
         NSLayoutConstraint.activate([
+            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
         ])
+        stackView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        stackView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         addContextMenuSettings()
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        // Scroll to top when view appears
+        if let scrollView = view as? NSScrollView {
+            scrollView.contentView.scroll(to: NSPoint.zero)
+        }
     }
 
     private func addContextMenuSettings() {
@@ -1552,6 +1982,7 @@ class PermissionsSettingsViewController: NSViewController {
 
     private var stackView: NSStackView!
     private var permissionViews: [PermissionType: NSView] = [:]
+    private var directoryListStack: NSStackView!
 
     override func loadView() {
         let scrollView = NSScrollView()
@@ -1565,6 +1996,7 @@ class PermissionsSettingsViewController: NSViewController {
         let contentView = NSView()
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        contentView.translatesAutoresizingMaskIntoConstraints = false
 
         stackView = NSStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -1576,14 +2008,20 @@ class PermissionsSettingsViewController: NSViewController {
         scrollView.documentView = contentView
 
         NSLayoutConstraint.activate([
+            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20),
-            stackView.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40)
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
         ])
+        stackView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        stackView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         addPermissionsSection()
+        addGrantedDirectoriesSection()
     }
 
     private func addPermissionsSection() {
@@ -1719,6 +2157,214 @@ class PermissionsSettingsViewController: NSViewController {
                 statusLabel.stringValue = status.displayText
                 statusLabel.textColor = status.color
             }
+        }
+        refreshGrantedDirectories()
+    }
+
+    // MARK: - Granted Directories
+
+    private func addGrantedDirectoriesSection() {
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.heightAnchor.constraint(equalToConstant: 24).isActive = true
+        stackView.addArrangedSubview(spacer)
+
+        let titleLabel = NSTextField(labelWithString: "Granted Directory Access")
+        titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize + 2)
+        stackView.addArrangedSubview(titleLabel)
+
+        let descLabel = NSTextField(labelWithString: "These are folders you have explicitly granted MacFileExplorer access to. You can reveal them in Finder or revoke access.")
+        descLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        descLabel.textColor = .secondaryLabelColor
+        descLabel.maximumNumberOfLines = 0
+        descLabel.preferredMaxLayoutWidth = 500
+        stackView.addArrangedSubview(descLabel)
+
+        directoryListStack = NSStackView()
+        directoryListStack.translatesAutoresizingMaskIntoConstraints = false
+        directoryListStack.orientation = .vertical
+        directoryListStack.alignment = .leading
+        directoryListStack.spacing = 6
+        stackView.addArrangedSubview(directoryListStack)
+
+        let buttonsRow = NSStackView()
+        buttonsRow.translatesAutoresizingMaskIntoConstraints = false
+        buttonsRow.orientation = .horizontal
+        buttonsRow.alignment = .centerY
+        buttonsRow.spacing = 8
+
+        let addButton = NSButton(title: "Add Directory…", target: self, action: #selector(addDirectoryAccess(_:)))
+        addButton.bezelStyle = .rounded
+        buttonsRow.addArrangedSubview(addButton)
+
+        let refreshButton = NSButton(title: "Refresh", target: self, action: #selector(refreshGrantedDirectoriesAction(_:)))
+        refreshButton.bezelStyle = .rounded
+        buttonsRow.addArrangedSubview(refreshButton)
+
+        stackView.addArrangedSubview(buttonsRow)
+
+        refreshGrantedDirectories()
+    }
+
+    private func directoryRow(for url: URL) -> NSView {
+        let entry = PermissionsManager.shared.resolvedGrantedDirectoryEntries().first { $0.path == url.path }
+        let container = NSView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+
+        let pathLabel = NSTextField(labelWithString: url.path)
+        pathLabel.lineBreakMode = .byTruncatingMiddle
+        pathLabel.translatesAutoresizingMaskIntoConstraints = false
+        pathLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        container.addSubview(pathLabel)
+
+        let statusText: String
+        let statusColor: NSColor
+        if let e = entry {
+            if !e.isValid { statusText = "Missing"; statusColor = NSColor.systemRed }
+            else if e.isStale { statusText = "Stale"; statusColor = NSColor.systemOrange }
+            else { statusText = "Valid"; statusColor = NSColor.systemGreen }
+        } else {
+            statusText = "Valid"
+            statusColor = NSColor.systemGreen
+        }
+
+        let statusLabel = NSTextField(labelWithString: statusText)
+        statusLabel.translatesAutoresizingMaskIntoConstraints = false
+        statusLabel.font = NSFont.boldSystemFont(ofSize: NSFont.smallSystemFontSize)
+        statusLabel.textColor = statusColor
+        container.addSubview(statusLabel)
+
+        let revealButton = NSButton(title: "Reveal", target: self, action: #selector(revealDirectory(_:)))
+        revealButton.translatesAutoresizingMaskIntoConstraints = false
+        revealButton.bezelStyle = .rounded
+        revealButton.identifier = NSUserInterfaceItemIdentifier(url.path)
+        container.addSubview(revealButton)
+
+        let fixNeeded = statusText == "Missing" || statusText == "Stale"
+        var fixButton: NSButton? = nil
+        if fixNeeded {
+            let btn = NSButton(title: "Fix…", target: self, action: #selector(fixDirectoryAccess(_:)))
+            btn.translatesAutoresizingMaskIntoConstraints = false
+            btn.bezelStyle = .rounded
+            btn.identifier = NSUserInterfaceItemIdentifier(url.path)
+            container.addSubview(btn)
+            fixButton = btn
+        }
+
+        let removeButton = NSButton(title: "Remove", target: self, action: #selector(removeDirectoryAccess(_:)))
+        removeButton.translatesAutoresizingMaskIntoConstraints = false
+        removeButton.bezelStyle = .rounded
+        removeButton.identifier = NSUserInterfaceItemIdentifier(url.path)
+        container.addSubview(removeButton)
+
+        let separator = NSBox()
+        separator.boxType = .separator
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(separator)
+
+        var constraints: [NSLayoutConstraint] = [
+            pathLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 10),
+            pathLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            statusLabel.leadingAnchor.constraint(greaterThanOrEqualTo: pathLabel.trailingAnchor, constant: 12),
+            statusLabel.centerYAnchor.constraint(equalTo: container.centerYAnchor)
+        ]
+
+        if let fixButton = fixButton {
+            constraints += [
+                fixButton.leadingAnchor.constraint(equalTo: statusLabel.trailingAnchor, constant: 8),
+                fixButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                revealButton.leadingAnchor.constraint(equalTo: fixButton.trailingAnchor, constant: 8)
+            ]
+        } else {
+            constraints += [
+                revealButton.leadingAnchor.constraint(equalTo: statusLabel.trailingAnchor, constant: 8)
+            ]
+        }
+
+        constraints += [
+            revealButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            removeButton.leadingAnchor.constraint(equalTo: revealButton.trailingAnchor, constant: 8),
+            removeButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            removeButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -10),
+            separator.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            separator.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            container.heightAnchor.constraint(greaterThanOrEqualToConstant: 32)
+        ]
+
+        NSLayoutConstraint.activate(constraints)
+        return container
+    }
+
+    @objc private func addDirectoryAccess(_ sender: NSButton) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Grant Access"
+        panel.message = "Choose a folder to grant the app persistent access."
+        if panel.runModal() == .OK, let url = panel.url {
+            PermissionsManager.shared.addGrantedDirectory(url)
+            refreshGrantedDirectories()
+        }
+    }
+
+    @objc private func refreshGrantedDirectoriesAction(_ sender: NSButton) {
+        refreshGrantedDirectories()
+    }
+
+    private func refreshGrantedDirectories() {
+        directoryListStack.arrangedSubviews.forEach { directoryListStack.removeArrangedSubview($0); $0.removeFromSuperview() }
+        let entries = PermissionsManager.shared.resolvedGrantedDirectoryEntries()
+        if entries.isEmpty {
+            let emptyLabel = NSTextField(labelWithString: "No directories granted yet.")
+            emptyLabel.textColor = .secondaryLabelColor
+            emptyLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+            directoryListStack.addArrangedSubview(emptyLabel)
+        } else {
+            for entry in entries {
+                if let url = entry.url ?? (entry.isValid ? URL(fileURLWithPath: entry.path) : URL(fileURLWithPath: entry.path)) as URL? {
+                    directoryListStack.addArrangedSubview(directoryRow(for: url))
+                }
+            }
+        }
+    }
+
+    private func urlFromButton(_ sender: NSButton) -> URL? {
+        guard let raw = sender.identifier?.rawValue, !raw.isEmpty else { return nil }
+        return URL(fileURLWithPath: raw)
+    }
+
+    @objc private func revealDirectory(_ sender: NSButton) {
+        if let url = urlFromButton(sender) {
+            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: url.path)
+        }
+    }
+
+    @objc private func removeDirectoryAccess(_ sender: NSButton) {
+        if let url = urlFromButton(sender) {
+            PermissionsManager.shared.removeGrantedDirectory(url)
+            refreshGrantedDirectories()
+        }
+    }
+
+    @objc private func fixDirectoryAccess(_ sender: NSButton) {
+        guard let oldURL = urlFromButton(sender) else { return }
+        // Try automatic refresh if stale and still exists
+        if FileManager.default.fileExists(atPath: oldURL.path) {
+            PermissionsManager.shared.refreshBookmarkIfStale(for: oldURL)
+            refreshGrantedDirectories()
+            return
+        }
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Replace"
+        panel.message = "Select the new location to replace missing directory access."
+        if panel.runModal() == .OK, let newURL = panel.url {
+            PermissionsManager.shared.replaceGrantedDirectory(oldURL: oldURL, with: newURL)
+            refreshGrantedDirectories()
         }
     }
 }

@@ -1,29 +1,35 @@
 Features
 
-[x]Divide the sidebar into three equal parts. Each section should occupy identical space.
-[x]Zoom issues. Spacing and scale.
-directory
-[] Support for search in subdirectories
-[] Filter by file type, size, date modified 
-[] Columns View Mode - incomplete
-[] Folder color and accent color not implemented. Apply button should be un-grayed out once a new color has been selected. 
+[x] X button on top does not appear to be part of the tab
+[x] toolbar and URL styling does not feel cohesive. Wanted to look seamless like Finder but acknowledge finder does not have the URL at the top
+[] Create help docs linked to it in menu for existing link  , open in new tab. 
 
+[] Zoom does not increase icon size only the label
+[] Zoom slider should not be displayed for Application views that are not applicable
+[] Support for search in subdirectories
+[x] Filter by file type, size, date modified 
+[] Columns View Mode - incomplete
+[x] Folder color and accent color not working. Apply button should be un-grayed out once a new color has been selected. 
+It's 18 hours
 [] Advanced Copy/Move Dialog: A dialog with a progress graph, transfer speed, pause button, and a detailed file queue.
 [] app icon
-[] export/import not implemented
+[x] hide preview pane button doesn't work, neither does the X. 
+[]Copy/move files between split panes with drag & drop
 
-[x]Copy/move files between split panes with drag & drop
+
+[x]No warning when destination has less free space
+[x]No comparison of total file sizes between panes
+[x]No "Available space: X / Required space: Y" indicator
+[-] Display Folder size in the list view, if possible. 
 
 
-[]No warning when destination has less free space
+[x] List view, columns should be configurable with right-click. Hide date created and tags by default hello. 
+[x] Storage Analyzer
+[]Auto expand to folder
 
-[]No comparison of total file sizes between panes
-[]No "Available space: X / Required space: Y" indicator
-[]No "Copy to other pane" quick action
-[]No "Move to other pane" quick action
-
-[]Storage Analyzer
-
+[x]Divide the sidebar into three equal parts. Each section should occupy identical space.
+[x] export/import not implemented
+[x] Status bar should be linked to the pane, one displayed for every pane. 
 [x]No visual indication of active pane during drag operations
 [x]Progress indicators for copy/move/delete operations
 [x]Confirmation dialogs with file counts and sizes
@@ -92,3 +98,103 @@ Allow adding/removing tags from context menu
 []Show size comparison when copying
 []No display showing source vs destination size
 []No synchronized scrolling option
+[] Metrics Panel: Add a new Settings section that shows logged file operation stats (total data moved, number of operations, average speeds).
+[]No "Copy to other pane" quick action
+[]No "Move to other pane" quick acti
+[]Zoom doesn't apply to all views. 
+
+# Start Page - Remaining Features & Enhancements
+
+## ✅ Completed (MVP)
+
+- [x] Design system (`StartDesignSystem.swift`)
+- [x] Base widget class (`StartWidgetView.swift`)
+- [x] Welcome widget with dismissal
+- [x] Favorites/My Computer widget with placeholder folders
+- [x] Quick Actions widget (New Folder, Terminal, Storage Analyzer, Eject)
+- [x] Getting Started checklist with task tracking
+- [x] Storage Overview widget with permission placeholders
+- [x] Contextual Permission Manager
+- [x] Main Start View Controller with widget coordination
+
+## 🚧 Phase 2: Enhanced Widgets
+
+### Recent Apps Widget
+**File**: `RecentAppsWidgetView.swift`
+- [ ] Use `NSWorkspace.shared.runningApplications` to show recently used apps
+- [ ] Display app icons in a horizontal scrollable list
+- [ ] Click to reveal app in Finder (if permissions granted)
+- [ ] Show app name and last used time
+- [ ] Limit to 8-10 most recent apps
+
+### Quick Start Guide Widget
+**File**: `QuickStartWidgetView.swift`
+- [ ] Expandable/collapsible detailed guide
+- [ ] Visual step-by-step walkthrough with icons
+- [ ] Steps:
+  - Pin Your Favorite Folders (with example)
+  - Try Dual-Pane View (screenshot/animation)
+  - Discover Storage Analyzer (feature highlight)
+  - Customize Toolbar (link to settings)
+- [ ] Progress dots showing which step user is on
+
+## 🎨 Phase 3: Full-Featured Dashboard
+
+### Recent Files Widget
+**File**: `RecentFilesWidgetView.swift`
+**Requirements**: File access permissions
+- [ ] Track recently opened files across granted folders
+- [ ] Use `NSMetadataQuery` for system-wide recent files
+- [ ] Display file thumbnails (for images/documents)
+- [ ] Show file name, size, last modified
+- [ ] Quick actions: Open, Reveal, Quick Look
+- [ ] Filter by file type (All, Documents, Images, etc.)
+
+### Smart Folders Widget
+**File**: `SmartFoldersWidgetView.swift`
+- [ ] Predefined smart search queries
+- [ ] User can pin/unpin searches
+- [ ] Click to run search and show results in main browser
+- [ ] Badge showing item count for each search
+- [ ] Custom smart folder creation
+
+### Enhanced Storage Widget
+- [ ] Show live mini storage chart (pie chart)
+- [ ] Category breakdown with percentages
+- [ ] Click category to filter in Storage Analyzer
+- [ ] Trend indicator (disk usage growing/shrinking)
+
+### Live Favorites with Badges
+- [ ] Show item count badge on each folder card
+- [ ] Display "last modified" timestamp
+- [ ] Show folder size (if accessible)
+- [ ] Thumbnail preview of recent files in folder
+
+## ⚙️ Phase 4: Customization & Settings
+
+- [ ] Widget customization mode
+- [ ] Settings integration panel
+- [ ] Drag & drop widget reordering
+- [ ] Show/hide individual widgets
+
+## 🔔 Phase 5: Permission & Notification Enhancements
+
+- [ ] Permission change notifications in PermissionsManager
+- [ ] Visual permission guides with screenshots
+- [ ] Auto-refresh on permission changes
+
+## 🎬 Phase 6: Animations & Polish
+
+- [ ] Staggered widget animations
+- [ ] Dark mode support
+- [ ] Empty state illustrations
+- [ ] Loading skeletons
+
+## 🧪 Phase 7: Testing & Quality
+
+- [ ] Unit tests for widgets
+- [ ] Integration tests
+- [ ] Accessibility (VoiceOver, keyboard navigation)
+- [ ] Performance optimization
+
+See full details in this file for complete specifications.

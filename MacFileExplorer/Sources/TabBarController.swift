@@ -10,15 +10,25 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     weak var delegate: TabBarControllerDelegate?
 
     private var tabView: NSTabView!
-    private var tabs: [SplitPaneViewController] = []
+    private var tabs: [NSViewController] = []
     private var currentTabIndex = 0
     private var tabBarContainer: NSView!
     private var tabButtonsStackView: NSStackView!
     private var tabButtons: [NSButton] = []
+    private var tabCloseButtons: [NSButton] = []
 
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
         setupUI()
+        
+        // Listen for accent color changes
+        NotificationCenter.default.addObserver(forName: .accentColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.updateTabButtons()
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: .accentColorDidChangeNotification, object: nil)
     }
 
     private func setupUI() {
@@ -77,7 +87,24 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         ])
     }
 
-    private func createTabButton(title: String, index: Int) -> NSButton {
+    private func createTabButtonContainer(title: String, index: Int, showClose: Bool) -> NSView {
+        let container = NSView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.wantsLayer = true
+
+        // Set container background based on selection
+        let isSelected = index == currentTabIndex
+        if isSelected {
+            // Use accent color for active tab with subtle alpha
+            container.layer?.backgroundColor = NSColor.customAccentColor.withAlphaComponent(0.15).cgColor
+        } else {
+            container.layer?.backgroundColor = NSColor.clear.cgColor
+        }
+
+        // Add subtle rounded corners at the top for Finder-style tabs
+        container.layer?.cornerRadius = 6
+        container.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+
         let button = NSButton()
         button.title = title
         button.bezelStyle = .shadowlessSquare
@@ -88,31 +115,59 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         button.tag = index
         button.font = NSFont.systemFont(ofSize: 13)
         button.alignment = .center
-
-        // Set minimum width for tabs
-        button.widthAnchor.constraint(greaterThanOrEqualToConstant: 120).isActive = true
-
-        // Full height tabs with distinct appearance
+        button.translatesAutoresizingMaskIntoConstraints = false
         button.wantsLayer = true
-        button.layer?.cornerRadius = 0 // No rounding for full height effect
+        button.layer?.backgroundColor = NSColor.clear.cgColor
 
-        if index == currentTabIndex {
-            // Active tab - distinct darker background with full height
-            if #available(macOS 10.14, *) {
-                button.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.15).cgColor
-            } else {
-                button.layer?.backgroundColor = NSColor.selectedControlColor.withAlphaComponent(0.15).cgColor
-            }
+        if isSelected {
             button.contentTintColor = NSColor.labelColor
             button.font = NSFont.systemFont(ofSize: 13, weight: .medium)
         } else {
-            // Inactive tab - transparent with subtle text
-            button.layer?.backgroundColor = NSColor.clear.cgColor
             button.contentTintColor = NSColor.secondaryLabelColor
             button.font = NSFont.systemFont(ofSize: 13)
         }
 
-        return button
+        container.addSubview(button)
+
+        var closeButton: NSButton?
+        if showClose {
+            let cb = NSButton()
+            cb.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close")
+            cb.bezelStyle = .shadowlessSquare
+            cb.isBordered = false
+            cb.setButtonType(.momentaryChange)
+            cb.imageScaling = .scaleProportionallyDown
+            cb.contentTintColor = isSelected ? NSColor.secondaryLabelColor : NSColor.tertiaryLabelColor
+            cb.translatesAutoresizingMaskIntoConstraints = false
+            cb.target = self
+            cb.action = #selector(closeTabButtonClicked(_:))
+            cb.tag = index
+            cb.wantsLayer = true
+            cb.layer?.cornerRadius = 3
+
+            container.addSubview(cb)
+            closeButton = cb
+            NSLayoutConstraint.activate([
+                cb.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -6),
+                cb.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                cb.widthAnchor.constraint(equalToConstant: 16),
+                cb.heightAnchor.constraint(equalToConstant: 16)
+            ])
+        }
+
+        NSLayoutConstraint.activate([
+            button.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 8),
+            button.topAnchor.constraint(equalTo: container.topAnchor),
+            button.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -1),
+            (closeButton != nil ? button.trailingAnchor.constraint(lessThanOrEqualTo: closeButton!.leadingAnchor, constant: -4) : button.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8)),
+            container.heightAnchor.constraint(equalToConstant: 28),
+            container.widthAnchor.constraint(greaterThanOrEqualToConstant: 130)
+        ])
+
+        // Track for updates
+        tabButtons.append(button)
+        if let cb = closeButton { tabCloseButtons.append(cb) }
+        return container
     }
 
     private func updateTabButtons() {
@@ -122,13 +177,14 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         // Remove all existing buttons
         tabButtonsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         tabButtons.removeAll()
+        tabCloseButtons.removeAll()
 
         // Create new buttons for all tabs
+        let showClose = tabs.count > 1
         for (index, _) in tabs.enumerated() {
             let tabItem = tabView.tabViewItem(at: index)
-            let button = createTabButton(title: tabItem.label, index: index)
-            tabButtonsStackView.addArrangedSubview(button)
-            tabButtons.append(button)
+            let container = createTabButtonContainer(title: tabItem.label, index: index, showClose: showClose)
+            tabButtonsStackView.addArrangedSubview(container)
         }
 
         // Force visual update
@@ -145,10 +201,10 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         updateTabButtons()
 
         // Update terminal to the new tab's directory
-                    _ = tabs[index].currentPath
-                    if let splitVC = parent as? SplitViewController {
-                        splitVC.updateTerminalDirectory()
-                    }    }
+        if let splitVC = parent as? SplitViewController {
+            splitVC.updateTerminalDirectory()
+        }
+    }
 
     // MARK: - Public Methods
 
@@ -163,103 +219,212 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         let tabItem = NSTabViewItem(viewController: splitPane)
         tabItem.label = URL(fileURLWithPath: splitPane.currentPath).lastPathComponent // Will be updated when directory loads
         tabView.addTabViewItem(tabItem)
-        
+
         tabView.selectTabViewItem(at: tabs.count - 1)
-        
+
         currentTabIndex = tabs.count - 1
 
         updateTabButtons()
     }
 
-    func closeCurrentTab() {
-        guard tabs.count > 1 else { return }
+    func addStartTab() {
+        let startVC = StartViewController()
+        startVC.delegate = self
+        tabs.append(startVC)
 
-        tabs.remove(at: currentTabIndex)
-        tabView.removeTabViewItem(tabView.tabViewItem(at: currentTabIndex))
+        // Force the view to load
+        _ = startVC.view
 
-        if currentTabIndex >= tabs.count {
-            currentTabIndex = tabs.count - 1
-        }
-        tabView.selectTabViewItem(at: currentTabIndex)
+        let tabItem = NSTabViewItem(viewController: startVC)
+        tabItem.label = "Start"
+        tabView.addTabViewItem(tabItem)
+
+        tabView.selectTabViewItem(at: tabs.count - 1)
+
+        currentTabIndex = tabs.count - 1
 
         updateTabButtons()
     }
 
+    func showStartTab() {
+        // Check if Start tab already exists
+        for (index, tab) in tabs.enumerated() {
+            if tab is StartViewController {
+                tabView.selectTabViewItem(at: index)
+                currentTabIndex = index
+                return
+            }
+        }
+
+        // If not, create it
+        addStartTab()
+    }
+
+    func closeCurrentTab() {
+        guard tabs.count > 1 else { return }
+        closeTab(at: currentTabIndex)
+    }
+
+    private func closeTab(at index: Int) {
+        guard index >= 0, index < tabs.count, tabs.count > 1 else { return }
+        tabs.remove(at: index)
+        tabView.removeTabViewItem(tabView.tabViewItem(at: index))
+        if currentTabIndex >= tabs.count { currentTabIndex = tabs.count - 1 }
+        tabView.selectTabViewItem(at: currentTabIndex)
+        updateTabButtons()
+    }
+
+    @objc private func closeTabButtonClicked(_ sender: NSButton) {
+        closeTab(at: sender.tag)
+    }
+
     func getCurrentPath() -> String? {
         guard currentTabIndex < tabs.count else { return nil }
-        return tabs[currentTabIndex].currentPath
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            return splitPane.currentPath
+        }
+        return nil
     }
 
     func cutSelection() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].cutSelection()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.cutSelection()
+        }
     }
 
     func copySelection() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].copySelection()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.copySelection()
+        }
     }
 
     func pasteSelection() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].pasteSelection()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.pasteSelection()
+        }
     }
-    
+
     // func changeFolderColor() {
     //     guard currentTabIndex < tabs.count else { return }
     //     tabs[currentTabIndex].changeFolderColor()
     // }
-    
+
     func setViewMode(_ viewMode: ViewMode) {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].setViewMode(viewMode)
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.setViewMode(viewMode)
+        }
     }
-    
+
     func toggleHiddenFiles() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].toggleHiddenFiles()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.toggleHiddenFiles()
+        }
     }
 
     func isShowingHiddenFiles() -> Bool {
         guard currentTabIndex < tabs.count else { return false }
-        return tabs[currentTabIndex].isShowingHiddenFiles()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            return splitPane.isShowingHiddenFiles()
+        }
+        return false
     }
-    
+
     func togglePreviewPane() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].togglePreviewPane()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.togglePreviewPane()
+        }
     }
 
     func goBack() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].goBack()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.goBack()
+        }
     }
 
     func goForward() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].goForward()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.goForward()
+        }
     }
 
     func splitVertically() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].splitVertically()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.splitVertically()
+        }
     }
-    
+
     func splitHorizontally() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].splitHorizontally()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.splitHorizontally()
+        }
     }
 
     func navigateToLocation(_ url: URL) {
         print("TabBarController: navigateToLocation - Received URL: \(url.path)")
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].navigateToURL(url)
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.navigateToURL(url)
+        }
     }
 
     func updateZoomLevel(to level: Double) {
         // Forward zoom level to the current tab/pane
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].updateZoomLevel(to: level)
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.updateZoomLevel(to: level)
+        }
+    }
+
+    // MARK: - Settings Tab
+
+    func openSettingsTab() {
+        // If settings tab already exists, select it
+        if let existingIndex = tabs.firstIndex(where: { $0 is SettingsSplitPaneViewController }) {
+            tabView.selectTabViewItem(at: existingIndex)
+            currentTabIndex = existingIndex
+            updateTabButtons()
+            return
+        }
+        let settingsPane = SettingsSplitPaneViewController()
+        settingsPane.delegate = self
+        tabs.append(settingsPane)
+        let tabItem = NSTabViewItem(viewController: settingsPane)
+        tabItem.label = "Settings"
+        tabView.addTabViewItem(tabItem)
+        tabView.selectTabViewItem(at: tabs.count - 1)
+        currentTabIndex = tabs.count - 1
+        updateTabButtons()
+    }
+
+    // MARK: - Storage Analyzer Tab
+
+    func openStorageAnalyzerTab() {
+        // If storage analyzer tab already exists, select it
+        if let existingIndex = tabs.firstIndex(where: { $0 is StorageAnalyzerTabViewController }) {
+            tabView.selectTabViewItem(at: existingIndex)
+            currentTabIndex = existingIndex
+            updateTabButtons()
+            return
+        }
+        let storageAnalyzerVC = StorageAnalyzerTabViewController()
+        storageAnalyzerVC.delegate = self
+        tabs.append(storageAnalyzerVC)
+        let tabItem = NSTabViewItem(viewController: storageAnalyzerVC)
+        tabItem.label = "Storage Analyzer"
+        tabView.addTabViewItem(tabItem)
+        tabView.selectTabViewItem(at: tabs.count - 1)
+        currentTabIndex = tabs.count - 1
+        updateTabButtons()
     }
 
     public func openInNewTab(url: URL) {
@@ -291,16 +456,31 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
 
 extension TabBarController {
     func splitPaneDirectoryDidChange(to path: String) {
-        // Update tab label with current directory name
-        let url = URL(fileURLWithPath: path)
-        let directoryName = url.lastPathComponent.isEmpty ? url.path : url.lastPathComponent
-
-        // Find the tab that corresponds to the current directory change
-        if currentTabIndex < tabView.numberOfTabViewItems {
-            let tabItem = tabView.tabViewItem(at: currentTabIndex)
-            tabItem.label = directoryName
-
-            // Update the button label too
+        // If the active tab is the Settings or Storage Analyzer tab, keep its label fixed.
+        if currentTabIndex < tabs.count, tabs[currentTabIndex] is SettingsSplitPaneViewController {
+            if currentTabIndex < tabView.numberOfTabViewItems {
+                let tabItem = tabView.tabViewItem(at: currentTabIndex)
+                if tabItem.label != "Settings" { tabItem.label = "Settings" }
+            }
+            if currentTabIndex < tabButtons.count, tabButtons[currentTabIndex].title != "Settings" {
+                tabButtons[currentTabIndex].title = "Settings"
+            }
+        } else if currentTabIndex < tabs.count, tabs[currentTabIndex] is StorageAnalyzerTabViewController {
+            if currentTabIndex < tabView.numberOfTabViewItems {
+                let tabItem = tabView.tabViewItem(at: currentTabIndex)
+                if tabItem.label != "Storage Analyzer" { tabItem.label = "Storage Analyzer" }
+            }
+            if currentTabIndex < tabButtons.count, tabButtons[currentTabIndex].title != "Storage Analyzer" {
+                tabButtons[currentTabIndex].title = "Storage Analyzer"
+            }
+        } else {
+            // Update tab label with current directory name
+            let url = URL(fileURLWithPath: path)
+            let directoryName = url.lastPathComponent.isEmpty ? url.path : url.lastPathComponent
+            if currentTabIndex < tabView.numberOfTabViewItems {
+                let tabItem = tabView.tabViewItem(at: currentTabIndex)
+                tabItem.label = directoryName
+            }
             if currentTabIndex < tabButtons.count {
                 tabButtons[currentTabIndex].title = directoryName
             }
@@ -338,11 +518,39 @@ extension TabBarController {
 
     func toolbarDidRequestSplitVertically() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].splitVertically()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.splitVertically()
+        }
     }
 
     func toolbarDidRequestSplitHorizontally() {
         guard currentTabIndex < tabs.count else { return }
-        tabs[currentTabIndex].splitHorizontally()
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.splitHorizontally()
+        }
+    }
+}
+
+// MARK: - StartViewControllerDelegate
+extension TabBarController: StartViewControllerDelegate {
+    func startViewDidRequestNavigate(to url: URL) {
+        // Close Start tab and open file browser to the requested URL
+        if currentTabIndex < tabs.count, tabs[currentTabIndex] is StartViewController {
+            // Replace Start tab with file browser
+            closeTab(at: currentTabIndex)
+        }
+
+        // Add new tab with the requested location
+        addNewTab()
+
+        // Navigate to the URL (need to access SplitPaneViewController)
+        if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
+            splitPane.navigateToURL(url)
+        }
+    }
+
+    func startViewDidRequestOpenSettings() {
+        // Open settings tab
+        openSettingsTab()
     }
 }

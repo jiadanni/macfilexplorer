@@ -7,11 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0056E7AFE18B4995869092AB /* StorageAnalyzerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8696DE7131D34C0BAB016416 /* StorageAnalyzerEngine.swift */; };
+		0533A2FEA61D47DBBB812F52 /* StorageSummaryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D1E7DCD9FE14FF7B5FDA8E9 /* StorageSummaryViewController.swift */; };
+		05DB5601FE8A4A869A4E2DAE /* QuickActionsWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC9FC164EB649DC8E794014 /* QuickActionsWidgetView.swift */; };
+		17E66C936B874320BEA2DBA4 /* StorageAnalyzerWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3664633C5874840B264CBF1 /* StorageAnalyzerWindowController.swift */; };
+		261194ABC26C4934B258E765 /* WelcomeWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CA5260DDE46454E997823C4 /* WelcomeWidgetView.swift */; };
+		37B7CDFD76504BA1873EF4EF /* StorageListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1972F8A5DEE3441298641AFC /* StorageListViewController.swift */; };
+		3C3D24F078A24A388C57F8B2 /* StartWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2CA98F441BC469AA6AC8B30 /* StartWidgetView.swift */; };
 		617E78C00A3B9EE92A79BE33 /* PermissionsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25571C2C8395C0D079C08C7 /* PermissionsManager.swift */; };
+		6A472FB704FA4AC7BD1C3BA4 /* StorageScopeSelectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06050E7A60B4D73BE112E7F /* StorageScopeSelectionViewController.swift */; };
+		6D7342074ECD4C96B27AE074 /* FavoritesWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBDDCAF9FC944D889F88AB7 /* FavoritesWidgetView.swift */; };
+		745071C3419A40EA9CE70FBA /* StorageProgressViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EE3071256D14F848904E873 /* StorageProgressViewController.swift */; };
+		75E502CAE4064D98B4DC278B /* StartViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8597653ABC94615B0186203 /* StartViewController.swift */; };
+		77F59CBBE25241F78535867F /* GettingStartedWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FFE03C491D474790704210 /* GettingStartedWidgetView.swift */; };
+		8F9A1D2E5C7B4E92A3F46B81 /* StorageAnalyzerTabViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C5E8F93A4D4761B9E72C40 /* StorageAnalyzerTabViewController.swift */; };
 		AA0000010000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000020000000000000001 /* AppDelegate.swift */; };
 		AA0000030000000000000001 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000040000000000000001 /* MainWindowController.swift */; };
 		AA0000050000000000000001 /* SplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000060000000000000001 /* SplitViewController.swift */; };
 		AA0000070000000000000001 /* FileBrowserViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000080000000000000001 /* FileBrowserViewController.swift */; };
+		AA0000750000000000000001 /* FilterPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000760000000000000001 /* FilterPanelViewController.swift */; };
 		AA0000090000000000000001 /* TerminalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000100000000000000001 /* TerminalViewController.swift */; };
 		AA0000110000000000000001 /* TabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000120000000000000001 /* TabBarController.swift */; };
 		AA0000130000000000000001 /* FileItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000140000000000000001 /* FileItem.swift */; };
@@ -28,6 +42,7 @@
 		AA0000420000000000000001 /* FileIconItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000430000000000000001 /* FileIconItem.swift */; };
 		AA0000440000000000000001 /* SettingsSidebarCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000450000000000000001 /* SettingsSidebarCellView.swift */; };
 		AA0000460000000000000001 /* StatusBarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000470000000000000001 /* StatusBarViewController.swift */; };
+		AA0000500000000000000001 /* SettingsSplitPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000510000000000000001 /* SettingsSplitPaneViewController.swift */; };
 		C357D9E02ECA0ECB001BA891 /* AboutWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9DF2ECA0ECB001BA891 /* AboutWindowController.swift */; };
 		C357D9E72ECA0EDF001BA891 /* NotificationNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */; };
 		C357D9E82ECA0EDF001BA891 /* ProgressViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */; };
@@ -35,16 +50,35 @@
 		C357D9EA2ECA0EDF001BA891 /* ViewOptionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E62ECA0EDF001BA891 /* ViewOptionsViewController.swift */; };
 		C357D9EB2ECA0EDF001BA891 /* ViewOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E52ECA0EDF001BA891 /* ViewOptions.swift */; };
 		C357D9EC2ECA0EDF001BA891 /* PreviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */; };
+		C3E3E8DF3B3B49068B6DD9C8 /* StorageCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A698595D0B4CF89651A85B /* StorageCategory.swift */; };
 		CCCBA794A1A1D994A87C8115 /* PreviewPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65E9B8A3D560CC7CD32E7587 /* PreviewPaneViewController.swift */; };
+		D1F884BA491944349930279B /* StartDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67FC3670FEF34117B1EA37F4 /* StartDesignSystem.swift */; };
+		D5ADEF7CBF5C46D6A5E89870 /* ContextualPermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F74C22C3ADD41E2A27FBABA /* ContextualPermissionManager.swift */; };
+		E010E822F5B6962C1C72A271 /* StorageSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0330B936510D968B8821EE52 /* StorageSettingsViewController.swift */; };
+		F2F1F3B120814DC8BD4B145A /* StorageOverviewWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABBBCC2BFE824B9CB573D557 /* StorageOverviewWidgetView.swift */; };
+		F9FFEF95DD2049FABE8B6569 /* StorageItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D68A94874EBC4DC39B2A3061 /* StorageItem.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0330B936510D968B8821EE52 /* StorageSettingsViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StorageSettingsViewController.swift; sourceTree = "<group>"; };
+		1972F8A5DEE3441298641AFC /* StorageListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageListViewController.swift; sourceTree = "<group>"; };
+		1F74C22C3ADD41E2A27FBABA /* ContextualPermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextualPermissionManager.swift; sourceTree = "<group>"; };
+		1FBDDCAF9FC944D889F88AB7 /* FavoritesWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesWidgetView.swift; sourceTree = "<group>"; };
+		2EE3071256D14F848904E873 /* StorageProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageProgressViewController.swift; sourceTree = "<group>"; };
+		3CC9FC164EB649DC8E794014 /* QuickActionsWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsWidgetView.swift; sourceTree = "<group>"; };
+		5D1E7DCD9FE14FF7B5FDA8E9 /* StorageSummaryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageSummaryViewController.swift; sourceTree = "<group>"; };
 		65E9B8A3D560CC7CD32E7587 /* PreviewPaneViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PreviewPaneViewController.swift; sourceTree = "<group>"; };
+		67FC3670FEF34117B1EA37F4 /* StartDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartDesignSystem.swift; sourceTree = "<group>"; };
+		83A698595D0B4CF89651A85B /* StorageCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageCategory.swift; sourceTree = "<group>"; };
+		8696DE7131D34C0BAB016416 /* StorageAnalyzerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageAnalyzerEngine.swift; sourceTree = "<group>"; };
+		9CA5260DDE46454E997823C4 /* WelcomeWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeWidgetView.swift; sourceTree = "<group>"; };
+		A06050E7A60B4D73BE112E7F /* StorageScopeSelectionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageScopeSelectionViewController.swift; sourceTree = "<group>"; };
 		AA0000000000000000000001 /* MacFileExplorer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacFileExplorer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000020000000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		AA0000040000000000000001 /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
 		AA0000060000000000000001 /* SplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitViewController.swift; sourceTree = "<group>"; };
 		AA0000080000000000000001 /* FileBrowserViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowserViewController.swift; sourceTree = "<group>"; };
+		AA0000760000000000000001 /* FilterPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterPanelViewController.swift; sourceTree = "<group>"; };
 		AA0000100000000000000001 /* TerminalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalViewController.swift; sourceTree = "<group>"; };
 		AA0000120000000000000001 /* TabBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarController.swift; sourceTree = "<group>"; };
 		AA0000140000000000000001 /* FileItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileItem.swift; sourceTree = "<group>"; };
@@ -63,6 +97,11 @@
 		AA0000430000000000000001 /* FileIconItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileIconItem.swift; sourceTree = "<group>"; };
 		AA0000450000000000000001 /* SettingsSidebarCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSidebarCellView.swift; sourceTree = "<group>"; };
 		AA0000470000000000000001 /* StatusBarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarViewController.swift; sourceTree = "<group>"; };
+		AA0000510000000000000001 /* SettingsSplitPaneViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSplitPaneViewController.swift; sourceTree = "<group>"; };
+		ABBBCC2BFE824B9CB573D557 /* StorageOverviewWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageOverviewWidgetView.swift; sourceTree = "<group>"; };
+		B1FFE03C491D474790704210 /* GettingStartedWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GettingStartedWidgetView.swift; sourceTree = "<group>"; };
+		B2C5E8F93A4D4761B9E72C40 /* StorageAnalyzerTabViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageAnalyzerTabViewController.swift; sourceTree = "<group>"; };
+		C2CA98F441BC469AA6AC8B30 /* StartWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartWidgetView.swift; sourceTree = "<group>"; };
 		C357D9DF2ECA0ECB001BA891 /* AboutWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutWindowController.swift; sourceTree = "<group>"; };
 		C357D9E12ECA0EDF001BA891 /* FileCopyMoveDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCopyMoveDialog.swift; sourceTree = "<group>"; };
 		C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationNames.swift; sourceTree = "<group>"; };
@@ -70,7 +109,10 @@
 		C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressViewController.swift; sourceTree = "<group>"; };
 		C357D9E52ECA0EDF001BA891 /* ViewOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewOptions.swift; sourceTree = "<group>"; };
 		C357D9E62ECA0EDF001BA891 /* ViewOptionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewOptionsViewController.swift; sourceTree = "<group>"; };
+		C8597653ABC94615B0186203 /* StartViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartViewController.swift; sourceTree = "<group>"; };
 		D25571C2C8395C0D079C08C7 /* PermissionsManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PermissionsManager.swift; sourceTree = "<group>"; };
+		D3664633C5874840B264CBF1 /* StorageAnalyzerWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageAnalyzerWindowController.swift; sourceTree = "<group>"; };
+		D68A94874EBC4DC39B2A3061 /* StorageItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageItem.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,11 +158,13 @@
 				AA0000040000000000000001 /* MainWindowController.swift */,
 				AA0000060000000000000001 /* SplitViewController.swift */,
 				AA0000080000000000000001 /* FileBrowserViewController.swift */,
+				AA0000760000000000000001 /* FilterPanelViewController.swift */,
 				AA0000100000000000000001 /* TerminalViewController.swift */,
 				AA0000120000000000000001 /* TabBarController.swift */,
 				AA0000310000000000000001 /* SidebarViewController.swift */,
 				AA0000320000000000000001 /* ToolbarViewController.swift */,
 				AA0000350000000000000001 /* SplitPaneViewController.swift */,
+				AA0000510000000000000001 /* SettingsSplitPaneViewController.swift */,
 				AA0000360000000000000001 /* SettingsViewController.swift */,
 				AA0000390000000000000001 /* SettingsSidebarViewController.swift */,
 				AA0000410000000000000001 /* SettingsWindowController.swift */,
@@ -132,6 +176,25 @@
 				AA0000180000000000000001 /* FileSystemMonitor.swift */,
 				65E9B8A3D560CC7CD32E7587 /* PreviewPaneViewController.swift */,
 				D25571C2C8395C0D079C08C7 /* PermissionsManager.swift */,
+				83A698595D0B4CF89651A85B /* StorageCategory.swift */,
+				D68A94874EBC4DC39B2A3061 /* StorageItem.swift */,
+				8696DE7131D34C0BAB016416 /* StorageAnalyzerEngine.swift */,
+				1972F8A5DEE3441298641AFC /* StorageListViewController.swift */,
+				5D1E7DCD9FE14FF7B5FDA8E9 /* StorageSummaryViewController.swift */,
+				A06050E7A60B4D73BE112E7F /* StorageScopeSelectionViewController.swift */,
+				2EE3071256D14F848904E873 /* StorageProgressViewController.swift */,
+				D3664633C5874840B264CBF1 /* StorageAnalyzerWindowController.swift */,
+				B2C5E8F93A4D4761B9E72C40 /* StorageAnalyzerTabViewController.swift */,
+				67FC3670FEF34117B1EA37F4 /* StartDesignSystem.swift */,
+				C2CA98F441BC469AA6AC8B30 /* StartWidgetView.swift */,
+				9CA5260DDE46454E997823C4 /* WelcomeWidgetView.swift */,
+				1FBDDCAF9FC944D889F88AB7 /* FavoritesWidgetView.swift */,
+				3CC9FC164EB649DC8E794014 /* QuickActionsWidgetView.swift */,
+				B1FFE03C491D474790704210 /* GettingStartedWidgetView.swift */,
+				ABBBCC2BFE824B9CB573D557 /* StorageOverviewWidgetView.swift */,
+				1F74C22C3ADD41E2A27FBABA /* ContextualPermissionManager.swift */,
+				C8597653ABC94615B0186203 /* StartViewController.swift */,
+				0330B936510D968B8821EE52 /* StorageSettingsViewController.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -237,11 +300,13 @@
 				AA0000030000000000000001 /* MainWindowController.swift in Sources */,
 				AA0000050000000000000001 /* SplitViewController.swift in Sources */,
 				AA0000070000000000000001 /* FileBrowserViewController.swift in Sources */,
+				AA0000750000000000000001 /* FilterPanelViewController.swift in Sources */,
 				AA0000090000000000000001 /* TerminalViewController.swift in Sources */,
 				AA0000110000000000000001 /* TabBarController.swift in Sources */,
 				AA0000300000000000000001 /* SidebarViewController.swift in Sources */,
 				AA0000330000000000000001 /* ToolbarViewController.swift in Sources */,
 				AA0000340000000000000001 /* SplitPaneViewController.swift in Sources */,
+				AA0000500000000000000001 /* SettingsSplitPaneViewController.swift in Sources */,
 				AA0000370000000000000001 /* SettingsViewController.swift in Sources */,
 				AA0000380000000000000001 /* SettingsSidebarViewController.swift in Sources */,
 				AA0000400000000000000001 /* SettingsWindowController.swift in Sources */,
@@ -259,6 +324,25 @@
 				C357D9EB2ECA0EDF001BA891 /* ViewOptions.swift in Sources */,
 				C357D9EC2ECA0EDF001BA891 /* PreviewViewController.swift in Sources */,
 				617E78C00A3B9EE92A79BE33 /* PermissionsManager.swift in Sources */,
+				C3E3E8DF3B3B49068B6DD9C8 /* StorageCategory.swift in Sources */,
+				F9FFEF95DD2049FABE8B6569 /* StorageItem.swift in Sources */,
+				0056E7AFE18B4995869092AB /* StorageAnalyzerEngine.swift in Sources */,
+				37B7CDFD76504BA1873EF4EF /* StorageListViewController.swift in Sources */,
+				0533A2FEA61D47DBBB812F52 /* StorageSummaryViewController.swift in Sources */,
+				6A472FB704FA4AC7BD1C3BA4 /* StorageScopeSelectionViewController.swift in Sources */,
+				745071C3419A40EA9CE70FBA /* StorageProgressViewController.swift in Sources */,
+				17E66C936B874320BEA2DBA4 /* StorageAnalyzerWindowController.swift in Sources */,
+				8F9A1D2E5C7B4E92A3F46B81 /* StorageAnalyzerTabViewController.swift in Sources */,
+				D1F884BA491944349930279B /* StartDesignSystem.swift in Sources */,
+				3C3D24F078A24A388C57F8B2 /* StartWidgetView.swift in Sources */,
+				261194ABC26C4934B258E765 /* WelcomeWidgetView.swift in Sources */,
+				6D7342074ECD4C96B27AE074 /* FavoritesWidgetView.swift in Sources */,
+				05DB5601FE8A4A869A4E2DAE /* QuickActionsWidgetView.swift in Sources */,
+				77F59CBBE25241F78535867F /* GettingStartedWidgetView.swift in Sources */,
+				F2F1F3B120814DC8BD4B145A /* StorageOverviewWidgetView.swift in Sources */,
+				D5ADEF7CBF5C46D6A5E89870 /* ContextualPermissionManager.swift in Sources */,
+				75E502CAE4064D98B4DC278B /* StartViewController.swift in Sources */,
+				E010E822F5B6962C1C72A271 /* StorageSettingsViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

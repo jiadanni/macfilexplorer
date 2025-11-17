@@ -71,6 +71,10 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
         splitViewController?.addNewTab()
     }
 
+    func addSettingsTab() {
+        splitViewController?.addSettingsTab()
+    }
+
     func closeCurrentTab() {
         splitViewController?.closeCurrentTab()
     }
@@ -109,6 +113,10 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
 
     func splitHorizontally() {
         splitViewController?.splitHorizontally()
+    }
+
+    func openStorageAnalyzerTab() {
+        splitViewController?.openStorageAnalyzerTab()
     }
 
     func goBack() {

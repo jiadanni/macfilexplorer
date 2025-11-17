@@ -204,15 +204,20 @@ class SidebarViewController: NSViewController {
            bottomSplitView.arrangedSubviews.count == 2 {
 
             let totalHeight = mainSplitView.bounds.height
-            let dividerThickness = mainSplitView.dividerThickness
-            let sectionHeight = (totalHeight - (dividerThickness * 2)) / 3.0
+            let mainDividerThickness = mainSplitView.dividerThickness
+            let bottomDividerThickness = bottomSplitView.dividerThickness
 
-            // Set favorites to 1/3
+            // Calculate exact 1/3 for each section
+            // Total available height minus both dividers
+            let availableHeight = totalHeight - mainDividerThickness - bottomDividerThickness
+            let sectionHeight = availableHeight / 3.0
+
+            // Set favorites section to exactly 1/3
             mainSplitView.setPosition(sectionHeight, ofDividerAt: 0)
 
-            // Set locations and folder explorer each to 1/3
-            let bottomHeight = totalHeight - sectionHeight - dividerThickness
-            bottomSplitView.setPosition(bottomHeight / 2.0, ofDividerAt: 0)
+            // Set locations section to exactly 1/3 within the bottom split view
+            bottomSplitView.setPosition(sectionHeight, ofDividerAt: 0)
+            // Folder explorer automatically takes the remaining 1/3
         }
     }
 
@@ -329,7 +334,7 @@ class SidebarViewController: NSViewController {
 
         // Set minimum height for folder explorer section
         folderExplorerScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 150).isActive = true
-        folderExplorerScrollView.widthAnchor.constraint(equalToConstant: 200).isActive = true // Match sidebar width
+        // Removed fixed width constraint so it can expand to full sidebar width.
     }
 
     private func createSectionHeader(title: String) -> NSView {
@@ -346,7 +351,7 @@ class SidebarViewController: NSViewController {
             label.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 10),
             label.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
             headerView.heightAnchor.constraint(equalToConstant: 20),
-            headerView.widthAnchor.constraint(equalToConstant: 180)
+            headerView.widthAnchor.constraint(greaterThanOrEqualToConstant: 0) // Allow header view to stretch
         ])
 
         return headerView
@@ -573,16 +578,11 @@ class SidebarViewController: NSViewController {
 
     private func loadFavoritesFromDefaults() {
         guard let savedPaths = UserDefaults.standard.array(forKey: "SidebarFavorites") as? [String] else { return }
-
         let workspace = NSWorkspace.shared
-        _ = NSImage(systemSymbolName: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(for: .folder)
-
         for path in savedPaths {
             let url = URL(fileURLWithPath: path)
             let icon = workspace.icon(forFile: path)
             let name = url.lastPathComponent
-
-            // Only add if not already in favorites
             if !favoriteItems.contains(where: { $0.url == url }) {
                 favoriteItems.append(SidebarItem(name: name, url: url, icon: icon))
             }
@@ -590,20 +590,20 @@ class SidebarViewController: NSViewController {
     }
     
     // MARK: - Auto-expand Folder Explorer
-    
-    func expandToCurrentDirectory(url: URL) {
+    private func autoExpandFolderExplorer(to url: URL) {
         guard UserDefaults.standard.bool(forKey: UserDefaults.Keys.expandSidebarToCurrentDirectory.rawValue) else { return }
-        
-        // Find the path components from the root to the target URL
         var pathComponents: [URL] = []
         var currentURL = url
         while currentURL.path != "/" && currentURL.path != folderExplorerRootItem.url.path {
             pathComponents.insert(currentURL, at: 0)
             currentURL = currentURL.deletingLastPathComponent()
         }
-        
-        // Recursively expand and load children as needed
         expandAndSelectPath(pathComponents: pathComponents, currentItem: folderExplorerRootItem, index: 0)
+    }
+
+    // Public method used by SplitViewController to trigger expansion to current directory
+    func expandToCurrentDirectory(url: URL) {
+        autoExpandFolderExplorer(to: url)
     }
     
     private func expandAndSelectPath(pathComponents: [URL], currentItem: FileItem?, index: Int) {

@@ -21,6 +21,7 @@ protocol ToolbarDelegate: AnyObject {
     func toolbarDidRequestClosePane()
     func toolbarDidSearchTextChange(_ searchText: String)
     func toolbarDidTogglePreviewPane()
+    func toolbarDidRequestShowFilter()
 }
 
 class ToolbarViewController: NSViewController {
@@ -42,7 +43,9 @@ class ToolbarViewController: NSViewController {
     private var newFolderButton: NSButton!
     private var closePaneButton: NSButton!
     private var searchField: NSSearchField!
+    private var filterButton: NSButton!
     private var previewPaneButton: NSButton!
+    private var storageAnalyzerButton: NSButton!
 
     private var currentURL: URL?
     private var canGoBack: Bool = false
@@ -69,6 +72,13 @@ class ToolbarViewController: NSViewController {
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
 
+        // Add subtle bottom border for visual separation
+        let bottomBorder = NSView()
+        bottomBorder.wantsLayer = true
+        bottomBorder.layer?.backgroundColor = NSColor.separatorColor.cgColor
+        bottomBorder.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(bottomBorder)
+
         // Load toolbar visibility settings from UserDefaults
         let showBackForward = UserDefaults.standard.object(forKey: UserDefaults.Keys.showBackForwardButtons.rawValue) as? Bool ?? true
         let showViewMode = UserDefaults.standard.object(forKey: UserDefaults.Keys.showViewModeButton.rawValue) as? Bool ?? true
@@ -77,6 +87,7 @@ class ToolbarViewController: NSViewController {
         let showPreviewPane = UserDefaults.standard.object(forKey: UserDefaults.Keys.showPreviewPaneButton.rawValue) as? Bool ?? true
         let showNewFolder = UserDefaults.standard.object(forKey: UserDefaults.Keys.showNewFolderButton.rawValue) as? Bool ?? true
         let showSort = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSortButton.rawValue) as? Bool ?? true
+        let showStorageAnalyzer = UserDefaults.standard.object(forKey: "showStorageAnalyzerButton") as? Bool ?? true
 
         // Back button
         backButton = NSButton()
@@ -104,14 +115,18 @@ class ToolbarViewController: NSViewController {
         forwardButton.isHidden = !showBackForward
         view.addSubview(forwardButton)
 
-        // Breadcrumb scroll view (for address bar)
+        // Breadcrumb scroll view (for address bar) - styled for Finder-like appearance
         breadcrumbScrollView = NSScrollView()
         breadcrumbScrollView.translatesAutoresizingMaskIntoConstraints = false
         breadcrumbScrollView.hasHorizontalScroller = false
         breadcrumbScrollView.hasVerticalScroller = false
-        breadcrumbScrollView.borderType = .bezelBorder
+        breadcrumbScrollView.borderType = .lineBorder
         breadcrumbScrollView.drawsBackground = true
-        breadcrumbScrollView.backgroundColor = NSColor.textBackgroundColor
+        breadcrumbScrollView.backgroundColor = NSColor.controlBackgroundColor
+        breadcrumbScrollView.wantsLayer = true
+        breadcrumbScrollView.layer?.cornerRadius = 6
+        breadcrumbScrollView.layer?.borderWidth = 0.5
+        breadcrumbScrollView.layer?.borderColor = NSColor.separatorColor.cgColor
         view.addSubview(breadcrumbScrollView)
 
         // Breadcrumb stack view
@@ -207,6 +222,17 @@ class ToolbarViewController: NSViewController {
         previewPaneButton.isHidden = !showPreviewPane
         view.addSubview(previewPaneButton)
 
+        // Storage Analyzer button
+        storageAnalyzerButton = NSButton()
+        storageAnalyzerButton.translatesAutoresizingMaskIntoConstraints = false
+        storageAnalyzerButton.bezelStyle = .texturedRounded
+        storageAnalyzerButton.image = NSImage(systemSymbolName: "chart.pie", accessibilityDescription: "Storage Analyzer")
+        storageAnalyzerButton.target = self
+        storageAnalyzerButton.action = #selector(storageAnalyzerButtonClicked(_:))
+        storageAnalyzerButton.toolTip = "Storage Analyzer"
+        storageAnalyzerButton.isHidden = !showStorageAnalyzer
+        view.addSubview(storageAnalyzerButton)
+
         // Sort button
         sortButton = NSPopUpButton()
         sortButton.translatesAutoresizingMaskIntoConstraints = false
@@ -264,9 +290,25 @@ class ToolbarViewController: NSViewController {
         searchField.sendsSearchStringImmediately = true
         searchField.toolTip = "Search (⌘F)"
         view.addSubview(searchField)
+        
+        // Filter button
+        filterButton = NSButton()
+        filterButton.translatesAutoresizingMaskIntoConstraints = false
+        filterButton.bezelStyle = .texturedRounded
+        filterButton.image = NSImage(systemSymbolName: "line.3.horizontal.decrease.circle", accessibilityDescription: "Filter")
+        filterButton.target = self
+        filterButton.action = #selector(filterButtonClicked(_:))
+        filterButton.toolTip = "Filter Files"
+        view.addSubview(filterButton)
 
         // Layout constraints
         NSLayoutConstraint.activate([
+            // Bottom border
+            bottomBorder.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            bottomBorder.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bottomBorder.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            bottomBorder.heightAnchor.constraint(equalToConstant: 1),
+
             backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
             backButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             backButton.widthAnchor.constraint(equalToConstant: 30),
@@ -328,20 +370,30 @@ class ToolbarViewController: NSViewController {
             previewPaneButton.widthAnchor.constraint(equalToConstant: 30),
             previewPaneButton.heightAnchor.constraint(equalToConstant: 26),
 
-            newFolderButton.trailingAnchor.constraint(equalTo: sortButton.leadingAnchor, constant: -8),
+            newFolderButton.trailingAnchor.constraint(equalTo: storageAnalyzerButton.leadingAnchor, constant: -8),
             newFolderButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             newFolderButton.widthAnchor.constraint(equalToConstant: 30),
             newFolderButton.heightAnchor.constraint(equalToConstant: 26),
+
+            storageAnalyzerButton.trailingAnchor.constraint(equalTo: sortButton.leadingAnchor, constant: -8),
+            storageAnalyzerButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            storageAnalyzerButton.widthAnchor.constraint(equalToConstant: 30),
+            storageAnalyzerButton.heightAnchor.constraint(equalToConstant: 26),
 
             sortButton.trailingAnchor.constraint(equalTo: searchField.leadingAnchor, constant: -8),
             sortButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             sortButton.widthAnchor.constraint(equalToConstant: 44),
             sortButton.heightAnchor.constraint(equalToConstant: 26),
 
-            searchField.trailingAnchor.constraint(equalTo: closePaneButton.leadingAnchor, constant: -8),
+            searchField.trailingAnchor.constraint(equalTo: filterButton.leadingAnchor, constant: -8),
             searchField.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             searchField.widthAnchor.constraint(equalToConstant: 150),
             searchField.heightAnchor.constraint(equalToConstant: 22),
+            
+            filterButton.trailingAnchor.constraint(equalTo: closePaneButton.leadingAnchor, constant: -4),
+            filterButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            filterButton.widthAnchor.constraint(equalToConstant: 30),
+            filterButton.heightAnchor.constraint(equalToConstant: 26),
 
             closePaneButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
             closePaneButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -433,7 +485,7 @@ class ToolbarViewController: NSViewController {
         closePaneButton.isHidden = !visible
     }
 
-    private func updatePreviewPaneDisplay(showing: Bool) {
+    func updatePreviewPaneDisplay(showing: Bool) {
         NSAnimationContext.runAnimationGroup { _ in
             NSAnimationContext.current.duration = 0.15
             if showing {
@@ -663,8 +715,21 @@ class ToolbarViewController: NSViewController {
         delegate?.toolbarDidRequestClosePane()
     }
 
+    @objc private func storageAnalyzerButtonClicked(_ sender: Any) {
+        // Navigate up to find the TabBarController and open Storage Analyzer in a tab
+        if let splitViewController = parent as? FileBrowserViewController,
+           let splitPaneVC = splitViewController.parent as? SplitPaneViewController,
+           let tabBarController = splitPaneVC.parent as? TabBarController {
+            tabBarController.openStorageAnalyzerTab()
+        }
+    }
+
     @objc private func searchFieldChanged(_ sender: NSSearchField) {
         delegate?.toolbarDidSearchTextChange(sender.stringValue)
+    }
+    
+    @objc private func filterButtonClicked(_ sender: Any) {
+        delegate?.toolbarDidRequestShowFilter()
     }
 }
 

@@ -88,6 +88,190 @@ class PermissionsManager {
 
     private init() {}
 
+    // MARK: - Granted Directories Storage
+    private let grantedDirectoriesKey = UserDefaults.Keys.grantedDirectoriesPaths.rawValue
+    private let grantedDirectoryBookmarksKey = UserDefaults.Keys.grantedDirectoryBookmarks.rawValue
+    private let migrationFlagKey = UserDefaults.Keys.grantedDirectoryBookmarksMigrated.rawValue
+    private var activeSecurityScopedURLs: Set<URL> = []
+
+    struct ResolvedGrantedDirectoryEntry {
+        let url: URL?
+        let path: String
+        let isStale: Bool
+        let isValid: Bool
+    }
+
+    // MARK: Migration
+    func migratePathsToBookmarksIfNeeded() {
+        // Only meaningful in sandboxed context; skip otherwise
+        guard isSandboxed() else { return }
+        let migrated = UserDefaults.standard.bool(forKey: migrationFlagKey)
+        guard !migrated else { return }
+        guard let paths = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String], !paths.isEmpty else {
+            UserDefaults.standard.set(true, forKey: migrationFlagKey)
+            return
+        }
+        var bookmarkDatas: [Data] = []
+        for path in paths {
+            let url = URL(fileURLWithPath: path)
+            do {
+                let data = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+                bookmarkDatas.append(data)
+            } catch {
+                NSLog("[PermissionsManager] Failed to create bookmark for migration: \(path) error: \(error)")
+            }
+        }
+        if !bookmarkDatas.isEmpty {
+            UserDefaults.standard.set(bookmarkDatas, forKey: grantedDirectoryBookmarksKey)
+        }
+        UserDefaults.standard.set(true, forKey: migrationFlagKey)
+    }
+
+    func grantedDirectories() -> [URL] {
+        // Prefer bookmarks if present
+        if isSandboxed() {
+            if let datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data], !datas.isEmpty {
+                return datas.compactMap { resolveBookmarkData($0).url }
+            }
+        }
+        guard let paths = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String] else { return [] }
+        return paths.compactMap { URL(fileURLWithPath: $0) }
+    }
+
+    func addGrantedDirectory(_ url: URL) {
+        print("[PermissionsManager] Adding granted directory: \(url.path)")
+        print("[PermissionsManager] Is sandboxed: \(isSandboxed())")
+        
+        // In non-sandboxed builds we only store path strings.
+        guard isSandboxed() else {
+            var existing = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String] ?? []
+            print("[PermissionsManager] Existing paths: \(existing)")
+            if !existing.contains(url.path) {
+                existing.append(url.path)
+                UserDefaults.standard.set(existing, forKey: grantedDirectoriesKey)
+                print("[PermissionsManager] Added path: \(url.path)")
+                print("[PermissionsManager] Updated paths: \(existing)")
+            } else {
+                print("[PermissionsManager] Path already exists: \(url.path)")
+            }
+            return
+        }
+        do {
+            let data = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+            var existingDatas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data] ?? []
+            if !existingDatas.contains(where: { resolveBookmarkData($0).path == url.path }) {
+                existingDatas.append(data)
+                UserDefaults.standard.set(existingDatas, forKey: grantedDirectoryBookmarksKey)
+            }
+        } catch {
+            NSLog("[PermissionsManager] Bookmark creation failed in sandbox for \(url.path): \(error)")
+        }
+    }
+
+    func removeGrantedDirectory(_ url: URL) {
+        if var datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data], !datas.isEmpty {
+            datas.removeAll { resolveBookmarkData($0).path == url.path }
+            UserDefaults.standard.set(datas, forKey: grantedDirectoryBookmarksKey)
+        }
+        if activeSecurityScopedURLs.contains(url) {
+            url.stopAccessingSecurityScopedResource()
+            activeSecurityScopedURLs.remove(url)
+        }
+        var existing = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String] ?? []
+        existing.removeAll { $0 == url.path }
+        UserDefaults.standard.set(existing, forKey: grantedDirectoriesKey)
+    }
+
+    func hasGrantedDirectory(_ url: URL) -> Bool {
+        if isSandboxed() {
+            if let datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data], !datas.isEmpty {
+                return datas.contains { resolveBookmarkData($0).path == url.path }
+            }
+        }
+        let existing = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String] ?? []
+        return existing.contains(url.path)
+    }
+
+    // MARK: - Bookmark Resolution
+    private func resolveBookmarkData(_ data: Data) -> ResolvedGrantedDirectoryEntry {
+        var stale = false
+        do {
+            let url = try URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &stale)
+            let exists = FileManager.default.fileExists(atPath: url.path)
+            return ResolvedGrantedDirectoryEntry(url: url, path: url.path, isStale: stale, isValid: exists)
+        } catch {
+            return ResolvedGrantedDirectoryEntry(url: nil, path: "<unresolved>", isStale: false, isValid: false)
+        }
+    }
+
+    func resolvedGrantedDirectoryEntries() -> [ResolvedGrantedDirectoryEntry] {
+        print("[PermissionsManager] resolvedGrantedDirectoryEntries called")
+        print("[PermissionsManager] Is sandboxed: \(isSandboxed())")
+        
+        if isSandboxed() {
+            if let datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data] {
+                print("[PermissionsManager] Found \(datas.count) bookmarks")
+                return datas.map { resolveBookmarkData($0) }
+            }
+        }
+        // Fallback to paths
+        let urls = grantedDirectories()
+        print("[PermissionsManager] Found \(urls.count) granted directories (from paths)")
+        let entries = urls.map { ResolvedGrantedDirectoryEntry(url: $0, path: $0.path, isStale: false, isValid: FileManager.default.fileExists(atPath: $0.path)) }
+        print("[PermissionsManager] Returning \(entries.count) entries")
+        for entry in entries {
+            print("[PermissionsManager]   - \(entry.path) (valid: \(entry.isValid))")
+        }
+        return entries
+    }
+
+    // MARK: - Security Scoped Lifecycle
+    func startAccessingAllSecurityScoped() {
+        guard isSandboxed() else { return }
+        for entry in resolvedGrantedDirectoryEntries() {
+            if let url = entry.url, entry.isValid, !activeSecurityScopedURLs.contains(url) {
+                if url.startAccessingSecurityScopedResource() {
+                    activeSecurityScopedURLs.insert(url)
+                }
+            }
+        }
+    }
+
+    func stopAccessingAllSecurityScoped() {
+        for url in activeSecurityScopedURLs {
+            url.stopAccessingSecurityScopedResource()
+        }
+        activeSecurityScopedURLs.removeAll()
+    }
+
+    // MARK: - Refresh / Replace
+    func replaceGrantedDirectory(oldURL: URL, with newURL: URL) {
+        removeGrantedDirectory(oldURL)
+        addGrantedDirectory(newURL)
+    }
+
+    func refreshBookmarkIfStale(for url: URL) {
+        guard isSandboxed() else { return }
+        guard var datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data] else { return }
+        var updated: [Data] = []
+        for data in datas {
+            let entry = resolveBookmarkData(data)
+            if entry.path == url.path {
+                if entry.isStale {
+                    do {
+                        let newData = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
+                        updated.append(newData)
+                        continue
+                    } catch {
+                        NSLog("[PermissionsManager] Failed to refresh stale bookmark for \(url.path): \(error)")
+                    }
+                }
+            }
+            updated.append(data)
+        }
+        UserDefaults.standard.set(updated, forKey: grantedDirectoryBookmarksKey)
+    }
+
     func checkPermissionStatus(for type: PermissionType) -> PermissionStatus {
         switch type {
         case .fullDiskAccess:
@@ -210,5 +394,10 @@ class PermissionsManager {
         if let url = URL(string: urlString) {
             NSWorkspace.shared.open(url)
         }
+    }
+
+    // MARK: - Environment
+    private func isSandboxed() -> Bool {
+        return ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
     }
 }

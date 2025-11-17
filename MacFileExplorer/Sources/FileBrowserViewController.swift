@@ -1,6 +1,48 @@
 import Cocoa
 import Quartz
 
+// MARK: - Filter Criteria
+
+struct FilterCriteria {
+    var fileTypes: Set<String> = []  // Extensions like "pdf", "jpg", "txt"
+    var sizeMin: Int64? = nil         // Minimum size in bytes
+    var sizeMax: Int64? = nil         // Maximum size in bytes
+    var dateMin: Date? = nil          // Minimum modification date
+    var dateMax: Date? = nil          // Maximum modification date
+    
+    var isActive: Bool {
+        return !fileTypes.isEmpty || sizeMin != nil || sizeMax != nil || dateMin != nil || dateMax != nil
+    }
+    
+    func matches(_ item: FileItem) -> Bool {
+        // File type filter
+        if !fileTypes.isEmpty {
+            let ext = item.url.pathExtension.lowercased()
+            if !fileTypes.contains(ext) && !fileTypes.contains("*") {
+                return false
+            }
+        }
+        
+        // Size filter
+        if let min = sizeMin, item.size < min {
+            return false
+        }
+        if let max = sizeMax, item.size > max {
+            return false
+        }
+        
+        // Date filter
+        if let min = dateMin, let modDate = item.modificationDate, modDate < min {
+            return false
+        }
+        if let max = dateMax, let modDate = item.modificationDate, modDate > max {
+            return false
+        }
+        
+        return true
+    }
+}
+
 // Root container view that provides a visual highlight when a drag session enters the pane.
 class RootFileBrowserView: NSView {
     private var highlightLayer: CALayer?
@@ -93,6 +135,15 @@ extension FileBrowserViewController {
 }
 
 // Cancellation token reference type
+extension FileBrowserViewController: NSSplitViewDelegate {
+    func splitViewDidResizeSubviews(_ notification: Notification) {
+        guard previewVisible, let pv = previewPaneViewController?.view else { return }
+        let width = pv.bounds.width
+        if width > 100 { // persist only reasonable widths
+            UserDefaults.standard.set(width, forKey: UserDefaults.Keys.previewPaneWidth.rawValue)
+        }
+    }
+}
 final class CancellationToken {
     private let lock = DispatchSemaphore(value: 1)
     private var _isCancelled = false
@@ -165,6 +216,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     private var collectionViewScrollView: NSScrollView! // For collection view
     private var browserView: NSBrowser! // For columns view
     private var freeFormLayout: FreeFormCollectionViewLayout? // Custom layout for free-form icon positioning
+    // Per-pane preview management
+    private var previewSplitView: NSSplitView?
+    private var previewPaneViewController: PreviewPaneViewController?
+    private var previewVisible: Bool = false
     
     // Constraint management for view switching
     private var activeConstraints: [NSLayoutConstraint] = []
@@ -179,6 +234,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     private var currentHistoryIndex: Int = -1
     private var showsHiddenFiles: Bool = false
     private var searchFilter: String?
+    private var filterCriteria: FilterCriteria = FilterCriteria()
 
     // Sorting state
     private var sortColumn: String = "NameColumn"
@@ -282,6 +338,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         view = RootFileBrowserView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
         setupUI()
         loadDirectory(currentDirectory)
+        // Initial preview visibility from global default applied per pane
+        let defaultShowPreview = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
+        if defaultShowPreview { showPreviewPane() }
     }
 
     override func viewDidAppear() {
@@ -511,6 +570,24 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
         scrollView.documentView = outlineView
         
+        // Column visibility preferences (initialize defaults if missing)
+        var columnVisibility = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.columnVisibility.rawValue) as? [String: Bool] ?? [:]
+        if columnVisibility.isEmpty {
+            columnVisibility = [
+                "NameColumn": true,
+                "DateModifiedColumn": true,
+                "TypeColumn": true,
+                "SizeColumn": true,
+                // Hidden by default as requested
+                "DateCreatedColumn": false,
+                "TagsColumn": false
+            ]
+            UserDefaults.standard.set(columnVisibility, forKey: UserDefaults.Keys.columnVisibility.rawValue)
+        }
+        applyColumnVisibility(columnVisibility)
+        // Header right-click menu for toggling columns
+        outlineView.headerView?.menu = createHeaderColumnsMenu()
+        
         // Set delegate and dataSource
         outlineView.delegate = self
         outlineView.dataSource = self
@@ -549,6 +626,121 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         displayFiles(for: currentViewMode)
     }
 
+    // Ensure active content view is embedded in preview split if preview visible
+    private func ensureContentInPreviewSplit() {
+        guard previewVisible else { return }
+        guard let contentView = currentActiveContentView() else { return }
+        if previewSplitView == nil {
+            let split = NSSplitView()
+            split.translatesAutoresizingMaskIntoConstraints = false
+            split.isVertical = true
+            split.dividerStyle = .thin
+            previewSplitView = split
+            containerView.addSubview(split)
+            NSLayoutConstraint.activate([
+                split.topAnchor.constraint(equalTo: containerView.topAnchor),
+                split.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                split.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                split.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+            ])
+        }
+        guard let split = previewSplitView else { return }
+        
+        // Move content view to split if it's not already there
+        if contentView.superview !== split {
+            // Remove any existing constraints on the content view
+            contentView.removeFromSuperview()
+            split.addArrangedSubview(contentView)
+        }
+        
+        // Ensure preview pane exists
+        if previewPaneViewController == nil {
+            let previewVC = PreviewPaneViewController()
+            previewVC.position = .right
+            addChild(previewVC)
+            previewPaneViewController = previewVC
+            let pv = previewVC.view
+            pv.translatesAutoresizingMaskIntoConstraints = false
+            pv.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            pv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+            split.addArrangedSubview(pv)
+            
+            // Apply saved width if available
+            let savedWidth = UserDefaults.standard.double(forKey: UserDefaults.Keys.previewPaneWidth.rawValue)
+            if savedWidth > 100 { // apply a reasonable minimum threshold
+                DispatchQueue.main.async { [weak split] in
+                    guard let split = split else { return }
+                    let total = split.bounds.width
+                    let position = max(0, total - CGFloat(savedWidth))
+                    split.setPosition(position, ofDividerAt: 0)
+                }
+            }
+            split.delegate = self
+            // Show current selection
+            if let sel = currentSingleSelection() { previewVC.previewFile(sel) }
+        } else if previewPaneViewController?.view.superview !== split {
+            // Re-add preview pane if it was removed
+            let pv = previewPaneViewController!.view
+            split.addArrangedSubview(pv)
+        }
+    }
+
+    private func dismantlePreviewSplit() {
+        guard let split = previewSplitView else { return }
+        // Move active content view back to container
+        if let contentView = currentActiveContentView() {
+            contentView.removeFromSuperview()
+            containerView.addSubview(contentView)
+            NSLayoutConstraint.activate([
+                contentView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                contentView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                contentView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                contentView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+            ])
+        }
+        previewPaneViewController?.view.removeFromSuperview()
+        previewPaneViewController?.removeFromParent()
+        previewPaneViewController = nil
+        split.removeFromSuperview()
+        previewSplitView = nil
+    }
+
+    private func currentActiveContentView() -> NSView? {
+        switch currentViewMode {
+        case .list: return scrollView
+        case .icons, .windowsList: return collectionViewScrollView
+        case .columns: return browserView
+        }
+    }
+
+    private func currentSingleSelection() -> FileItem? {
+        let selected = outlineView.selectedRowIndexes
+        guard selected.count == 1, let row = selected.first else { return nil }
+        return outlineView.item(atRow: row) as? FileItem
+    }
+
+    // Update preview pane with a newly selected file or clear if nil/multiple
+    private func updatePreviewPane(with file: FileItem?) {
+        guard previewVisible, let previewVC = previewPaneViewController else { return }
+        if let file {
+            previewVC.previewFile(file)
+        } else {
+            previewVC.resetPreview()
+        }
+    }
+
+    private func showPreviewPane() {
+        previewVisible = true
+        ensureContentInPreviewSplit()
+        toolbarViewController.updatePreviewPaneDisplay(showing: true)
+    }
+
+    private func hidePreviewPane() {
+        previewVisible = false
+        dismantlePreviewSplit()
+        toolbarViewController.updatePreviewPaneDisplay(showing: false)
+    }
+
     private func displayFiles(for viewMode: ViewMode) {
         print("Displaying files for view mode: \(viewMode)")
         
@@ -569,13 +761,15 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             }
             scrollView.isHidden = false
             
-            activeConstraints = [
-                scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-            ]
-            NSLayoutConstraint.activate(activeConstraints)
+            if !previewVisible {
+                activeConstraints = [
+                    scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                    scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                    scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                    scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+                ]
+                NSLayoutConstraint.activate(activeConstraints)
+            }
             outlineView.reloadData()
 
             // Use dispatch to ensure window is ready
@@ -598,18 +792,22 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 return
             }
             
-            if collectionViewScrollView.superview == nil {
+            // Add to container if not in split view (preview will handle embedding)
+            if collectionViewScrollView.superview == nil && !previewVisible {
                 containerView.addSubview(collectionViewScrollView)
             }
             collectionViewScrollView.isHidden = false
             
-            activeConstraints = [
-                collectionViewScrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                collectionViewScrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                collectionViewScrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                collectionViewScrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-            ]
-            NSLayoutConstraint.activate(activeConstraints)
+            // Only set constraints if preview is not visible (preview split will manage layout)
+            if !previewVisible {
+                activeConstraints = [
+                    collectionViewScrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                    collectionViewScrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                    collectionViewScrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                    collectionViewScrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+                ]
+                NSLayoutConstraint.activate(activeConstraints)
+            }
 
             // Configure layout based on viewMode
             if viewMode == .windowsList {
@@ -654,18 +852,20 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 return
             }
             
-            if browserView.superview == nil {
+            if browserView.superview == nil && !previewVisible {
                 containerView.addSubview(browserView)
             }
             browserView.isHidden = false
             
-            activeConstraints = [
-                browserView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                browserView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                browserView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                browserView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-            ]
-            NSLayoutConstraint.activate(activeConstraints)
+            if !previewVisible {
+                activeConstraints = [
+                    browserView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                    browserView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                    browserView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                    browserView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+                ]
+                NSLayoutConstraint.activate(activeConstraints)
+            }
             
             // Use dispatch to ensure layout is complete before loading data
             print("displayFiles: Setting up browser view, rootItem has \(rootItem?.children?.count ?? 0) children")
@@ -685,6 +885,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 self.view.window?.makeFirstResponder(self.view)
             }
         }
+        // If preview visible, ensure split embedding stays consistent after view switch
+        if previewVisible { ensureContentInPreviewSplit() }
     }
 
     private func setupCollectionView() {
@@ -824,12 +1026,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         }
         
         let location = panGesture.location(in: collectionView)
-        if let indexPath = collectionView.indexPathForItem(at: location) {
-            // Only begin if clicking on a selected item
-            return collectionView.selectionIndexPaths.contains(indexPath)
-        }
-        
-        return false
+        guard let hitIndexPath = collectionView.indexPathForItem(at: location) else { return false }
+        return collectionView.selectionIndexPaths.contains(hitIndexPath)
     }
     
     @objc private func handleIconDrag(_ sender: NSPanGestureRecognizer) {
@@ -843,7 +1041,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         switch sender.state {
         case .began:
             // Find the item being dragged and store initial positions
-            if let indexPath = collectionView.indexPathForItem(at: location) {
+            if collectionView.indexPathForItem(at: location) != nil {
                 draggedItemsInitialPositions.removeAll()
                 for indexPath in collectionView.selectionIndexPaths {
                     if let pos = layout.position(for: indexPath) {
@@ -1185,12 +1383,32 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     private func applySearchFilter() {
-        guard let rootItem = rootItem, let searchText = searchFilter, !searchText.isEmpty else { return }
+        guard let rootItem = rootItem else { return }
+        
+        // Check if any filtering is active
+        let hasSearchText = searchFilter != nil && !searchFilter!.isEmpty
+        let hasFilterCriteria = filterCriteria.isActive
+        
+        guard hasSearchText || hasFilterCriteria else { return }
 
-        // Filter children based on search text
+        // Filter children based on search text and filter criteria
         if var children = rootItem.children {
             children = children.filter { item in
-                item.name.localizedCaseInsensitiveContains(searchText)
+                // Apply text search filter
+                if hasSearchText, let searchText = searchFilter {
+                    if !item.name.localizedCaseInsensitiveContains(searchText) {
+                        return false
+                    }
+                }
+                
+                // Apply advanced filters (but not to folders unless explicitly filtering by them)
+                if hasFilterCriteria && !item.isDirectory {
+                    if !filterCriteria.matches(item) {
+                        return false
+                    }
+                }
+                
+                return true
             }
             rootItem.children = children
         }
@@ -1216,6 +1434,24 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         zoomLevel = max(0.5, min(2.0, level)) // Clamp between 0.5 and 2.0
         statusBarViewController?.setZoomLevel(zoomLevel)
         applyZoomToCurrentView()
+    }
+    
+    func setFilter(_ criteria: FilterCriteria) {
+        filterCriteria = criteria
+        refreshCurrentDirectory()
+    }
+    
+    func clearFilters() {
+        filterCriteria = FilterCriteria()
+        refreshCurrentDirectory()
+    }
+    
+    func showFilterPanel() {
+        let filterPanel = FilterPanelViewController(currentFilter: filterCriteria) { [weak self] newFilter in
+            self?.setFilter(newFilter)
+        }
+        
+        presentAsSheet(filterPanel)
     }
 
     // MARK: - StatusBarDelegate
@@ -1382,6 +1618,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             newFolderItem.keyEquivalentModifierMask = .command
         }
         menu.addItem(newFolderItem)
+        menu.addItem(withTitle: "New File", action: #selector(contextMenuNewFile(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Add to Favorites", action: #selector(contextMenuAddToFavorites(_:)), keyEquivalent: "")
         // Remove possible extra separator if previous item was a separator
@@ -1417,6 +1654,67 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
         menu.delegate = self
         return menu
+    }
+
+    // MARK: - Column Visibility
+
+    private func createHeaderColumnsMenu() -> NSMenu {
+        let menu = NSMenu(title: "Columns")
+        let visibility = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.columnVisibility.rawValue) as? [String: Bool] ?? [:]
+        for column in outlineView.tableColumns {
+            let identifier = column.identifier.rawValue
+            let title = column.title
+            let item = NSMenuItem(title: title, action: #selector(toggleColumnVisibility(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = identifier
+            let isVisible = visibility[identifier] ?? true
+            item.state = isVisible ? .on : .off
+            // Prevent hiding the NameColumn entirely
+            if identifier == "NameColumn" { item.isEnabled = false }
+            menu.addItem(item)
+        }
+        menu.addItem(NSMenuItem.separator())
+        let resetItem = NSMenuItem(title: "Reset to Defaults", action: #selector(resetColumnVisibility(_:)), keyEquivalent: "")
+        resetItem.target = self
+        menu.addItem(resetItem)
+        return menu
+    }
+
+    @objc private func toggleColumnVisibility(_ sender: NSMenuItem) {
+        guard let identifier = sender.representedObject as? String, identifier != "NameColumn" else { return }
+        var visibility = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.columnVisibility.rawValue) as? [String: Bool] ?? [:]
+        let current = visibility[identifier] ?? true
+        visibility[identifier] = !current
+        UserDefaults.standard.set(visibility, forKey: UserDefaults.Keys.columnVisibility.rawValue)
+        applyColumnVisibility(visibility)
+        // Refresh header menu to update states
+        outlineView.headerView?.menu = createHeaderColumnsMenu()
+    }
+
+    @objc private func resetColumnVisibility(_ sender: NSMenuItem) {
+        let defaults: [String: Bool] = [
+            "NameColumn": true,
+            "DateModifiedColumn": true,
+            "TypeColumn": true,
+            "SizeColumn": true,
+            "DateCreatedColumn": false,
+            "TagsColumn": false
+        ]
+        UserDefaults.standard.set(defaults, forKey: UserDefaults.Keys.columnVisibility.rawValue)
+        applyColumnVisibility(defaults)
+        outlineView.headerView?.menu = createHeaderColumnsMenu()
+    }
+
+    private func applyColumnVisibility(_ visibility: [String: Bool]) {
+        for column in outlineView.tableColumns {
+            let id = column.identifier.rawValue
+            if id == "NameColumn" { // Always visible
+                column.isHidden = false
+                continue
+            }
+            let shouldShow = visibility[id] ?? true
+            column.isHidden = !shouldShow
+        }
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -2141,6 +2439,86 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         }
     }
 
+    @objc private func contextMenuNewFile(_ sender: Any) {
+        let alert = NSAlert()
+        alert.messageText = "New File"
+        alert.informativeText = "Enter name for new file (including extension):"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Create")
+        alert.addButton(withTitle: "Cancel")
+
+        // Create a container view for the text field and label
+        let containerView = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 50))
+
+        // Add a helpful label
+        let label = NSTextField(labelWithString: "File name:")
+        label.frame = NSRect(x: 0, y: 26, width: 300, height: 17)
+        label.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        label.textColor = .secondaryLabelColor
+        containerView.addSubview(label)
+
+        // Add text field
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
+        textField.stringValue = "untitled.txt"
+        textField.placeholderString = "e.g., document.txt, notes.md, script.sh"
+        containerView.addSubview(textField)
+
+        alert.accessoryView = containerView
+
+        // Make the window appear and select the filename (without extension)
+        DispatchQueue.main.async {
+            textField.becomeFirstResponder()
+            // Select just the filename part (before the last dot)
+            if let dotRange = textField.stringValue.range(of: ".", options: .backwards) {
+                let filenameLength = textField.stringValue.distance(from: textField.stringValue.startIndex, to: dotRange.lowerBound)
+                textField.currentEditor()?.selectedRange = NSRange(location: 0, length: filenameLength)
+            }
+        }
+
+        if alert.runModal() == .alertFirstButtonReturn {
+            let fileName = textField.stringValue.trimmingCharacters(in: .whitespaces)
+            guard !fileName.isEmpty else {
+                showError("File name cannot be empty")
+                return
+            }
+
+            // Validate filename (no path separators)
+            if fileName.contains("/") || fileName.contains("\\") {
+                showError("File name cannot contain / or \\ characters")
+                return
+            }
+
+            let newFileURL = currentDirectory.appendingPathComponent(fileName)
+
+            // Check if file already exists
+            if FileManager.default.fileExists(atPath: newFileURL.path) {
+                let confirmAlert = NSAlert()
+                confirmAlert.messageText = "File Already Exists"
+                confirmAlert.informativeText = "A file named \"\(fileName)\" already exists. Do you want to replace it?"
+                confirmAlert.alertStyle = .warning
+                confirmAlert.addButton(withTitle: "Replace")
+                confirmAlert.addButton(withTitle: "Cancel")
+
+                if confirmAlert.runModal() != .alertFirstButtonReturn {
+                    return
+                }
+            }
+
+            do {
+                // Create an empty file
+                try Data().write(to: newFileURL)
+                refreshCurrentDirectory()
+
+                // Select the newly created file
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                    self?.selectFile(at: newFileURL)
+                }
+            } catch {
+                showError("Failed to create file: \(error.localizedDescription)")
+            }
+        }
+    }
+
 
 
     @objc private func contextMenuShowInFinder(_ sender: Any) {
@@ -2178,6 +2556,25 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
     private func showError(_ message: String) {
         showBanner(message: message, style: .error)
+    }
+
+    private func selectFile(at url: URL) {
+        // Find the file item in the current directory
+        guard let children = rootItem.children,
+              let index = children.firstIndex(where: { $0.url == url }) else { return }
+
+        // Select in outline view
+        if currentViewMode == .list {
+            let row = outlineView.row(forItem: children[index])
+            if row >= 0 {
+                outlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+                outlineView.scrollRowToVisible(row)
+            }
+        } else if currentViewMode == .icons || currentViewMode == .windowsList {
+            // Select in collection view
+            let indexPath = IndexPath(item: index, section: 0)
+            collectionView?.selectItems(at: Set([indexPath]), scrollPosition: .centeredVertically)
+        }
     }
 
     enum BannerStyle { case info, error }
@@ -2379,6 +2776,21 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
             textField.alignment = .right  // Right-align like Windows Explorer
             textField.stringValue = fileItem.sizeString
 
+            // If folder sizes should be shown and this is a directory, calculate it asynchronously
+            if fileItem.isDirectory && UserDefaults.standard.bool(forKey: "showFolderSizes") {
+                // Show placeholder while calculating
+                if fileItem.size == 0 {
+                    textField.stringValue = "Calculating..."
+                    textField.textColor = .secondaryLabelColor
+                    
+                    // Calculate folder size asynchronously
+                    fileItem.calculateFolderSize { [weak textField] totalSize in
+                        textField?.stringValue = ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
+                        textField?.textColor = .labelColor
+                    }
+                }
+            }
+
             cellView.addSubview(textField)
             textField.translatesAutoresizingMaskIntoConstraints = false
 
@@ -2540,11 +2952,14 @@ extension FileBrowserViewController: NSOutlineViewDelegate {
         if selectedRows.count == 1, let selectedRow = selectedRows.first {
             if let selectedFileItem = outlineView.item(atRow: selectedRow) as? FileItem {
                 delegate?.fileBrowser(self, didSelectFile: selectedFileItem)
+                updatePreviewPane(with: selectedFileItem)
             } else {
                 delegate?.fileBrowser(self, didSelectFile: nil)
+                updatePreviewPane(with: nil)
             }
         } else {
             delegate?.fileBrowser(self, didSelectFile: nil)
+            updatePreviewPane(with: nil)
         }
         updateStatusBar()
     }
@@ -2901,7 +3316,11 @@ extension FileBrowserViewController: ToolbarDelegate {
     }
 
     func toolbarDidTogglePreviewPane() {
-        (parent as? SplitPaneViewController)?.togglePreviewPane()
+        previewVisible ? hidePreviewPane() : showPreviewPane()
+    }
+    
+    func toolbarDidRequestShowFilter() {
+        showFilterPanel()
     }
 }
 
@@ -3083,8 +3502,10 @@ extension FileBrowserViewController: NSCollectionViewDelegate {
 
         if selectedFileItems.count == 1 {
             delegate?.fileBrowser(self, didSelectFile: selectedFileItems.first)
+            updatePreviewPane(with: selectedFileItems.first)
         } else {
             delegate?.fileBrowser(self, didSelectFile: nil)
+            updatePreviewPane(with: nil)
         }
         updateStatusBar()
     }
@@ -3316,11 +3737,14 @@ extension FileBrowserViewController: NSBrowserDelegate {
                let children = item.children,
                selectedRow < children.count {
                 delegate?.fileBrowser(self, didSelectFile: children[selectedRow])
+                updatePreviewPane(with: children[selectedRow])
             } else {
                 delegate?.fileBrowser(self, didSelectFile: nil)
+                updatePreviewPane(with: nil)
             }
         } else {
             delegate?.fileBrowser(self, didSelectFile: nil)
+            updatePreviewPane(with: nil)
         }
         updateStatusBar()
     }

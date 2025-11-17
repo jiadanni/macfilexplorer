@@ -36,6 +36,9 @@ class SettingsSidebarViewController: NSViewController, NSTableViewDelegate, NSTa
         tableView.allowsEmptySelection = false
         tableView.allowsMultipleSelection = false
         tableView.rowHeight = 30
+        // Ensure the table view can expand to fill and scroll properly
+        tableView.translatesAutoresizingMaskIntoConstraints = true
+        tableView.autoresizingMask = [.width, .height]
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("SectionColumn"))
         column.width = 200
@@ -46,6 +49,12 @@ class SettingsSidebarViewController: NSViewController, NSTableViewDelegate, NSTa
         scrollView.documentView = tableView
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(scrollView)
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        // Keep the table view sized to the scroll view bounds so all rows are accessible
+        tableView.frame = scrollView.bounds
     }
 
     private func setupConstraints() {

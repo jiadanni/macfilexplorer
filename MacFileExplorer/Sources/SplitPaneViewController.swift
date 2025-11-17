@@ -30,9 +30,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
 
     private var panes: [FileBrowserViewController] = []
     private var activePaneIndex: Int = 0
-    private var previewViewController: PreviewPaneViewController?
-    private var previewSplitItem: NSSplitViewItem?
-    private var isPreviewPaneVisible: Bool = false
+    // Per-pane preview now managed inside each FileBrowserViewController
 
     var currentPath: String {
         guard activePaneIndex < panes.count else { return "/" }
@@ -43,6 +41,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
         super.viewDidLoad()
         setupUI()
         NotificationCenter.default.addObserver(self, selector: #selector(handlePreviewPaneCloseRequested), name: .previewPaneCloseRequested, object: nil)
+        // Per-pane preview visibility restored when each pane is created
     }
 
     private func setupUI() {
@@ -244,27 +243,19 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
     }
 
     func fileBrowserDidRequestSplit(_ fileBrowser: FileBrowserViewController, orientation: SplitOrientation) {
-        // Determine which pane requested the split
-        guard let paneIndex = panes.firstIndex(of: fileBrowser) else { return }
-        
-        // Change split view orientation if needed
+        // Verify pane exists
+        guard panes.contains(fileBrowser) else { return }
         let isVertical = orientation == .vertical
         if splitView.isVertical != isVertical {
             splitView.isVertical = isVertical
         }
-        
-        // Add a new pane next to the requesting pane with the same directory
-        // Use the currentPath property to get the directory URL
         let currentPath = fileBrowser.currentPath
         let currentURL = URL(fileURLWithPath: currentPath)
         addPane(url: currentURL)
     }
     
     func fileBrowser(_ fileBrowser: FileBrowserViewController, didSelectFile file: FileItem?) {
-        // Update preview pane if visible
-        if isPreviewPaneVisible, let preview = previewViewController {
-            preview.previewFile(file)
-        }
+        // Selection handled per pane for its own preview; nothing needed here.
     }
 
     func fileBrowserDidRequestClosePane(_ fileBrowser: FileBrowserViewController) {
@@ -305,11 +296,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
                 // previewViewController.fileItem = nil
             } else {
                 // Update preview with the new active pane's selection, or clear if no selection
-                let currentActivePane = panes[activePaneIndex]
-                // This is a bit tricky as we don't have direct access to its selection.
-                // For now, we'll clear the preview. A more robust solution would involve
-                // the active pane re-reporting its selection.
-                // previewViewController.fileItem = nil 
+                // Active pane may refresh its own preview automatically; nothing needed here.
             }
 
             // Notify delegate of new active path
@@ -341,61 +328,14 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
     // MARK: - Additional Public Methods
 
     func togglePreviewPane() {
-        if isPreviewPaneVisible {
-            // Hide preview pane
-            if let previewSplitItem = previewSplitItem {
-                removeSplitViewItem(previewSplitItem)
-                previewViewController?.removeFromParent()
-                previewViewController = nil
-                self.previewSplitItem = nil
-                isPreviewPaneVisible = false
-                
-                // Save state and notify
-                UserDefaults.standard.set(false, forKey: UserDefaults.Keys.showPreviewPane.rawValue)
-                NotificationCenter.default.post(name: Notification.Name("previewPaneToggled"), object: nil)
-            }
-        } else {
-            // Show preview pane
-            let preview = PreviewPaneViewController()
-            preview.position = .right
-            previewViewController = preview
-
-            addChild(preview)
-            let splitItem = NSSplitViewItem(viewController: preview)
-            splitItem.canCollapse = true
-            splitItem.minimumThickness = 250
-            splitItem.maximumThickness = 600
-
-            // Prevent the preview pane from pushing/resizing the window
-            splitItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 249)
-            addSplitViewItem(splitItem)
-
-            // Set width constraints to keep preview pane stable
-            preview.view.translatesAutoresizingMaskIntoConstraints = false
-            preview.view.setContentHuggingPriority(.defaultHigh, for: .horizontal)
-            preview.view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-            previewSplitItem = splitItem
-            isPreviewPaneVisible = true
-            
-            // Update preview with current selection
-            if activePaneIndex < panes.count {
-                let selectedItems = panes[activePaneIndex].getSelectedItems()
-                if let firstItem = selectedItems.first {
-                    preview.previewFile(firstItem)
-                }
-            }
-            
-            // Save state and notify
-            UserDefaults.standard.set(true, forKey: UserDefaults.Keys.showPreviewPane.rawValue)
-            NotificationCenter.default.post(name: Notification.Name("previewPaneToggled"), object: nil)
-        }
+        // Delegate toggle to active pane's internal preview implementation
+        guard activePaneIndex < panes.count else { return }
+        panes[activePaneIndex].toolbarDidTogglePreviewPane()
+        NotificationCenter.default.post(name: Notification.Name("previewPaneToggled"), object: nil)
     }
 
     @objc private func handlePreviewPaneCloseRequested() {
-        if isPreviewPaneVisible {
-            togglePreviewPane()
-        }
+        togglePreviewPane()
     }
 
 

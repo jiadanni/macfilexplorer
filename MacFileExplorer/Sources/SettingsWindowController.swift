@@ -17,6 +17,8 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
     private var cancelButton: NSButton?
     private var okButton: NSButton?
     private var resetButton: NSButton?
+    private var exportButton: NSButton?
+    private var importButton: NSButton?
 
     convenience init() {
         let settingsVC = SettingsViewController()
@@ -66,7 +68,7 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
         let buttonContainer = NSView()
         buttonContainer.translatesAutoresizingMaskIntoConstraints = false
         buttonContainer.wantsLayer = true
-        buttonContainer.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        buttonContainer.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         containerView.addSubview(buttonContainer)
         buttonContainerView = buttonContainer
 
@@ -84,6 +86,22 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
         resetButton?.action = #selector(resetButtonClicked)
         resetButton?.translatesAutoresizingMaskIntoConstraints = false
         buttonContainer.addSubview(resetButton!)
+
+        importButton = NSButton()
+        importButton?.title = "Import..."
+        importButton?.bezelStyle = .rounded
+        importButton?.target = self
+        importButton?.action = #selector(importButtonClicked)
+        importButton?.translatesAutoresizingMaskIntoConstraints = false
+        buttonContainer.addSubview(importButton!)
+
+        exportButton = NSButton()
+        exportButton?.title = "Export..."
+        exportButton?.bezelStyle = .rounded
+        exportButton?.target = self
+        exportButton?.action = #selector(exportButtonClicked)
+        exportButton?.translatesAutoresizingMaskIntoConstraints = false
+        buttonContainer.addSubview(exportButton!)
 
         cancelButton = NSButton()
         cancelButton?.title = "Cancel"
@@ -124,31 +142,42 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
             buttonContainer.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             buttonContainer.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
             buttonContainer.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-            buttonContainer.heightAnchor.constraint(equalToConstant: 50),
+            buttonContainer.heightAnchor.constraint(equalToConstant: 60),
 
             // Separator
             separator.topAnchor.constraint(equalTo: buttonContainer.topAnchor),
             separator.leadingAnchor.constraint(equalTo: buttonContainer.leadingAnchor),
             separator.trailingAnchor.constraint(equalTo: buttonContainer.trailingAnchor),
+            separator.heightAnchor.constraint(equalToConstant: 1),
 
             // Reset button (left aligned)
             resetButton!.leadingAnchor.constraint(equalTo: buttonContainer.leadingAnchor, constant: 16),
-            resetButton!.centerYAnchor.constraint(equalTo: buttonContainer.centerYAnchor),
+            resetButton!.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor, constant: -12),
             resetButton!.widthAnchor.constraint(greaterThanOrEqualToConstant: 120),
+
+            // Import button (next to Reset)
+            importButton!.leadingAnchor.constraint(equalTo: resetButton!.trailingAnchor, constant: 12),
+            importButton!.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor, constant: -12),
+            importButton!.widthAnchor.constraint(greaterThanOrEqualToConstant: 80),
+
+            // Export button (next to Import)
+            exportButton!.leadingAnchor.constraint(equalTo: importButton!.trailingAnchor, constant: 12),
+            exportButton!.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor, constant: -12),
+            exportButton!.widthAnchor.constraint(greaterThanOrEqualToConstant: 80),
 
             // OK button (right aligned)
             okButton!.trailingAnchor.constraint(equalTo: buttonContainer.trailingAnchor, constant: -16),
-            okButton!.centerYAnchor.constraint(equalTo: buttonContainer.centerYAnchor),
+            okButton!.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor, constant: -12),
             okButton!.widthAnchor.constraint(greaterThanOrEqualToConstant: 80),
 
             // Apply button (next to OK)
             applyButton!.trailingAnchor.constraint(equalTo: okButton!.leadingAnchor, constant: -12),
-            applyButton!.centerYAnchor.constraint(equalTo: buttonContainer.centerYAnchor),
+            applyButton!.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor, constant: -12),
             applyButton!.widthAnchor.constraint(greaterThanOrEqualToConstant: 80),
 
             // Cancel button (next to Apply)
             cancelButton!.trailingAnchor.constraint(equalTo: applyButton!.leadingAnchor, constant: -12),
-            cancelButton!.centerYAnchor.constraint(equalTo: buttonContainer.centerYAnchor),
+            cancelButton!.bottomAnchor.constraint(equalTo: buttonContainer.bottomAnchor, constant: -12),
             cancelButton!.widthAnchor.constraint(greaterThanOrEqualToConstant: 80)
         ])
 
@@ -198,4 +227,119 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
             applyButton?.isEnabled = false
         }
     }
+
+    @objc private func exportButtonClicked() {
+        let savePanel = NSSavePanel()
+        savePanel.title = "Export Settings"
+        savePanel.message = "Choose a location to save your settings"
+        savePanel.nameFieldStringValue = "MacFileExplorer-Settings.json"
+        savePanel.allowedContentTypes = [.json]
+        savePanel.canCreateDirectories = true
+
+        savePanel.begin { [weak self] response in
+            guard response == .OK, let url = savePanel.url else { return }
+            self?.exportSettings(to: url)
+        }
+    }
+
+    @objc private func importButtonClicked() {
+        let openPanel = NSOpenPanel()
+        openPanel.title = "Import Settings"
+        openPanel.message = "Select a settings file to import"
+        openPanel.allowedContentTypes = [.json]
+        openPanel.allowsMultipleSelection = false
+
+        openPanel.begin { [weak self] response in
+            guard response == .OK, let url = openPanel.urls.first else { return }
+            self?.importSettings(from: url)
+        }
+    }
+
+    // MARK: - Export/Import Helpers
+
+    private func exportSettings(to url: URL) {
+        var settingsDict: [String: Any] = [:]
+        let defaults = UserDefaults.standard
+
+        // Export all settings keys
+        for key in UserDefaults.Keys.allCases {
+            if let value = defaults.object(forKey: key.rawValue) {
+                settingsDict[key.rawValue] = value
+            }
+        }
+
+        // Also export favorites
+        if let favorites = defaults.array(forKey: "SidebarFavorites") {
+            settingsDict["SidebarFavorites"] = favorites
+        }
+
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: settingsDict, options: [.prettyPrinted, .sortedKeys])
+            try jsonData.write(to: url)
+
+            // Show success alert
+            let alert = NSAlert()
+            alert.messageText = "Export Successful"
+            alert.informativeText = "Your settings have been exported successfully."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        } catch {
+            // Show error alert
+            let alert = NSAlert()
+            alert.messageText = "Export Failed"
+            alert.informativeText = "Failed to export settings: \(error.localizedDescription)"
+            alert.alertStyle = .critical
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+    }
+
+    private func importSettings(from url: URL) {
+        do {
+            let jsonData = try Data(contentsOf: url)
+            guard let settingsDict = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
+                throw NSError(domain: "SettingsImport", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid settings file format"])
+            }
+
+            let defaults = UserDefaults.standard
+
+            // Import all settings
+            for (key, value) in settingsDict {
+                defaults.set(value, forKey: key)
+            }
+
+            // Synchronize to ensure changes are saved
+            defaults.synchronize()
+
+            // Show success alert and offer to restart
+            let alert = NSAlert()
+            alert.messageText = "Import Successful"
+            alert.informativeText = "Your settings have been imported successfully. Some changes may require restarting the application to take effect."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+
+            // Notify delegate to refresh settings
+            settingsDelegate?.settingsWindowDidApply()
+            applyButton?.isEnabled = false
+
+            // Post notification to refresh all UI
+            NotificationCenter.default.post(name: .settingsDidChange, object: nil)
+        } catch {
+            // Show error alert
+            let alert = NSAlert()
+            alert.messageText = "Import Failed"
+            alert.informativeText = "Failed to import settings: \(error.localizedDescription)"
+            alert.alertStyle = .critical
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+    }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let settingsDidChange = Notification.Name("settingsDidChange")
 }

@@ -334,6 +334,11 @@ class PreviewPaneViewController: NSViewController {
         storageAnalyzerView.isHidden = true
     }
 
+    // Public wrapper to allow external controllers to clear the preview when selection is empty
+    func resetPreview() {
+        clearPreview()
+    }
+
     private func showImagePreview(for fileItem: FileItem) {
         // Load image with size constraints to handle large images efficiently
         let image = loadImageWithSizeLimit(from: fileItem.url, maxDimension: 4096)

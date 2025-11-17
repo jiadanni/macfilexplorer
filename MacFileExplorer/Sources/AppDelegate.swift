@@ -17,6 +17,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             UserDefaults.standard.removeObject(forKey: "hideChangeFolderColor")
         }
 
+        // Check if this is first launch
+        let hasLaunchedBefore = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hasLaunchedBefore.rawValue)
+        if !hasLaunchedBefore {
+            UserDefaults.standard.set(true, forKey: UserDefaults.Keys.hasLaunchedBefore.rawValue)
+        }
+
         // Create and show the main window
         let controller = MainWindowController()
         windowController = controller
@@ -36,6 +42,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         updatePreviewPaneMenuItem()
         updateHiddenFilesMenuItem()
         configureViewMenuShortcuts()
+
+        // Defer any sandbox-only bookmark migration to next run loop and guard sandbox check
+        DispatchQueue.main.async {
+            PermissionsManager.shared.migratePathsToBookmarksIfNeeded()
+            PermissionsManager.shared.startAccessingAllSecurityScoped()
+        }
     }
 
     @objc func updateHiddenFilesMenuItem() {
@@ -207,7 +219,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
-        // Clean up resources
+        // Release security-scoped resources
+        PermissionsManager.shared.stopAccessingAllSecurityScoped()
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
@@ -276,6 +289,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @IBAction func splitHorizontally(_ sender: Any?) {
         windowController?.splitHorizontally()
+    }
+
+    @IBAction func showStorageAnalyzer(_ sender: Any?) {
+        windowController?.openStorageAnalyzerTab()
     }
 
     // MARK: - Navigation Actions
@@ -409,12 +426,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Settings
 
     @IBAction func showPreferences(_ sender: Any?) {
-        if settingsWindowController == nil {
-            settingsWindowController = SettingsWindowController()
+        let openInTab = UserDefaults.standard.object(forKey: UserDefaults.Keys.openSettingsInTab.rawValue) as? Bool ?? true
+        if openInTab {
+            windowController?.addSettingsTab()
+            NSApp.activate(ignoringOtherApps: true)
+        } else {
+            if settingsWindowController == nil { settingsWindowController = SettingsWindowController() }
+            settingsWindowController?.showWindow(sender)
+            settingsWindowController?.window?.makeKeyAndOrderFront(sender)
+            NSApp.activate(ignoringOtherApps: true)
         }
-        settingsWindowController?.showWindow(sender)
-        settingsWindowController?.window?.makeKeyAndOrderFront(sender)
-        NSApp.activate(ignoringOtherApps: true)
     }
     
     @IBAction func showAbout(_ sender: Any?) {
