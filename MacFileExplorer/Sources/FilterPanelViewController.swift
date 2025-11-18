@@ -110,7 +110,7 @@ class FilterPanelViewController: NSViewController {
         ]
         
         for (name, types) in fileTypes {
-            let checkbox = NSButton(checkboxWithTitle: name, target: self, action: #selector(fileTypeChanged(_:)))
+            let checkbox = AccentCheckbox(title: name, target: self, action: #selector(fileTypeChanged(_:)))
             checkbox.translatesAutoresizingMaskIntoConstraints = false
             
             // Check if this category is active
@@ -187,7 +187,7 @@ class FilterPanelViewController: NSViewController {
         stackView.addArrangedSubview(maxContainer)
         
         // Size unit popup
-        sizeUnitPopup = NSPopUpButton()
+        sizeUnitPopup = AccentPopUpButton()
         sizeUnitPopup.translatesAutoresizingMaskIntoConstraints = false
         sizeUnitPopup.addItems(withTitles: ["KB", "MB", "GB"])
         sizeUnitPopup.selectItem(at: 1) // Default to MB
@@ -205,7 +205,7 @@ class FilterPanelViewController: NSViewController {
         stackView.addArrangedSubview(sectionLabel)
         
         // Min date
-        dateMinCheckbox = NSButton(checkboxWithTitle: "After:", target: self, action: #selector(dateCheckboxChanged(_:)))
+        dateMinCheckbox = AccentCheckbox(title: "After:", target: self, action: #selector(dateCheckboxChanged(_:)))
         dateMinCheckbox.state = currentFilter.dateMin != nil ? .on : .off
         stackView.addArrangedSubview(dateMinCheckbox)
         
@@ -218,7 +218,7 @@ class FilterPanelViewController: NSViewController {
         stackView.addArrangedSubview(dateMinPicker)
         
         // Max date
-        dateMaxCheckbox = NSButton(checkboxWithTitle: "Before:", target: self, action: #selector(dateCheckboxChanged(_:)))
+        dateMaxCheckbox = AccentCheckbox(title: "Before:", target: self, action: #selector(dateCheckboxChanged(_:)))
         dateMaxCheckbox.state = currentFilter.dateMax != nil ? .on : .off
         stackView.addArrangedSubview(dateMaxCheckbox)
         

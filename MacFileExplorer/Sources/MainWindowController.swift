@@ -18,6 +18,13 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
         window.setFrameAutosaveName("MainWindow")
         window.isReleasedWhenClosed = false
         window.backgroundColor = .windowBackgroundColor
+        
+        // Set minimum and maximum window sizes
+        window.minSize = NSSize(width: 600, height: 400)
+        window.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        
+        // Ensure window is resizable
+        window.styleMask.insert(.resizable)
 
         // Disable native window tabs - we have our own custom tab implementation
         window.tabbingMode = .disallowed

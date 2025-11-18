@@ -7,4 +7,5 @@ extension Notification.Name {
     static let accentColorDidChangeNotification = Notification.Name("accentColorDidChangeNotification")
     static let showFileExtensionsDidChangeNotification = Notification.Name("showFileExtensionsDidChangeNotification")
     static let easySelectDidChangeNotification = Notification.Name("easySelectDidChangeNotification")
+    static let toolbarSettingsDidChangeNotification = Notification.Name("toolbarSettingsDidChangeNotification")
 }

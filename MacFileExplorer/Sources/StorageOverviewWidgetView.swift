@@ -26,7 +26,10 @@ class StorageOverviewWidgetView: StartWidgetView {
     }
 
     private func checkPermissions() {
-        hasFullDiskAccess = PermissionsManager.shared.checkPermissionStatus(for: .fullDiskAccess) == .granted
+        // Check Full Disk Access by attempting to read a protected directory
+        // This avoids triggering permission dialogs unless actually needed
+        let protectedPath = "/Library/Application Support"
+        hasFullDiskAccess = FileManager.default.isReadableFile(atPath: protectedPath)
     }
 
     override func setupContent() {

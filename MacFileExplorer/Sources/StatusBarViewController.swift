@@ -88,6 +88,11 @@ class StatusBarViewController: NSViewController {
         statusLabel.stringValue = message
     }
     
+    func setZoomControlsVisible(_ visible: Bool) {
+        zoomSlider.isHidden = !visible
+        zoomPercentageLabel.isHidden = !visible
+    }
+    
     func updateFileInformation(selectedCount: Int, totalSize: Int64, diskSpace: String?) {
         if selectedCount > 0 {
             let formattedSize = ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)

@@ -24,7 +24,7 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
         let settingsVC = SettingsViewController()
 
         // Create a container view for the entire settings UI
-        let containerView = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+        let containerView = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 650))
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 800, height: 650),
@@ -34,7 +34,7 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
         )
         window.center()
         window.title = "Preferences"
-        window.minSize = NSSize(width: 600, height: 400)
+        window.minSize = NSSize(width: 600, height: 450)
 
         // Create a wrapper view controller
         let wrapperVC = NSViewController()
@@ -193,21 +193,21 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
 
     @objc private func okButtonClicked() {
         // Apply changes and close
-        // settingsViewController?.applyChanges()
+        settingsViewController?.applyChanges()
         settingsDelegate?.settingsWindowDidApply()
         close()
     }
 
     @objc private func cancelButtonClicked() {
         // Revert changes and close
-        // settingsViewController?.cancelChanges()
+        settingsViewController?.cancelChanges()
         settingsDelegate?.settingsWindowDidCancel()
         close()
     }
 
     @objc private func applyButtonClicked() {
         // Apply changes without closing
-        // settingsViewController?.applyChanges()
+        settingsViewController?.applyChanges()
         settingsDelegate?.settingsWindowDidApply()
         applyButton?.isEnabled = false
     }

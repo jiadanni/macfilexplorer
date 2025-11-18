@@ -208,8 +208,23 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
     func sidebarDidSelectLocation(_ url: URL) {
         print("SplitViewController: sidebarDidSelectLocation - Received URL: \(url.path)")
-        // Open in new tab instead of navigating current tab
-        tabBarController?.openInNewTab(url: url)
+        
+        // Check if we're currently on the Start page
+        // If so, open in new tab. Otherwise, navigate in current tab.
+        guard let tabBarController = tabBarController else {
+            return
+        }
+        
+        if tabBarController.isCurrentTabStartPage() {
+            // On Start page - open in new tab
+            print("  → Opening in new tab (currently on Start page)")
+            tabBarController.openInNewTab(url: url)
+        } else {
+            // On a regular tab - navigate in current tab
+            print("  → Navigating in current tab")
+            tabBarController.navigateToLocation(url)
+        }
+        
         sidebarViewController?.expandToCurrentDirectory(url: url)
     }
     

@@ -444,4 +444,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         aboutWindowController?.show()
     }
+
+    @IBAction func showHelp(_ sender: Any?) {
+        // Get the path to the help HTML file in the app bundle
+        // Try multiple methods to locate the help file
+        var helpURL: URL?
+
+        // Method 1: Direct path in Resources/Help
+        if let resourcePath = Bundle.main.resourcePath {
+            let helpPath = (resourcePath as NSString).appendingPathComponent("Help/index.html")
+            if FileManager.default.fileExists(atPath: helpPath) {
+                helpURL = URL(fileURLWithPath: helpPath)
+            }
+        }
+
+        // Method 2: Using Bundle.main.path
+        if helpURL == nil, let helpPath = Bundle.main.path(forResource: "index", ofType: "html", inDirectory: "Help") {
+            helpURL = URL(fileURLWithPath: helpPath)
+        }
+
+        // Method 3: Using Bundle.main.url
+        if helpURL == nil {
+            helpURL = Bundle.main.url(forResource: "Help/index", withExtension: "html")
+        }
+
+        if let url = helpURL {
+            NSWorkspace.shared.open(url)
+        } else {
+            // Fallback: show an alert if help file is not found
+            let alert = NSAlert()
+            alert.messageText = "Help Not Available"
+            alert.informativeText = "The help documentation could not be found. Please ensure the application is properly installed."
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+    }
 }

@@ -9,7 +9,6 @@ import Cocoa
 
 class FavoritesWidgetView: StartWidgetView {
 
-    private var gridView: NSGridView!
     private var addButton: NSView!
 
     private var defaultFolders: [(name: String, icon: String, url: URL?)] = []
@@ -39,49 +38,30 @@ class FavoritesWidgetView: StartWidgetView {
     }
 
     override func setupContent() {
-        // Grid for folder buttons
-        gridView = NSGridView()
-        gridView.rowSpacing = StartDesignSystem.Spacing.md
-        gridView.columnSpacing = StartDesignSystem.Spacing.md
-        gridView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(gridView)
-
-        // Create folder cards in grid (3 columns)
-        var row = 0
-        var col = 0
-        let columnsPerRow = 3
-
+        // Use stack view for better layout control
+        let containerStack = NSStackView()
+        containerStack.orientation = .horizontal
+        containerStack.spacing = StartDesignSystem.Spacing.md
+        containerStack.alignment = .top
+        containerStack.distribution = .fillEqually
+        containerStack.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(containerStack)
+        
+        // Create folder cards
         for folder in defaultFolders {
             let card = createFolderCard(name: folder.name, icon: folder.icon, url: folder.url)
-
-            if col == 0 {
-                let newRow = [card]
-                gridView.addRow(with: newRow)
-            } else {
-                gridView.cell(atColumnIndex: 0, rowIndex: row).xPlacement = .fill
-                gridView.addColumn(with: [card])
-            }
-
-            col += 1
-            if col >= columnsPerRow {
-                col = 0
-                row += 1
-            }
+            containerStack.addArrangedSubview(card)
         }
-
+        
         // Add "Add Favorite" button
         addButton = createAddFavoriteCard()
-        if col == 0 {
-            gridView.addRow(with: [addButton])
-        } else {
-            gridView.addColumn(with: [addButton])
-        }
+        containerStack.addArrangedSubview(addButton)
 
         NSLayoutConstraint.activate([
-            gridView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            gridView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            gridView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            gridView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            containerStack.topAnchor.constraint(equalTo: contentView.topAnchor),
+            containerStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            containerStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            containerStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
     }
 

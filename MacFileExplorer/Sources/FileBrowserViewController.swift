@@ -215,6 +215,65 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     private var collectionView: NSCollectionView! // For icons view
     private var collectionViewScrollView: NSScrollView! // For collection view
     private var browserView: NSBrowser! // For columns view
+    private enum BrowserSetupState { case idle, preparing, creatingBrowser, ready, failed }
+    private var browserSetupState: BrowserSetupState = .idle {
+        didSet {
+            let msg = "DEBUG: browserSetupState -> \(browserSetupState)"
+            print(msg)
+            if let handle = FileHandle(forWritingAtPath: "/tmp/macfileexplorer_column_debug.log") {
+                handle.seekToEndOfFile()
+                if let data = (msg + "\n").data(using: .utf8) {
+                    handle.write(data)
+                }
+                handle.closeFile()
+            }
+        }
+    }
+
+    private let browserSerialQueue = DispatchQueue(label: "com.macfileexplorer.browserSetup")
+
+    private class BrowserSetupToken {
+        weak var owner: FileBrowserViewController?
+        init(owner: FileBrowserViewController) {
+            self.owner = owner
+            owner.browserSetupState = .preparing
+        }
+        func markCreating() { owner?.browserSetupState = .creatingBrowser }
+        func markReady() { owner?.browserSetupState = .ready }
+        func markFailed() { owner?.browserSetupState = .failed }
+        deinit {
+            guard let owner = owner else { return }
+            if owner.browserSetupState == .preparing || owner.browserSetupState == .creatingBrowser {
+                owner.browserSetupState = .failed
+            }
+        }
+    }
+
+    private func beginBrowserSetup() -> BrowserSetupToken? {
+        guard browserSetupState == .idle || browserSetupState == .failed else {
+            let msg = "DEBUG: beginBrowserSetup blocked; state=\(browserSetupState)"
+            print(msg)
+            if let handle = FileHandle(forWritingAtPath: "/tmp/macfileexplorer_column_debug.log") {
+                handle.seekToEndOfFile()
+                if let data = (msg + "\n").data(using: .utf8) { handle.write(data) }
+                handle.closeFile()
+            }
+            return nil
+        }
+        return BrowserSetupToken(owner: self)
+    }
+
+    private func enqueueBrowserSetupIfNeeded() {
+        if browserView == nil {
+            browserSerialQueue.async { [weak self] in
+                DispatchQueue.main.async {
+                    self?.setupBrowserView()
+                }
+            }
+        }
+    }
+
+    private var suppressedDisplayCalls = 0
     private var freeFormLayout: FreeFormCollectionViewLayout? // Custom layout for free-form icon positioning
     // Per-pane preview management
     private var previewSplitView: NSSplitView?
@@ -742,6 +801,18 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     private func displayFiles(for viewMode: ViewMode) {
+        assert(Thread.isMainThread, "displayFiles must run on main thread")
+        if browserSetupState == .preparing || browserSetupState == .creatingBrowser {
+            suppressedDisplayCalls += 1
+            let msg = "DEBUG: displayFiles blocked (state=\(browserSetupState)) count=\(suppressedDisplayCalls)"
+            print(msg)
+            if let handle = FileHandle(forWritingAtPath: "/tmp/macfileexplorer_column_debug.log") {
+                handle.seekToEndOfFile()
+                if let data = (msg + "\n").data(using: .utf8) { handle.write(data) }
+                handle.closeFile()
+            }
+            return
+        }
         print("Displaying files for view mode: \(viewMode)")
         
         // Deactivate any existing constraints
@@ -842,7 +913,22 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         case .columns:
             // Use NSBrowser for columns view
             if browserView == nil {
-                setupBrowserView()
+                enqueueBrowserSetupIfNeeded()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                    guard let self else { return }
+                    if self.browserView != nil && self.browserSetupState == .ready {
+                        let msg = "DEBUG: Retrying displayFiles after browser ready; suppressedDisplayCalls=\(self.suppressedDisplayCalls)"
+                        print(msg)
+                        if let handle = FileHandle(forWritingAtPath: "/tmp/macfileexplorer_column_debug.log") {
+                            handle.seekToEndOfFile()
+                            if let data = (msg + "\n").data(using: .utf8) { handle.write(data) }
+                            handle.closeFile()
+                        }
+                        self.suppressedDisplayCalls = 0
+                        self.displayFiles(for: .columns)
+                    }
+                }
+                return
             }
             
             guard let browserView = browserView else {
@@ -938,44 +1024,44 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
     
     private func setupBrowserView() {
+        assert(Thread.isMainThread, "setupBrowserView must run on main thread")
         // Prevent duplicate setup
         if browserView != nil {
             print("BrowserView already initialized, skipping setup")
             return
         }
 
+        guard let token = beginBrowserSetup() else { return }
+        token.markCreating()
+
+        // Construct NSBrowser here to avoid cross-file visibility issues
         let newBrowser = NSBrowser()
         newBrowser.translatesAutoresizingMaskIntoConstraints = false
-        newBrowser.delegate = self
         newBrowser.allowsMultipleSelection = true
         newBrowser.allowsEmptySelection = true
         newBrowser.takesTitleFromPreviousColumn = false
         newBrowser.separatesColumns = true
-        newBrowser.rowHeight = 22.0  // Slightly taller rows for better readability
+        newBrowser.rowHeight = 22.0
         newBrowser.hasHorizontalScroller = true
         newBrowser.autohidesScroller = true
-
-        // Set minimum and maximum column widths for better spacing
-        newBrowser.minColumnWidth = 180  // Minimum width for each column
-        newBrowser.maxVisibleColumns = 4  // Maximum number of visible columns
-
-        // Don't use autosave as it can cause layout issues
-        // newBrowser.columnsAutosaveName = "FileBrowserColumns"
-
+        newBrowser.minColumnWidth = 180
+        newBrowser.maxVisibleColumns = 4
         newBrowser.doubleAction = #selector(handleBrowserDoubleClick(_:))
         newBrowser.target = self
-
-        // Set the cell class that NSBrowser will use
         newBrowser.setCellClass(NSBrowserCell.self)
-
-        // Set up context menu
         newBrowser.menu = createContextMenu()
 
         browserView = newBrowser
+
+        // Set delegate AFTER creation and assignment
+        browserView.delegate = self
+
         print("BrowserView setup completed with minColumnWidth: 180")
+
+        token.markReady()
     }
     
-    @objc private func handleBrowserDoubleClick(_ sender: NSBrowser) {
+    @objc func handleBrowserDoubleClick(_ sender: NSBrowser) {
         let selectedColumn = browserView.selectedColumn
         let selectedRow = browserView.selectedRow(inColumn: selectedColumn)
         

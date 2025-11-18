@@ -1,6 +1,7 @@
 import Cocoa
 import Foundation
 
+// Use AccentColorControls.swift for custom checkbox and popup controls
 extension UserDefaults {
     enum Keys: String, CaseIterable {
         // General Settings
@@ -119,10 +120,88 @@ protocol SettingsSidebarDelegate: AnyObject {
     func settingsSidebarDidSelectSection(_ section: SettingsSection)
 }
 
+// MARK: - Pending Settings Storage
+
+class PendingSettings {
+    static let shared = PendingSettings()
+    private var pendingChanges: [String: Any] = [:]
+    
+    private init() {}
+    
+    func setValue(_ value: Any?, forKey key: String) {
+        pendingChanges[key] = value
+    }
+    
+    func getValue(forKey key: String) -> Any? {
+        return pendingChanges[key]
+    }
+    
+    func bool(forKey key: String) -> Bool {
+        if let pending = pendingChanges[key] as? Bool {
+            return pending
+        }
+        return UserDefaults.standard.bool(forKey: key)
+    }
+    
+    func string(forKey key: String) -> String? {
+        if let pending = pendingChanges[key] as? String {
+            return pending
+        }
+        return UserDefaults.standard.string(forKey: key)
+    }
+    
+    func applyChanges() {
+        let changedKeys = Set(pendingChanges.keys)
+        
+        for (key, value) in pendingChanges {
+            UserDefaults.standard.set(value, forKey: key)
+        }
+        pendingChanges.removeAll()
+        
+        // Post notifications for settings that need immediate UI updates
+        if changedKeys.contains(UserDefaults.Keys.showFileExtensions.rawValue) {
+            NotificationCenter.default.post(name: .showFileExtensionsDidChangeNotification, object: nil)
+        }
+        if changedKeys.contains(UserDefaults.Keys.enableEasySelect.rawValue) {
+            NotificationCenter.default.post(name: .easySelectDidChangeNotification, object: nil)
+        }
+        if changedKeys.contains(UserDefaults.Keys.accentColor.rawValue) {
+            NotificationCenter.default.post(name: .accentColorDidChangeNotification, object: nil)
+        }
+        if changedKeys.contains(UserDefaults.Keys.globalFolderColor.rawValue) {
+            NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+        }
+        if changedKeys.intersection([
+            UserDefaults.Keys.showBackForwardButtons.rawValue,
+            UserDefaults.Keys.showViewModeButton.rawValue,
+            UserDefaults.Keys.showHiddenFilesButton.rawValue,
+            UserDefaults.Keys.showSplitButtons.rawValue,
+            UserDefaults.Keys.showPreviewPaneButton.rawValue,
+            UserDefaults.Keys.showNewFolderButton.rawValue,
+            UserDefaults.Keys.showSortButton.rawValue
+        ]).isEmpty == false {
+            NotificationCenter.default.post(name: .toolbarSettingsDidChangeNotification, object: nil)
+        }
+    }
+    
+    func cancelChanges() {
+        pendingChanges.removeAll()
+    }
+    
+    func hasChanges() -> Bool {
+        return !pendingChanges.isEmpty
+    }
+}
+
 // MARK: - Settings Change Delegate
 
 protocol SettingsChangeDelegate: AnyObject {
     func settingsDidChange()
+}
+
+protocol SettingsApplyable: AnyObject {
+    func applyChanges()
+    func cancelChanges()
 }
 
 // MARK: - Settings Sections Enum
@@ -188,7 +267,9 @@ class SettingsViewController: NSSplitViewController, SettingsSidebarDelegate {
             vc.changeDelegate = changeDelegate
             newContentVC = vc
         case .appearance:
-            newContentVC = AppearanceSettingsViewController()
+            let vc = AppearanceSettingsViewController()
+            vc.changeDelegate = changeDelegate
+            newContentVC = vc
         case .tabs:
             newContentVC = TabsSettingsViewController()
         case .toolbar:
@@ -221,6 +302,49 @@ class SettingsViewController: NSSplitViewController, SettingsSidebarDelegate {
         addSplitViewItem(newContentItem)
 
         currentContentViewController = newContentVC
+    }
+    
+    // MARK: - Settings Application
+    
+    func applyChanges() {
+        PendingSettings.shared.applyChanges()
+    }
+    
+    func cancelChanges() {
+        PendingSettings.shared.cancelChanges()
+        // Reload the current view controller to reset UI
+        if let currentVC = currentContentViewController {
+            let section: SettingsSection
+            switch currentVC {
+            case is GeneralSettingsViewController:
+                section = .general
+            case is AppearanceSettingsViewController:
+                section = .appearance
+            case is TabsSettingsViewController:
+                section = .tabs
+            case is ToolbarSettingsViewController:
+                section = .toolbar
+            case is StorageSettingsViewController:
+                section = .storage
+            case is FileOperationsSettingsViewController:
+                section = .fileOperations
+            case is GoMenuSettingsViewController:
+                section = .goMenu
+            case is TerminalSettingsViewController:
+                section = .terminal
+            case is PermissionsSettingsViewController:
+                section = .permissions
+            case is AdvancedSettingsViewController:
+                section = .advanced
+            case is SidebarSettingsViewController:
+                section = .sidebar
+            case is ContextMenuSettingsViewController:
+                section = .contextMenu
+            default:
+                return
+            }
+            settingsSidebarDidSelectSection(section)
+        }
     }
 }
 
@@ -364,26 +488,32 @@ class GeneralSettingsViewController: NSViewController {
         openPanel.begin { [weak self] response in
             guard response == .OK, let url = openPanel.url else { return }
 
-            UserDefaults.standard.set(url.path, forKey: UserDefaults.Keys.startupFolder.rawValue)
+            PendingSettings.shared.setValue(url.path, forKey: UserDefaults.Keys.startupFolder.rawValue)
             // Disable Start Page when a folder is chosen
-            UserDefaults.standard.set(false, forKey: UserDefaults.Keys.showStartOnLaunch.rawValue)
+            PendingSettings.shared.setValue(false, forKey: UserDefaults.Keys.showStartOnLaunch.rawValue)
 
             // Update the path label
             if let pathLabel = self?.view.viewWithTag(9001) as? NSTextField {
                 pathLabel.stringValue = url.path
             }
+            
+            // Notify delegate of changes
+            self?.changeDelegate?.settingsDidChange()
         }
     }
 
     @objc private func resetStartupFolder(_ sender: Any) {
         // Remove the setting to default to Start Page
-        UserDefaults.standard.removeObject(forKey: UserDefaults.Keys.startupFolder.rawValue)
-        UserDefaults.standard.set(true, forKey: UserDefaults.Keys.showStartOnLaunch.rawValue)
+        PendingSettings.shared.setValue(nil, forKey: UserDefaults.Keys.startupFolder.rawValue)
+        PendingSettings.shared.setValue(true, forKey: UserDefaults.Keys.showStartOnLaunch.rawValue)
 
         // Update the path label
         if let pathLabel = view.viewWithTag(9001) as? NSTextField {
             pathLabel.stringValue = "Start Page (default)"
         }
+        
+        // Notify delegate of changes
+        changeDelegate?.settingsDidChange()
     }
 
     private func addFileExtensionSettings() {
@@ -501,17 +631,18 @@ class GeneralSettingsViewController: NSViewController {
             colorButton.wantsLayer = true
             colorButton.layer?.backgroundColor = color.cgColor
             colorButton.layer?.cornerRadius = 4
-            colorButton.layer?.borderWidth = 2
             colorButton.title = ""
             colorButton.target = self
             colorButton.action = #selector(colorButtonClicked(_:))
             colorButton.tag = index
             colorButton.toolTip = name
 
-            // Highlight selected color
+            // Highlight selected color with prominent border
             if colorsAreEqual(color, currentColor) {
-                colorButton.layer?.borderColor = NSColor.selectedContentBackgroundColor.cgColor
+                colorButton.layer?.borderWidth = 4
+                colorButton.layer?.borderColor = NSColor.customAccentColor.cgColor
             } else {
+                colorButton.layer?.borderWidth = 2
                 colorButton.layer?.borderColor = NSColor.separatorColor.cgColor
             }
 
@@ -566,11 +697,10 @@ class GeneralSettingsViewController: NSViewController {
         guard sender.tag < presetColors.count else { return }
         let selectedColor = presetColors[sender.tag]
 
-        // Save the color
+        // Save the color to pending settings
         do {
             let colorData = try NSKeyedArchiver.archivedData(withRootObject: selectedColor, requiringSecureCoding: false)
-            UserDefaults.standard.set(colorData, forKey: UserDefaults.Keys.globalFolderColor.rawValue)
-            NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+            PendingSettings.shared.setValue(colorData, forKey: UserDefaults.Keys.globalFolderColor.rawValue)
 
             // Update button borders to show selection
             if let paletteContainer = sender.superview {
@@ -590,7 +720,7 @@ class GeneralSettingsViewController: NSViewController {
     }
 
     private func addCheckbox(title: String, key: UserDefaults.Keys, defaultValue: Bool = false) {
-        let checkbox = NSButton(checkboxWithTitle: title, target: self, action: #selector(checkboxChanged(_:)))
+        let checkbox = AccentCheckbox(title: title, target: self, action: #selector(checkboxChanged(_:)))
         checkbox.translatesAutoresizingMaskIntoConstraints = false
         checkbox.tag = key.rawValue.hashValue // Use hashValue as a unique identifier for the key
         checkbox.state = UserDefaults.standard.bool(forKey: key.rawValue) ? .on : .off
@@ -605,20 +735,10 @@ class GeneralSettingsViewController: NSViewController {
     @objc func checkboxChanged(_ sender: NSButton) {
         // Find the UserDefaults.Keys enum value from the tag
         if let key = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag }) {
-            UserDefaults.standard.set(sender.state == .on, forKey: key.rawValue)
+            PendingSettings.shared.setValue(sender.state == .on, forKey: key.rawValue)
+            changeDelegate?.settingsDidChange()
 
-            // Post notifications for settings that need immediate UI updates
-            switch key {
-            case .showFileExtensions:
-                NotificationCenter.default.post(name: .showFileExtensionsDidChangeNotification, object: nil)
-            case .enableEasySelect:
-                NotificationCenter.default.post(name: .easySelectDidChangeNotification, object: nil)
-            case .deleteWithBackspaceOnly:
-                // This setting doesn't need a notification, it's checked on keyDown
-                break
-            default:
-                break
-            }
+            // Note: Notifications for immediate UI updates will be sent when Apply is clicked
         }
     }
 
@@ -655,8 +775,8 @@ class GeneralSettingsViewController: NSViewController {
             ("Orange", NSColor(red: 1.0, green: 0.58, blue: 0.0, alpha: 1.0)),
             ("Yellow", NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0)),
             ("Green", NSColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1.0)),
-            ("Gray", NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0)),
-            ("Indigo", NSColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1.0))
+            ("Teal", NSColor(red: 0.19, green: 0.67, blue: 0.69, alpha: 1.0)),
+            ("Gray", NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0))
         ]
 
         var xOffset: CGFloat = 0
@@ -680,17 +800,18 @@ class GeneralSettingsViewController: NSViewController {
             colorButton.wantsLayer = true
             colorButton.layer?.backgroundColor = color.cgColor
             colorButton.layer?.cornerRadius = 4
-            colorButton.layer?.borderWidth = 2
             colorButton.title = ""
             colorButton.target = self
             colorButton.action = #selector(accentColorButtonClicked(_:))
             colorButton.tag = index
             colorButton.toolTip = name
 
-            // Highlight selected color
+            // Highlight selected color with prominent border
             if colorsAreEqual(color, currentAccentColor) {
-                colorButton.layer?.borderColor = NSColor.selectedContentBackgroundColor.cgColor
+                colorButton.layer?.borderWidth = 4
+                colorButton.layer?.borderColor = NSColor.labelColor.cgColor
             } else {
+                colorButton.layer?.borderWidth = 2
                 colorButton.layer?.borderColor = NSColor.separatorColor.cgColor
             }
 
@@ -728,18 +849,17 @@ class GeneralSettingsViewController: NSViewController {
             NSColor(red: 1.0, green: 0.58, blue: 0.0, alpha: 1.0),
             NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0),
             NSColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1.0),
-            NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0),
-            NSColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1.0)
+            NSColor(red: 0.19, green: 0.67, blue: 0.69, alpha: 1.0),
+            NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0)
         ]
 
         guard sender.tag < presetAccentColors.count else { return }
         let selectedColor = presetAccentColors[sender.tag]
 
-        // Save the color
+        // Save the color to pending settings
         do {
             let colorData = try NSKeyedArchiver.archivedData(withRootObject: selectedColor, requiringSecureCoding: false)
-            UserDefaults.standard.set(colorData, forKey: UserDefaults.Keys.accentColor.rawValue)
-            NotificationCenter.default.post(name: .accentColorDidChangeNotification, object: nil)
+            PendingSettings.shared.setValue(colorData, forKey: UserDefaults.Keys.accentColor.rawValue)
 
             // Update button borders to show selection
             if let paletteContainer = sender.superview {
@@ -773,7 +893,7 @@ class GeneralSettingsViewController: NSViewController {
         let viewModeLabel = NSTextField(labelWithString: "Default View Mode:")
         viewModeLabel.textColor = .secondaryLabelColor
         stackView.addArrangedSubview(viewModeLabel)
-        let viewPopup = NSPopUpButton()
+        let viewPopup = AccentPopUpButton()
         viewPopup.translatesAutoresizingMaskIntoConstraints = false
         viewPopup.addItems(withTitles: ["List", "Icons", "Columns", "Windows List"])
         let storedViewMode = UserDefaults.standard.string(forKey: UserDefaults.Keys.defaultViewMode.rawValue) ?? "list"
@@ -791,7 +911,7 @@ class GeneralSettingsViewController: NSViewController {
         let sortLabel = NSTextField(labelWithString: "Default Sort Column:")
         sortLabel.textColor = .secondaryLabelColor
         stackView.addArrangedSubview(sortLabel)
-        let sortPopup = NSPopUpButton()
+        let sortPopup = AccentPopUpButton()
         sortPopup.translatesAutoresizingMaskIntoConstraints = false
         sortPopup.addItems(withTitles: ["Name", "Size", "Date Modified", "Date Created", "Type"])
         let storedSortCol = UserDefaults.standard.string(forKey: UserDefaults.Keys.defaultSortColumn.rawValue) ?? "NameColumn"
@@ -807,7 +927,7 @@ class GeneralSettingsViewController: NSViewController {
         stackView.addArrangedSubview(sortPopup)
 
         // Default Sort Direction
-        let ascendingCheckbox = NSButton(checkboxWithTitle: "Sort Ascending by Default", target: self, action: #selector(defaultSortAscendingChanged(_:)))
+        let ascendingCheckbox = AccentCheckbox(title: "Sort Ascending by Default", target: self, action: #selector(defaultSortAscendingChanged(_:)))
         if UserDefaults.standard.object(forKey: UserDefaults.Keys.defaultSortAscending.rawValue) == nil {
             UserDefaults.standard.set(true, forKey: UserDefaults.Keys.defaultSortAscending.rawValue)
         }
@@ -824,7 +944,7 @@ class GeneralSettingsViewController: NSViewController {
         case "Windows List": value = "windowsList"
         default: value = "list"
         }
-        UserDefaults.standard.set(value, forKey: UserDefaults.Keys.defaultViewMode.rawValue)
+        PendingSettings.shared.setValue(value, forKey: UserDefaults.Keys.defaultViewMode.rawValue)
     }
 
     @objc private func defaultSortColumnChanged(_ sender: NSPopUpButton) {
@@ -837,20 +957,18 @@ class GeneralSettingsViewController: NSViewController {
         case "Type": column = "TypeColumn"
         default: column = "NameColumn"
         }
-        UserDefaults.standard.set(column, forKey: UserDefaults.Keys.defaultSortColumn.rawValue)
+        PendingSettings.shared.setValue(column, forKey: UserDefaults.Keys.defaultSortColumn.rawValue)
     }
 
     @objc private func defaultSortAscendingChanged(_ sender: NSButton) {
-        UserDefaults.standard.set(sender.state == .on, forKey: UserDefaults.Keys.defaultSortAscending.rawValue)
+        PendingSettings.shared.setValue(sender.state == .on, forKey: UserDefaults.Keys.defaultSortAscending.rawValue)
     }
 }
 
+// NOTE: Custom accent color functionality removed in favor of system accent color.
+// Keep this helper for backward compatibility but return the system accent color.
 extension NSColor {
     static var customAccentColor: NSColor {
-        if let colorData = UserDefaults.standard.data(forKey: UserDefaults.Keys.accentColor.rawValue),
-           let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: colorData) {
-            return color
-        }
         return .controlAccentColor
     }
 }
@@ -897,7 +1015,7 @@ class TabsSettingsViewController: NSViewController {
     }
 
     private func addCheckbox(title: String, key: UserDefaults.Keys, defaultValue: Bool = false) {
-        let checkbox = NSButton(checkboxWithTitle: title, target: self, action: #selector(checkboxChanged(_:)))
+        let checkbox = AccentCheckbox(title: title, target: self, action: #selector(checkboxChanged(_:)))
         checkbox.translatesAutoresizingMaskIntoConstraints = false
         checkbox.tag = key.rawValue.hashValue
         checkbox.state = UserDefaults.standard.bool(forKey: key.rawValue) ? .on : .off
@@ -910,7 +1028,7 @@ class TabsSettingsViewController: NSViewController {
 
     @objc func checkboxChanged(_ sender: NSButton) {
         if let keyRawValue = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag })?.rawValue {
-            UserDefaults.standard.set(sender.state == .on, forKey: keyRawValue)
+            PendingSettings.shared.setValue(sender.state == .on, forKey: keyRawValue)
         }
     }
 }
@@ -918,6 +1036,7 @@ class TabsSettingsViewController: NSViewController {
 class AppearanceSettingsViewController: NSViewController {
 
     private var stackView: NSStackView!
+    weak var changeDelegate: SettingsChangeDelegate?
 
     override func loadView() {
         let scrollView = NSScrollView()
@@ -957,7 +1076,8 @@ class AppearanceSettingsViewController: NSViewController {
         ])
 
         addFolderAppearanceSettings()
-        addAccentColorSettings()
+        // Custom accent color settings removed for consistency with macOS.
+        // addAccentColorSettings() // intentionally disabled
     }
 
     override func viewDidAppear() {
@@ -1010,6 +1130,15 @@ class AppearanceSettingsViewController: NSViewController {
         descriptionLabel.preferredMaxLayoutWidth = 450
         stackView.addArrangedSubview(descriptionLabel)
 
+        // Add note about system controls
+        let noteLabel = NSTextField(labelWithString: "Note: Checkboxes and dropdown arrows use your system's accent color from macOS Settings → Appearance.")
+        noteLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize - 1)
+        noteLabel.textColor = .tertiaryLabelColor
+        noteLabel.lineBreakMode = .byWordWrapping
+        noteLabel.maximumNumberOfLines = 0
+        noteLabel.preferredMaxLayoutWidth = 450
+        stackView.addArrangedSubview(noteLabel)
+
         // Add spacing
         let spacer1 = NSView()
         spacer1.translatesAutoresizingMaskIntoConstraints = false
@@ -1021,6 +1150,10 @@ class AppearanceSettingsViewController: NSViewController {
     }
 
     private func createColorPalette(forAccent: Bool) {
+        // If asked to create accent palette, skip — we rely on system accent color.
+        if forAccent {
+            return
+        }
         let paletteContainer = NSView()
         paletteContainer.translatesAutoresizingMaskIntoConstraints = false
         stackView.addArrangedSubview(paletteContainer)
@@ -1034,8 +1167,8 @@ class AppearanceSettingsViewController: NSViewController {
             ("Orange", NSColor(red: 1.0, green: 0.58, blue: 0.0, alpha: 1.0)),
             ("Yellow", NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0)),
             ("Green", NSColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1.0)),
-            ("Gray", NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0)),
-            ("Indigo", NSColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1.0))
+            ("Teal", NSColor(red: 0.19, green: 0.67, blue: 0.69, alpha: 1.0)),
+            ("Gray", NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0))
         ] : [
             ("Default", .controlAccentColor),
             ("Blue", NSColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 1.0)),
@@ -1071,17 +1204,22 @@ class AppearanceSettingsViewController: NSViewController {
             colorButton.wantsLayer = true
             colorButton.layer?.backgroundColor = color.cgColor
             colorButton.layer?.cornerRadius = 6
-            colorButton.layer?.borderWidth = 2
             colorButton.title = ""
             colorButton.target = self
             colorButton.action = forAccent ? #selector(accentColorButtonClicked(_:)) : #selector(folderColorButtonClicked(_:))
             colorButton.tag = index
             colorButton.toolTip = name
 
-            // Highlight selected color
+            // Highlight selected color with prominent border
             if colorsAreEqual(color, currentColor) {
-                colorButton.layer?.borderColor = NSColor.selectedContentBackgroundColor.cgColor
+                colorButton.layer?.borderWidth = 4
+                if forAccent {
+                    colorButton.layer?.borderColor = NSColor.labelColor.cgColor
+                } else {
+                    colorButton.layer?.borderColor = NSColor.customAccentColor.cgColor
+                }
             } else {
+                colorButton.layer?.borderWidth = 2
                 colorButton.layer?.borderColor = NSColor.separatorColor.cgColor
             }
 
@@ -1138,18 +1276,22 @@ class AppearanceSettingsViewController: NSViewController {
 
         do {
             let colorData = try NSKeyedArchiver.archivedData(withRootObject: selectedColor, requiringSecureCoding: false)
-            UserDefaults.standard.set(colorData, forKey: UserDefaults.Keys.globalFolderColor.rawValue)
-            NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+            PendingSettings.shared.setValue(colorData, forKey: UserDefaults.Keys.globalFolderColor.rawValue)
 
             // Update button borders
             if let paletteContainer = sender.superview {
                 for view in paletteContainer.subviews {
                     if let button = view as? NSButton {
+                        button.layer?.borderWidth = 2
                         button.layer?.borderColor = NSColor.separatorColor.cgColor
                     }
                 }
             }
-            sender.layer?.borderColor = NSColor.selectedContentBackgroundColor.cgColor
+            sender.layer?.borderWidth = 4
+            sender.layer?.borderColor = NSColor.customAccentColor.cgColor
+
+            // Notify delegate that settings changed
+            changeDelegate?.settingsDidChange()
         } catch {
             print("Failed to save folder color: \(error)")
         }
@@ -1165,8 +1307,8 @@ class AppearanceSettingsViewController: NSViewController {
             NSColor(red: 1.0, green: 0.58, blue: 0.0, alpha: 1.0),
             NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1.0),
             NSColor(red: 0.2, green: 0.78, blue: 0.35, alpha: 1.0),
-            NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0),
-            NSColor(red: 0.35, green: 0.34, blue: 0.84, alpha: 1.0)
+            NSColor(red: 0.19, green: 0.67, blue: 0.69, alpha: 1.0),
+            NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0)
         ]
 
         guard sender.tag < presetAccentColors.count else { return }
@@ -1174,18 +1316,22 @@ class AppearanceSettingsViewController: NSViewController {
 
         do {
             let colorData = try NSKeyedArchiver.archivedData(withRootObject: selectedColor, requiringSecureCoding: false)
-            UserDefaults.standard.set(colorData, forKey: UserDefaults.Keys.accentColor.rawValue)
-            NotificationCenter.default.post(name: .accentColorDidChangeNotification, object: nil)
+            PendingSettings.shared.setValue(colorData, forKey: UserDefaults.Keys.accentColor.rawValue)
 
             // Update button borders
             if let paletteContainer = sender.superview {
                 for view in paletteContainer.subviews {
                     if let button = view as? NSButton {
+                        button.layer?.borderWidth = 2
                         button.layer?.borderColor = NSColor.separatorColor.cgColor
                     }
                 }
             }
-            sender.layer?.borderColor = NSColor.selectedContentBackgroundColor.cgColor
+            sender.layer?.borderWidth = 4
+            sender.layer?.borderColor = NSColor.labelColor.cgColor
+
+            // Notify delegate that settings changed
+            changeDelegate?.settingsDidChange()
         } catch {
             print("Failed to save accent color: \(error)")
         }
@@ -1310,7 +1456,7 @@ class FileOperationsSettingsViewController: NSViewController {
     }
 
     private func addCheckbox(title: String, key: UserDefaults.Keys, defaultValue: Bool = false) {
-        let checkbox = NSButton(checkboxWithTitle: title, target: self, action: #selector(checkboxChanged(_:)))
+        let checkbox = AccentCheckbox(title: title, target: self, action: #selector(checkboxChanged(_:)))
         checkbox.translatesAutoresizingMaskIntoConstraints = false
         checkbox.tag = key.rawValue.hashValue
         checkbox.state = UserDefaults.standard.bool(forKey: key.rawValue) ? .on : .off
@@ -1323,7 +1469,7 @@ class FileOperationsSettingsViewController: NSViewController {
 
     @objc func checkboxChanged(_ sender: NSButton) {
         if let keyRawValue = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag })?.rawValue {
-            UserDefaults.standard.set(sender.state == .on, forKey: keyRawValue)
+            PendingSettings.shared.setValue(sender.state == .on, forKey: keyRawValue)
         }
     }
 }
@@ -1386,7 +1532,7 @@ class TerminalSettingsViewController: NSViewController {
     }
 
     private func addCheckbox(title: String, key: UserDefaults.Keys, defaultValue: Bool = false) {
-        let checkbox = NSButton(checkboxWithTitle: title, target: self, action: #selector(checkboxChanged(_:)))
+        let checkbox = AccentCheckbox(title: title, target: self, action: #selector(checkboxChanged(_:)))
         checkbox.translatesAutoresizingMaskIntoConstraints = false
         checkbox.tag = key.rawValue.hashValue
         checkbox.state = UserDefaults.standard.bool(forKey: key.rawValue) ? .on : .off
@@ -1399,7 +1545,7 @@ class TerminalSettingsViewController: NSViewController {
 
     @objc func checkboxChanged(_ sender: NSButton) {
         if let keyRawValue = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag })?.rawValue {
-            UserDefaults.standard.set(sender.state == .on, forKey: keyRawValue)
+            PendingSettings.shared.setValue(sender.state == .on, forKey: keyRawValue)
         }
     }
 }
@@ -1565,7 +1711,7 @@ class AdvancedSettingsViewController: NSViewController {
     }
 
     private func addCheckbox(title: String, key: UserDefaults.Keys, defaultValue: Bool = false) {
-        let checkbox = NSButton(checkboxWithTitle: title, target: self, action: #selector(checkboxChanged(_:)))
+        let checkbox = AccentCheckbox(title: title, target: self, action: #selector(checkboxChanged(_:)))
         checkbox.translatesAutoresizingMaskIntoConstraints = false
         checkbox.tag = key.rawValue.hashValue
         checkbox.state = UserDefaults.standard.bool(forKey: key.rawValue) ? .on : .off
@@ -1578,13 +1724,13 @@ class AdvancedSettingsViewController: NSViewController {
 
     @objc func checkboxChanged(_ sender: NSButton) {
         if let keyRawValue = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag })?.rawValue {
-            UserDefaults.standard.set(sender.state == .on, forKey: keyRawValue)
+            PendingSettings.shared.setValue(sender.state == .on, forKey: keyRawValue)
         }
     }
 
     @objc func maxPanesStepperChanged(_ sender: NSStepper) {
         let newValue = sender.integerValue
-        UserDefaults.standard.set(newValue, forKey: UserDefaults.Keys.maximumPanes.rawValue)
+        PendingSettings.shared.setValue(newValue, forKey: UserDefaults.Keys.maximumPanes.rawValue)
 
         // Find and update the value label in the same row
         if let parentStack = stackView.arrangedSubviews.compactMap({ $0 as? NSStackView }).first(where: { stack in
@@ -1763,7 +1909,7 @@ class SidebarSettingsViewController: NSViewController {
     }
 
     private func addCheckbox(title: String, key: UserDefaults.Keys, defaultValue: Bool = false) {
-        let checkbox = NSButton(checkboxWithTitle: title, target: self, action: #selector(checkboxChanged(_:)))
+        let checkbox = AccentCheckbox(title: title, target: self, action: #selector(checkboxChanged(_:)))
         checkbox.translatesAutoresizingMaskIntoConstraints = false
         checkbox.tag = key.rawValue.hashValue
         checkbox.state = UserDefaults.standard.bool(forKey: key.rawValue) ? .on : .off
@@ -1776,12 +1922,12 @@ class SidebarSettingsViewController: NSViewController {
 
     @objc func checkboxChanged(_ sender: NSButton) {
         if let keyRawValue = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag })?.rawValue {
-            UserDefaults.standard.set(sender.state == .on, forKey: keyRawValue)
+            PendingSettings.shared.setValue(sender.state == .on, forKey: keyRawValue)
         }
     }
 
     @objc func sidebarOrderChanged(_ sender: NSSegmentedControl) {
-        UserDefaults.standard.set(sender.selectedSegment, forKey: UserDefaults.Keys.sidebarOrder.rawValue)
+        PendingSettings.shared.setValue(sender.selectedSegment, forKey: UserDefaults.Keys.sidebarOrder.rawValue)
     }
 }
 
@@ -1884,7 +2030,7 @@ class ContextMenuSettingsViewController: NSViewController {
 
     @objc func checkboxChanged(_ sender: NSButton) {
         if let keyRawValue = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag })?.rawValue {
-            UserDefaults.standard.set(sender.state == .on, forKey: keyRawValue)
+            PendingSettings.shared.setValue(sender.state == .on, forKey: keyRawValue)
         }
     }
 }
@@ -1967,15 +2113,10 @@ class ToolbarSettingsViewController: NSViewController {
 
     @objc func checkboxChanged(_ sender: NSButton) {
         if let keyRawValue = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag })?.rawValue {
-            UserDefaults.standard.set(sender.state == .on, forKey: keyRawValue)
-            // Post notification to update toolbar
-            NotificationCenter.default.post(name: .toolbarSettingsDidChangeNotification, object: nil)
+            PendingSettings.shared.setValue(sender.state == .on, forKey: keyRawValue)
+            // Note: toolbar notification will be posted when Apply is clicked
         }
     }
-}
-
-extension Notification.Name {
-    static let toolbarSettingsDidChangeNotification = Notification.Name("toolbarSettingsDidChangeNotification")
 }
 
 class PermissionsSettingsViewController: NSViewController {
@@ -2464,7 +2605,7 @@ class GoMenuSettingsViewController: NSViewController {
 
     @objc func checkboxChanged(_ sender: NSButton) {
         if let keyRawValue = UserDefaults.Keys.allCases.first(where: { $0.rawValue.hashValue == sender.tag })?.rawValue {
-            UserDefaults.standard.set(sender.state == .on, forKey: keyRawValue)
+            PendingSettings.shared.setValue(sender.state == .on, forKey: keyRawValue)
         }
     }
 }

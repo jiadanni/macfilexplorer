@@ -1,9 +1,10 @@
-.todo.md.swp
-todo.md
 
 # Xcode
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
+
+
+package-lock.json
 
 ## Build generated
 build/

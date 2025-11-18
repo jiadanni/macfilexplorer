@@ -180,9 +180,10 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         tabCloseButtons.removeAll()
 
         // Create new buttons for all tabs
-        let showClose = tabs.count > 1
-        for (index, _) in tabs.enumerated() {
+        for (index, tab) in tabs.enumerated() {
             let tabItem = tabView.tabViewItem(at: index)
+            // Start tab should never show close button
+            let showClose = tabs.count > 1 && !(tab is StartViewController)
             let container = createTabButtonContainer(title: tabItem.label, index: index, showClose: showClose)
             tabButtonsStackView.addArrangedSubview(container)
         }
@@ -262,11 +263,19 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
 
     func closeCurrentTab() {
         guard tabs.count > 1 else { return }
+        // Don't allow closing the Start tab
+        if tabs[currentTabIndex] is StartViewController {
+            return
+        }
         closeTab(at: currentTabIndex)
     }
 
     private func closeTab(at index: Int) {
         guard index >= 0, index < tabs.count, tabs.count > 1 else { return }
+        // Don't allow closing the Start tab
+        if tabs[index] is StartViewController {
+            return
+        }
         tabs.remove(at: index)
         tabView.removeTabViewItem(tabView.tabViewItem(at: index))
         if currentTabIndex >= tabs.count { currentTabIndex = tabs.count - 1 }
@@ -375,6 +384,11 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
             splitPane.navigateToURL(url)
         }
+    }
+    
+    func isCurrentTabStartPage() -> Bool {
+        guard currentTabIndex < tabs.count else { return false }
+        return tabs[currentTabIndex] is StartViewController
     }
 
     func updateZoomLevel(to level: Double) {

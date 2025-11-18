@@ -3,7 +3,10 @@
     "allow": [
       "Bash(xcodebuild:*)",
       "Bash(tee:*)",
-      "Bash(open:*)"
+      "Bash(open:*)",
+      "Bash(ruby -e:*)",
+      "Bash(cat:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

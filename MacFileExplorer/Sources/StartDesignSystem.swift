@@ -14,7 +14,9 @@ struct StartDesignSystem {
 
     struct Colors {
         /// Primary accent color for interactive elements
-        static let accent = NSColor.controlAccentColor
+        static var accent: NSColor {
+            return NSColor.customAccentColor
+        }
 
         /// Widget background color
         static let widgetBackground = NSColor.controlBackgroundColor
@@ -36,7 +38,7 @@ struct StartDesignSystem {
 
         /// Card hover overlay
         static var hoverOverlay: NSColor {
-            return NSColor.controlAccentColor.withAlphaComponent(0.05)
+            return NSColor.customAccentColor.withAlphaComponent(0.05)
         }
     }
 

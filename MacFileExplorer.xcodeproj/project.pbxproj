@@ -19,13 +19,14 @@
 		6D7342074ECD4C96B27AE074 /* FavoritesWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBDDCAF9FC944D889F88AB7 /* FavoritesWidgetView.swift */; };
 		745071C3419A40EA9CE70FBA /* StorageProgressViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EE3071256D14F848904E873 /* StorageProgressViewController.swift */; };
 		75E502CAE4064D98B4DC278B /* StartViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8597653ABC94615B0186203 /* StartViewController.swift */; };
+		774DEAE20156EAD3D3E020FD /* AccentColorControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B971B3759F927A8101D61E /* AccentColorControls.swift */; };
 		77F59CBBE25241F78535867F /* GettingStartedWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FFE03C491D474790704210 /* GettingStartedWidgetView.swift */; };
 		8F9A1D2E5C7B4E92A3F46B81 /* StorageAnalyzerTabViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C5E8F93A4D4761B9E72C40 /* StorageAnalyzerTabViewController.swift */; };
+		922DA356552FC1D24A4C899D /* Help in Resources */ = {isa = PBXBuildFile; fileRef = 16F13AFA7D36527FAC1CEC06 /* Help */; };
 		AA0000010000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000020000000000000001 /* AppDelegate.swift */; };
 		AA0000030000000000000001 /* MainWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000040000000000000001 /* MainWindowController.swift */; };
 		AA0000050000000000000001 /* SplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000060000000000000001 /* SplitViewController.swift */; };
 		AA0000070000000000000001 /* FileBrowserViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000080000000000000001 /* FileBrowserViewController.swift */; };
-		AA0000750000000000000001 /* FilterPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000760000000000000001 /* FilterPanelViewController.swift */; };
 		AA0000090000000000000001 /* TerminalViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000100000000000000001 /* TerminalViewController.swift */; };
 		AA0000110000000000000001 /* TabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000120000000000000001 /* TabBarController.swift */; };
 		AA0000130000000000000001 /* FileItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000140000000000000001 /* FileItem.swift */; };
@@ -43,6 +44,7 @@
 		AA0000440000000000000001 /* SettingsSidebarCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000450000000000000001 /* SettingsSidebarCellView.swift */; };
 		AA0000460000000000000001 /* StatusBarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000470000000000000001 /* StatusBarViewController.swift */; };
 		AA0000500000000000000001 /* SettingsSplitPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000510000000000000001 /* SettingsSplitPaneViewController.swift */; };
+		AA0000750000000000000001 /* FilterPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000760000000000000001 /* FilterPanelViewController.swift */; };
 		C357D9E02ECA0ECB001BA891 /* AboutWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9DF2ECA0ECB001BA891 /* AboutWindowController.swift */; };
 		C357D9E72ECA0EDF001BA891 /* NotificationNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */; };
 		C357D9E82ECA0EDF001BA891 /* ProgressViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */; };
@@ -61,6 +63,8 @@
 
 /* Begin PBXFileReference section */
 		0330B936510D968B8821EE52 /* StorageSettingsViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StorageSettingsViewController.swift; sourceTree = "<group>"; };
+		08B971B3759F927A8101D61E /* AccentColorControls.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccentColorControls.swift; sourceTree = "<group>"; };
+		16F13AFA7D36527FAC1CEC06 /* Help */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; path = Help; sourceTree = "<group>"; };
 		1972F8A5DEE3441298641AFC /* StorageListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageListViewController.swift; sourceTree = "<group>"; };
 		1F74C22C3ADD41E2A27FBABA /* ContextualPermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextualPermissionManager.swift; sourceTree = "<group>"; };
 		1FBDDCAF9FC944D889F88AB7 /* FavoritesWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesWidgetView.swift; sourceTree = "<group>"; };
@@ -78,7 +82,6 @@
 		AA0000040000000000000001 /* MainWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWindowController.swift; sourceTree = "<group>"; };
 		AA0000060000000000000001 /* SplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitViewController.swift; sourceTree = "<group>"; };
 		AA0000080000000000000001 /* FileBrowserViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowserViewController.swift; sourceTree = "<group>"; };
-		AA0000760000000000000001 /* FilterPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterPanelViewController.swift; sourceTree = "<group>"; };
 		AA0000100000000000000001 /* TerminalViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalViewController.swift; sourceTree = "<group>"; };
 		AA0000120000000000000001 /* TabBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarController.swift; sourceTree = "<group>"; };
 		AA0000140000000000000001 /* FileItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileItem.swift; sourceTree = "<group>"; };
@@ -98,6 +101,7 @@
 		AA0000450000000000000001 /* SettingsSidebarCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSidebarCellView.swift; sourceTree = "<group>"; };
 		AA0000470000000000000001 /* StatusBarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusBarViewController.swift; sourceTree = "<group>"; };
 		AA0000510000000000000001 /* SettingsSplitPaneViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSplitPaneViewController.swift; sourceTree = "<group>"; };
+		AA0000760000000000000001 /* FilterPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterPanelViewController.swift; sourceTree = "<group>"; };
 		ABBBCC2BFE824B9CB573D557 /* StorageOverviewWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageOverviewWidgetView.swift; sourceTree = "<group>"; };
 		B1FFE03C491D474790704210 /* GettingStartedWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GettingStartedWidgetView.swift; sourceTree = "<group>"; };
 		B2C5E8F93A4D4761B9E72C40 /* StorageAnalyzerTabViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageAnalyzerTabViewController.swift; sourceTree = "<group>"; };
@@ -195,6 +199,7 @@
 				1F74C22C3ADD41E2A27FBABA /* ContextualPermissionManager.swift */,
 				C8597653ABC94615B0186203 /* StartViewController.swift */,
 				0330B936510D968B8821EE52 /* StorageSettingsViewController.swift */,
+				08B971B3759F927A8101D61E /* AccentColorControls.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -204,6 +209,7 @@
 			children = (
 				AA0000200000000000000001 /* Assets.xcassets */,
 				AA0000220000000000000001 /* MainMenu.xib */,
+				16F13AFA7D36527FAC1CEC06 /* Help */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -285,6 +291,7 @@
 			files = (
 				AA0000190000000000000001 /* Assets.xcassets in Resources */,
 				AA0000210000000000000001 /* MainMenu.xib in Resources */,
+				922DA356552FC1D24A4C899D /* Help in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -343,6 +350,7 @@
 				D5ADEF7CBF5C46D6A5E89870 /* ContextualPermissionManager.swift in Sources */,
 				75E502CAE4064D98B4DC278B /* StartViewController.swift in Sources */,
 				E010E822F5B6962C1C72A271 /* StorageSettingsViewController.swift in Sources */,
+				774DEAE20156EAD3D3E020FD /* AccentColorControls.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

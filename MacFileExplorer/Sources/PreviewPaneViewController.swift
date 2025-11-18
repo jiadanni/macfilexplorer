@@ -460,6 +460,15 @@ class PreviewPaneViewController: NSViewController {
         textView.isEditable = false
         textView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
 
+        // Enable word wrapping
+        textView.isHorizontallyResizable = false
+        textView.isVerticallyResizable = true
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainer?.containerSize = NSSize(width: scrollView.contentSize.width, height: CGFloat.greatestFiniteMagnitude)
+
+        // Disable horizontal scrolling
+        scrollView.hasHorizontalScroller = false
+
         contentView.addSubview(scrollView)
         self.textView = textView
 
@@ -821,6 +830,9 @@ class PreviewPaneViewController: NSViewController {
     // MARK: - Storage Analyzer
 
     private func showStorageAnalyzer(for fileItem: FileItem) {
+        // Show folder metadata similar to file metadata
+        showFolderMetadata(for: fileItem)
+
         storageAnalyzerView.isHidden = false
 
         // Calculate folder size asynchronously
@@ -842,6 +854,91 @@ class PreviewPaneViewController: NSViewController {
                 }
             }
         }
+    }
+
+    private func showFolderMetadata(for fileItem: FileItem) {
+        let stackView = NSStackView()
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.orientation = .vertical
+        stackView.spacing = 8
+        stackView.alignment = .leading
+        stackView.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
+        contentView.addSubview(stackView)
+
+        metadataStackView = stackView
+
+        // Icon and name row
+        let iconNameStack = NSStackView()
+        iconNameStack.orientation = .horizontal
+        iconNameStack.spacing = 12
+        iconNameStack.alignment = .centerY
+
+        let iconView = NSImageView()
+        iconView.image = NSWorkspace.shared.icon(forFile: fileItem.url.path)
+        iconView.imageScaling = .scaleProportionallyDown
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.widthAnchor.constraint(equalToConstant: 64).isActive = true
+        iconView.heightAnchor.constraint(equalToConstant: 64).isActive = true
+        iconNameStack.addArrangedSubview(iconView)
+
+        let nameLabel = NSTextField(labelWithString: fileItem.displayName)
+        nameLabel.font = NSFont.boldSystemFont(ofSize: 14)
+        nameLabel.lineBreakMode = .byWordWrapping
+        nameLabel.maximumNumberOfLines = 0
+        iconNameStack.addArrangedSubview(nameLabel)
+
+        stackView.addArrangedSubview(iconNameStack)
+
+        // Add separator
+        let separator1 = NSBox()
+        separator1.boxType = .separator
+        separator1.translatesAutoresizingMaskIntoConstraints = false
+        stackView.addArrangedSubview(separator1)
+
+        // Information section
+        stackView.addArrangedSubview(createInfoLabel("General Information", isBold: true))
+
+        // Kind
+        stackView.addArrangedSubview(createInfoRow(label: "Kind:", value: "Folder"))
+
+        // Location
+        let location = fileItem.url.deletingLastPathComponent().path
+        stackView.addArrangedSubview(createInfoRow(label: "Where:", value: location))
+
+        // Get folder properties
+        if let resourceValues = try? fileItem.url.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey, .contentAccessDateKey]) {
+            if let created = resourceValues.creationDate {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .short
+                stackView.addArrangedSubview(createInfoRow(label: "Created:", value: formatter.string(from: created)))
+            }
+
+            if let modified = resourceValues.contentModificationDate {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .short
+                stackView.addArrangedSubview(createInfoRow(label: "Modified:", value: formatter.string(from: modified)))
+            }
+
+            if let lastUsed = resourceValues.contentAccessDate {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .short
+                stackView.addArrangedSubview(createInfoRow(label: "Last opened:", value: formatter.string(from: lastUsed)))
+            }
+        }
+
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            stackView.widthAnchor.constraint(equalTo: contentScrollView.widthAnchor),
+
+            separator1.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -40)
+        ])
+
+        quickActionsView.isHidden = true
     }
 
     private func calculateFolderSize(url: URL) -> (Int64, Int) {

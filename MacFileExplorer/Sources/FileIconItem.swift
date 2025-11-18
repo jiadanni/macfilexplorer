@@ -60,6 +60,7 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
         // Size will be determined by the collection view's layout
         let containerView = SelectableItemView(frame: NSRect(x: 0, y: 0, width: 100, height: 120))
         containerView.wantsLayer = true
+        containerView.layer?.masksToBounds = true // Clip subviews to bounds
         containerView.itemDelegate = self
         self.view = containerView
     }
@@ -71,6 +72,18 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
             setupUI()
             hasSetupUI = true
         }
+        
+        // Observe accent color changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(accentColorDidChange),
+            name: .accentColorDidChangeNotification,
+            object: nil
+        )
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     private func setupUI() {
@@ -98,11 +111,14 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
         myTextField?.isEditable = false
         myTextField?.isSelectable = false
         myTextField?.drawsBackground = false
+        myTextField?.cell?.wraps = false // Ensure no wrapping
+        myTextField?.cell?.truncatesLastVisibleLine = true
+        myTextField?.preferredMaxLayoutWidth = 100 // Constrain text width
         view.addSubview(myTextField!)
         self.textField = myTextField // Assign to the NSCollectionViewItem's textField property
 
         // Create checkbox (will be shown/hidden based on showCheckbox property)
-        myCheckbox = NSButton(checkboxWithTitle: "", target: self, action: #selector(checkboxToggled(_:)))
+        myCheckbox = AccentCheckbox(title: "", target: self, action: #selector(checkboxToggled(_:)))
         myCheckbox?.translatesAutoresizingMaskIntoConstraints = false
         myCheckbox?.isHidden = !showCheckbox
         view.addSubview(myCheckbox!)
@@ -122,6 +138,10 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
         let baseFontSize: CGFloat = 11
         let scaledFontSize = max(8, baseFontSize * zoomLevel) // Minimum 8pt
         myTextField.font = NSFont.systemFont(ofSize: scaledFontSize)
+
+        // Update max width to scale with zoom level (base 100pt * zoom)
+        // This ensures text doesn't overflow at higher zoom levels
+        myTextField.preferredMaxLayoutWidth = 100 * zoomLevel
     }
     
     private func updateLayoutConstraints() {
@@ -257,7 +277,7 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
     private func updateSelectionAppearance() {
         // Update visual appearance based on selection state
         if isSelected {
-            view.layer?.backgroundColor = NSColor.selectedContentBackgroundColor.cgColor
+            view.layer?.backgroundColor = NSColor.customAccentColor.withAlphaComponent(0.3).cgColor
         } else {
             view.layer?.backgroundColor = NSColor.clear.cgColor
         }
@@ -268,6 +288,13 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
     func itemViewDidReceiveMouseDown() {
         // Provide immediate visual feedback on mouse down
         // Temporarily show selection appearance until the actual selection state is set
-        view.layer?.backgroundColor = NSColor.selectedContentBackgroundColor.withAlphaComponent(0.5).cgColor
+        view.layer?.backgroundColor = NSColor.customAccentColor.withAlphaComponent(0.2).cgColor
+    }
+
+    @objc private func accentColorDidChange() {
+        // Update selection color when accent color changes
+        if isSelected {
+            updateSelectionAppearance()
+        }
     }
 }

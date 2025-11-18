@@ -59,6 +59,8 @@ class ToolbarViewController: NSViewController {
         setupUI()
         // Observe preview pane visibility changes to update toggle button state
         NotificationCenter.default.addObserver(self, selector: #selector(handlePreviewPaneToggled(_:)), name: .previewPaneToggled, object: nil)
+        // Observe accent color changes
+        NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange), name: .accentColorDidChangeNotification, object: nil)
         // Initial state update based on persisted preference
         let initiallyShowingPreview = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
         updatePreviewPaneDisplay(showing: initiallyShowingPreview)
@@ -66,6 +68,7 @@ class ToolbarViewController: NSViewController {
 
     deinit {
         NotificationCenter.default.removeObserver(self, name: .previewPaneToggled, object: nil)
+        NotificationCenter.default.removeObserver(self, name: .accentColorDidChangeNotification, object: nil)
     }
 
     private func setupUI() {
@@ -234,7 +237,7 @@ class ToolbarViewController: NSViewController {
         view.addSubview(storageAnalyzerButton)
 
         // Sort button
-        sortButton = NSPopUpButton()
+        sortButton = AccentPopUpButton()
         sortButton.translatesAutoresizingMaskIntoConstraints = false
         sortButton.bezelStyle = .texturedRounded
         sortButton.pullsDown = true
@@ -490,13 +493,21 @@ class ToolbarViewController: NSViewController {
             NSAnimationContext.current.duration = 0.15
             if showing {
                 previewPaneButton.image = NSImage(systemSymbolName: "sidebar.right", accessibilityDescription: "Hide Preview Pane")
-                previewPaneButton.contentTintColor = .systemBlue
+                previewPaneButton.contentTintColor = NSColor.customAccentColor
                 previewPaneButton.toolTip = "Hide Preview Pane"
             } else {
                 previewPaneButton.image = NSImage(systemSymbolName: "sidebar.right", accessibilityDescription: "Show Preview Pane")
                 previewPaneButton.contentTintColor = nil
                 previewPaneButton.toolTip = "Show Preview Pane"
             }
+        }
+    }
+
+    @objc private func accentColorDidChange() {
+        // Update preview pane button color if it's active
+        let isShowingPreview = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
+        if isShowingPreview {
+            previewPaneButton.contentTintColor = NSColor.customAccentColor
         }
     }
 

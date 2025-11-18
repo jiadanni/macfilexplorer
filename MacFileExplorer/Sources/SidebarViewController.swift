@@ -1,5 +1,23 @@
 import Cocoa
 
+// Custom table row view with accent color selection
+class AccentTableRowView: NSTableRowView {
+    override func drawSelection(in dirtyRect: NSRect) {
+        if selectionHighlightStyle != .none {
+            let selectionRect = bounds
+            NSColor.customAccentColor.withAlphaComponent(0.3).setFill()
+            let selectionPath = NSBezierPath(roundedRect: selectionRect, xRadius: 4, yRadius: 4)
+            selectionPath.fill()
+        }
+    }
+
+    override var isEmphasized: Bool {
+        didSet {
+            needsDisplay = true
+        }
+    }
+}
+
 // Custom button with hover effect
 class HoverButton: NSButton {
     private var trackingArea: NSTrackingArea?
@@ -1082,6 +1100,11 @@ extension SidebarViewController: NSOutlineViewDataSource {
 // MARK: - NSOutlineViewDelegate
 
 extension SidebarViewController: NSOutlineViewDelegate {
+    func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
+        let rowView = AccentTableRowView()
+        return rowView
+    }
+
     func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
         guard let fileItem = item as? FileItem else { return nil }
 

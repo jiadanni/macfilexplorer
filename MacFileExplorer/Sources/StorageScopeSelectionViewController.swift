@@ -141,7 +141,7 @@ class StorageScopeSelectionViewController: NSViewController {
         optionsTitle.font = NSFont.boldSystemFont(ofSize: 12)
 
         // Include hidden files checkbox
-        includeHiddenCheckbox = NSButton(checkboxWithTitle: "Include hidden files", target: nil, action: nil)
+        includeHiddenCheckbox = AccentCheckbox(title: "Include hidden files", target: nil, action: nil)
         includeHiddenCheckbox.state = .off
 
         // Minimum size filter

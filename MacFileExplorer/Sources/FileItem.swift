@@ -142,6 +142,55 @@ class FileItem: Hashable {
             print("   showsHiddenFiles: \(showsHiddenFiles)")
         }
 
+        // Special handling for root directory "/" to avoid permission dialogs
+        if url.path == "/" {
+            print("📂 Special handling for root directory /")
+            
+            // For root, only show /Volumes and maybe /Users/<username>
+            var safeRootItems: [URL] = []
+            
+            // Always add /Volumes (mounted drives)
+            let volumesURL = URL(fileURLWithPath: "/Volumes")
+            if fileManager.fileExists(atPath: volumesURL.path) {
+                safeRootItems.append(volumesURL)
+            }
+            
+            // Add user's home directory
+            let homeURL = URL(fileURLWithPath: NSHomeDirectory())
+            if fileManager.fileExists(atPath: homeURL.path) {
+                safeRootItems.append(homeURL)
+            }
+            
+            // Add /Applications if accessible
+            let applicationsURL = URL(fileURLWithPath: "/Applications")
+            if fileManager.fileExists(atPath: applicationsURL.path) {
+                safeRootItems.append(applicationsURL)
+            }
+            
+            // Only add other root folders if they're already granted permission
+            // This prevents triggering permission dialogs
+            let potentialRootFolders = ["/System", "/Library", "/Users", "/private", "/bin", "/sbin", "/usr", "/var", "/tmp", "/cores", "/dev", "/etc"]
+            for folderPath in potentialRootFolders {
+                let folderURL = URL(fileURLWithPath: folderPath)
+                // Only add if we can read it without triggering permission dialog
+                if fileManager.isReadableFile(atPath: folderPath) {
+                    safeRootItems.append(folderURL)
+                }
+            }
+            
+            children = safeRootItems.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+                .map { FileItem(url: $0) }
+            
+            children?.forEach { child in
+                if child.isDirectory && child.children == nil {
+                    child.children = []
+                }
+            }
+            
+            print("   ✅ Root directory loaded with \(children?.count ?? 0) safe items")
+            return true
+        }
+
         do {
             var options: FileManager.DirectoryEnumerationOptions = []
             if !showsHiddenFiles {

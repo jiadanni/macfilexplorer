@@ -7,90 +7,37 @@ class ColorManager {
     private let colorKey = "GlobalFolderColors"
 
     private init() {
-        NotificationCenter.default.addObserver(forName: .globalFolderColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.globalFolderColorChanged()
-        }
+        // Disabled: no-op
     }
 
-    // MARK: - Public Methods
+    // MARK: - Public Methods (no-op/stubbed)
 
-    /// Set color for all folders with this name globally
     func setColor(_ color: NSColor, forFolderName name: String) {
-        var colors = loadColors()
-        colors[name] = color.toHex()
-        saveColors(colors)
+        // No-op: custom folder coloring disabled
     }
 
-    /// Get color for a folder by its name (not path)
     func getColor(forFolderName name: String) -> NSColor? {
-        // Prioritize global folder color if set
-        if let globalColor = getGlobalFolderColor() {
-            return globalColor
-        }
-        
-        let colors = loadColors()
-        guard let hexString = colors[name] else { return nil }
-        return NSColor(hex: hexString)
-    }
-
-    /// Get color for a folder by its URL (uses folder name)
-    func getColor(for url: URL) -> NSColor? {
-        // Prioritize global folder color if set
-        if let globalColor = getGlobalFolderColor() {
-            return globalColor
-        }
-        
-        let folderName = url.lastPathComponent
-        return getColor(forFolderName: folderName)
-    }
-    
-    /// Get the globally set folder color from UserDefaults
-    func getGlobalFolderColor() -> NSColor? {
-        if let colorData = userDefaults.data(forKey: UserDefaults.Keys.globalFolderColor.rawValue),
-           let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: colorData) {
-            return color
-        }
         return nil
     }
 
-    /// Remove color assignment for folders with this name
+    func getColor(for url: URL) -> NSColor? {
+        return nil
+    }
+
+    func getGlobalFolderColor() -> NSColor? {
+        return nil
+    }
+
     func removeColor(forFolderName name: String) {
-        var colors = loadColors()
-        colors.removeValue(forKey: name)
-        saveColors(colors)
+        // No-op
     }
 
-    /// Clear all global color assignments
     func clearAllColors() {
-        userDefaults.removeObject(forKey: colorKey)
+        // No-op
     }
 
-    /// Get all folder names that have colors assigned
     func getAllColoredFolderNames() -> [String] {
-        return Array(loadColors().keys)
-    }
-
-    // MARK: - Private Methods
-
-    private func loadColors() -> [String: String] {
-        guard let data = userDefaults.data(forKey: colorKey),
-              let colors = try? JSONDecoder().decode([String: String].self, from: data) else {
-            return [:]
-        }
-        return colors
-    }
-
-    private func saveColors(_ colors: [String: String]) {
-        if let data = try? JSONEncoder().encode(colors) {
-            userDefaults.set(data, forKey: colorKey)
-        }
-    }
-    
-    private func globalFolderColorChanged() {
-        // This method is called when the global folder color changes.
-        // It doesn't need to do anything here, as FileBrowserViewController will observe this notification
-        // and reload its data to reflect the change.
-        print("Global folder color changed notification received by ColorManager.")
+        return []
     }
 }
 

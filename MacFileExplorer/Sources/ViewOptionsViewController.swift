@@ -63,14 +63,14 @@ class ViewOptionsViewController: NSViewController {
         yOffset -= 40
 
         // Always open in icon view
-        alwaysOpenInIconViewCheckbox = NSButton(checkboxWithTitle: "Always open in icon view", target: self, action: #selector(optionChanged(_:)))
+        alwaysOpenInIconViewCheckbox = AccentCheckbox(title: "Always open in icon view", target: self, action: #selector(optionChanged(_:)))
         alwaysOpenInIconViewCheckbox.frame = NSRect(x: 20, y: yOffset, width: 300, height: 20)
         alwaysOpenInIconViewCheckbox.state = viewOptions.alwaysOpenInIconView ? .on : .off
         view.addSubview(alwaysOpenInIconViewCheckbox)
         yOffset -= 30
 
         // Browse in icon view (indented)
-        browseInIconViewCheckbox = NSButton(checkboxWithTitle: "Browse in icon view", target: self, action: #selector(optionChanged(_:)))
+        browseInIconViewCheckbox = AccentCheckbox(title: "Browse in icon view", target: self, action: #selector(optionChanged(_:)))
         browseInIconViewCheckbox.frame = NSRect(x: 40, y: yOffset, width: 280, height: 20)
         browseInIconViewCheckbox.state = viewOptions.browseInIconView ? .on : .off
         view.addSubview(browseInIconViewCheckbox)
@@ -81,7 +81,7 @@ class ViewOptionsViewController: NSViewController {
         groupByLabel.frame = NSRect(x: 20, y: yOffset, width: 100, height: 20)
         view.addSubview(groupByLabel)
 
-        groupByPopup = NSPopUpButton(frame: NSRect(x: 120, y: yOffset - 3, width: 290, height: 26), pullsDown: false)
+        groupByPopup = AccentPopUpButton(frame: NSRect(x: 120, y: yOffset - 3, width: 290, height: 26), pullsDown: false)
         groupByPopup.target = self
         groupByPopup.action = #selector(optionChanged(_:))
         for option in GroupByOption.allCases {
@@ -96,7 +96,7 @@ class ViewOptionsViewController: NSViewController {
         sortByLabel.frame = NSRect(x: 20, y: yOffset, width: 100, height: 20)
         view.addSubview(sortByLabel)
 
-        sortByPopup = NSPopUpButton(frame: NSRect(x: 120, y: yOffset - 3, width: 240, height: 26), pullsDown: false)
+        sortByPopup = AccentPopUpButton(frame: NSRect(x: 120, y: yOffset - 3, width: 240, height: 26), pullsDown: false)
         sortByPopup.target = self
         sortByPopup.action = #selector(optionChanged(_:))
         for option in SortByOption.allCases {
@@ -209,14 +209,14 @@ class ViewOptionsViewController: NSViewController {
         yOffset -= 40
 
         // Show item info
-        showItemInfoCheckbox = NSButton(checkboxWithTitle: "Show item info", target: self, action: #selector(optionChanged(_:)))
+        showItemInfoCheckbox = AccentCheckbox(title: "Show item info", target: self, action: #selector(optionChanged(_:)))
         showItemInfoCheckbox.frame = NSRect(x: 20, y: yOffset, width: 300, height: 20)
         showItemInfoCheckbox.state = viewOptions.showItemInfo ? .on : .off
         view.addSubview(showItemInfoCheckbox)
         yOffset -= 25
 
         // Show icon preview
-        showIconPreviewCheckbox = NSButton(checkboxWithTitle: "Show icon preview", target: self, action: #selector(optionChanged(_:)))
+        showIconPreviewCheckbox = AccentCheckbox(title: "Show icon preview", target: self, action: #selector(optionChanged(_:)))
         showIconPreviewCheckbox.frame = NSRect(x: 20, y: yOffset, width: 300, height: 20)
         showIconPreviewCheckbox.state = viewOptions.showIconPreview ? .on : .off
         view.addSubview(showIconPreviewCheckbox)

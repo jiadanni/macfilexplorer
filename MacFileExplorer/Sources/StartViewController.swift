@@ -26,12 +26,12 @@ class StartViewController: NSViewController {
     private var favoritesWidget: FavoritesWidgetView!
     private var quickActionsWidget: QuickActionsWidgetView!
     private var gettingStartedWidget: GettingStartedWidgetView?
-    private var storageWidget: StorageOverviewWidgetView!
+    private var storageWidget: StorageOverviewWidgetView?
 
     // MARK: - Lifecycle
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+        view = NSView()
     }
 
     override func viewDidLoad() {
@@ -64,9 +64,9 @@ class StartViewController: NSViewController {
         contentStackView = NSStackView()
         contentStackView.orientation = .vertical
         contentStackView.spacing = StartDesignSystem.Spacing.gridSpacing
-        contentStackView.alignment = .centerX
+        contentStackView.alignment = .leading
         contentStackView.edgeInsets = NSEdgeInsets(
-            top: StartDesignSystem.Spacing.xxl,
+            top: StartDesignSystem.Spacing.lg,
             left: StartDesignSystem.Spacing.xxl,
             bottom: StartDesignSystem.Spacing.xxl,
             right: StartDesignSystem.Spacing.xxl
@@ -81,22 +81,19 @@ class StartViewController: NSViewController {
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 
-            contentStackView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentStackView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentStackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentStackView.leadingAnchor.constraint(greaterThanOrEqualTo: scrollView.leadingAnchor),
+            contentStackView.trailingAnchor.constraint(lessThanOrEqualTo: scrollView.trailingAnchor),
+            contentStackView.centerXAnchor.constraint(equalTo: scrollView.centerXAnchor),
             contentStackView.widthAnchor.constraint(lessThanOrEqualToConstant: StartDesignSystem.Layout.maxContentWidth)
         ])
     }
 
     private func setupWidgets() {
-        // Check if first time
-        let hasLaunchedBefore = UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
-
-        // Welcome widget (only on first launch, unless dismissed)
-        if !hasLaunchedBefore || !UserDefaults.standard.bool(forKey: "dismissedWelcome") {
-            welcomeWidget = WelcomeWidgetView()
-            welcomeWidget?.delegate = self
-            addWidget(welcomeWidget!)
-        }
+        // Getting Started widget (combines welcome and suggestions, always visible, dismissible)
+        gettingStartedWidget = GettingStartedWidgetView()
+        gettingStartedWidget?.delegate = self
+        addWidget(gettingStartedWidget!)
 
         // Favorites widget (always visible)
         favoritesWidget = FavoritesWidgetView()
@@ -108,18 +105,14 @@ class StartViewController: NSViewController {
         quickActionsWidget.delegate = self
         addWidget(quickActionsWidget)
 
-        // Getting Started (only on first launch or until all complete)
-        let allTasksComplete = checkAllTasksComplete()
-        if !hasLaunchedBefore || !allTasksComplete {
-            gettingStartedWidget = GettingStartedWidgetView()
-            gettingStartedWidget?.delegate = self
-            addWidget(gettingStartedWidget!)
+        // Storage Overview (only show if Home folder permission is granted)
+        let homeURL = URL(fileURLWithPath: NSHomeDirectory())
+        let hasHomeAccess = FileManager.default.isReadableFile(atPath: homeURL.path)
+        if hasHomeAccess {
+            storageWidget = StorageOverviewWidgetView()
+            storageWidget?.delegate = self
+            addWidget(storageWidget!)
         }
-
-        // Storage Overview (always visible)
-        storageWidget = StorageOverviewWidgetView()
-        storageWidget.delegate = self
-        addWidget(storageWidget)
     }
 
     private func addWidget(_ widget: StartWidgetView) {
@@ -153,8 +146,20 @@ class StartViewController: NSViewController {
     }
 
     private func refreshWidgets() {
-        storageWidget.refresh()
+        // Refresh storage widget if it exists
+        storageWidget?.refresh()
         // Could refresh other widgets that depend on permissions
+        
+        // If storage widget doesn't exist but home access is now granted, add it
+        if storageWidget == nil {
+            let homeURL = URL(fileURLWithPath: NSHomeDirectory())
+            let hasHomeAccess = FileManager.default.isReadableFile(atPath: homeURL.path)
+            if hasHomeAccess {
+                storageWidget = StorageOverviewWidgetView()
+                storageWidget!.delegate = self
+                addWidget(storageWidget!)
+            }
+        }
     }
 
     // MARK: - Actions

@@ -75,6 +75,10 @@ class StartWidgetView: NSView {
         setupUI()
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     // MARK: - Setup
 
     private func setupUI() {
@@ -123,6 +127,7 @@ class StartWidgetView: NSView {
 
         setupConstraints()
         setupHoverEffect()
+        observeAccentColorChanges()
     }
 
     private func setupConstraints() {
@@ -186,6 +191,21 @@ class StartWidgetView: NSView {
             userInfo: nil
         )
         addTrackingArea(trackingArea)
+    }
+
+    private func observeAccentColorChanges() {
+        NotificationCenter.default.addObserver(
+            forName: .accentColorDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.updateAccentColors()
+        }
+    }
+
+    private func updateAccentColors() {
+        // Update icon tint color
+        iconView?.contentTintColor = StartDesignSystem.Colors.accent
     }
 
     // MARK: - Hover Effects

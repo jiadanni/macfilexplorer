@@ -1,31 +1,38 @@
 Features
-
-[x] X button on top does not appear to be part of the tab
-[x] toolbar and URL styling does not feel cohesive. Wanted to look seamless like Finder but acknowledge finder does not have the URL at the top
-[] Create help docs linked to it in menu for existing link  , open in new tab. 
-
+[]Copy/move files between split panes with drag & drop
+[-]Inconsistency in previews between folder and file
+[] Folder color and accent color not working. Apply button should be un-grayed out once a new color has been selected. 
+[x] Create help docs linked to it in menu for existing link  , open in new tab. 
+Connect to Server creates the server in Finder and launches Finder. 
 [] Zoom does not increase icon size only the label
-[] Zoom slider should not be displayed for Application views that are not applicable
 [] Support for search in subdirectories
-[x] Filter by file type, size, date modified 
+[] Auto expand to folder
 [] Columns View Mode - incomplete
-[x] Folder color and accent color not working. Apply button should be un-grayed out once a new color has been selected. 
-It's 18 hours
 [] Advanced Copy/Move Dialog: A dialog with a progress graph, transfer speed, pause button, and a detailed file queue.
 [] app icon
+[] Permissions. 
+[-] Display Folder size in the list view, if possible. 
+[] Google Drive folders are not displayed correctly. 
+
+
+[x] Zoom slider should not be displayed for Application views that are not applicable
+
+[x] Filter by file type, size, date modified 
+[x] X button on top does not appear to be part of the tab
+[x] toolbar and URL styling does not feel cohesive. Wanted to look seamless like Finder but acknowledge finder does not have the URL at the top
+
 [x] hide preview pane button doesn't work, neither does the X. 
-[]Copy/move files between split panes with drag & drop
 
 
+Come I love you she
 [x]No warning when destination has less free space
 [x]No comparison of total file sizes between panes
 [x]No "Available space: X / Required space: Y" indicator
-[-] Display Folder size in the list view, if possible. 
 
 
 [x] List view, columns should be configurable with right-click. Hide date created and tags by default hello. 
 [x] Storage Analyzer
-[]Auto expand to folder
+
 
 [x]Divide the sidebar into three equal parts. Each section should occupy identical space.
 [x] export/import not implemented
