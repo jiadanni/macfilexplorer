@@ -293,7 +293,12 @@ class FileItem: Hashable {
     // MARK: - Computed Properties
 
     var icon: NSImage {
-        return NSWorkspace.shared.icon(forFile: url.path)
+        let baseIcon = NSWorkspace.shared.icon(forFile: url.path)
+        let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+        if useGrayscale {
+            return baseIcon.grayscale()
+        }
+        return baseIcon
     }
 
     var isImage: Bool {

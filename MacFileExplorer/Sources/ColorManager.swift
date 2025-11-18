@@ -73,3 +73,24 @@ extension NSColor {
         self.init(red: red, green: green, blue: blue, alpha: 1.0)
     }
 }
+
+// MARK: - NSImage Grayscale Helper
+extension NSImage {
+    /// Returns a grayscale copy of the image. If conversion fails, returns original.
+    func grayscale() -> NSImage {
+        guard let tiff = self.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiff) else {
+            return self
+        }
+
+        let ciImage = CIImage(bitmapImageRep: bitmap)
+        guard let filter = CIFilter(name: "CIPhotoEffectMono") else { return self }
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+        guard let output = filter.outputImage else { return self }
+
+        let rep = NSCIImageRep(ciImage: output)
+        let img = NSImage(size: rep.size)
+        img.addRepresentation(rep)
+        return img
+    }
+}

@@ -46,6 +46,8 @@ extension UserDefaults {
         case showPreviewPane = "showPreviewPane"
         case previewPanePosition = "previewPanePosition" // "right" or "bottom"
         case previewPaneWidth = "previewPaneWidth" // Stored width (CGFloat)
+        // Icon appearance
+        case useGrayscaleIcons = "useGrayscaleIcons"
         // Granted Directory Permissions (user-approved folder access list)
         case grantedDirectoriesPaths = "grantedDirectoriesPaths" // [String] of absolute paths
         case grantedDirectoryBookmarks = "grantedDirectoryBookmarks" // [Data] security-scoped bookmarks
@@ -1089,26 +1091,20 @@ class AppearanceSettingsViewController: NSViewController {
     }
 
     private func addFolderAppearanceSettings() {
-        let titleLabel = NSTextField(labelWithString: "Folder Color:")
+        // Folder color feature is currently disabled because it does not work reliably
+        // across all macOS environments (see issue tracker). Hide the UI to avoid
+        // confusing users. The underlying ColorManager is a no-op.
+        let titleLabel = NSTextField(labelWithString: "Folder Color: (disabled)")
         titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize + 2)
         stackView.addArrangedSubview(titleLabel)
 
-        let descriptionLabel = NSTextField(labelWithString: "Choose a global color for all folder icons:")
+        let descriptionLabel = NSTextField(labelWithString: "Folder color customization is disabled in Appearance Settings.\nConsider using custom icon sets instead.")
         descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         descriptionLabel.textColor = .secondaryLabelColor
         descriptionLabel.lineBreakMode = .byWordWrapping
         descriptionLabel.maximumNumberOfLines = 0
         descriptionLabel.preferredMaxLayoutWidth = 450
         stackView.addArrangedSubview(descriptionLabel)
-
-        // Add spacing
-        let spacer1 = NSView()
-        spacer1.translatesAutoresizingMaskIntoConstraints = false
-        spacer1.heightAnchor.constraint(equalToConstant: 10).isActive = true
-        stackView.addArrangedSubview(spacer1)
-
-        // Create color palette
-        createColorPalette(forAccent: false)
     }
 
     private func addAccentColorSettings() {
@@ -1147,6 +1143,27 @@ class AppearanceSettingsViewController: NSViewController {
 
         // Create accent color palette
         createColorPalette(forAccent: true)
+        
+        // Grayscale icons option
+        let spacer2 = NSView()
+        spacer2.translatesAutoresizingMaskIntoConstraints = false
+        spacer2.heightAnchor.constraint(equalToConstant: 12).isActive = true
+        stackView.addArrangedSubview(spacer2)
+
+        let grayscaleCheckbox = AccentCheckbox(title: "Use grayscale icons", target: self, action: #selector(grayscaleCheckboxChanged(_:)))
+        grayscaleCheckbox.translatesAutoresizingMaskIntoConstraints = false
+        let useGray = UserDefaults.standard.object(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue) as? Bool ?? false
+        grayscaleCheckbox.state = useGray ? .on : .off
+        // Ensure default exists
+        if UserDefaults.standard.object(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue) == nil {
+            UserDefaults.standard.set(false, forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+        }
+        stackView.addArrangedSubview(grayscaleCheckbox)
+    }
+
+    @objc private func grayscaleCheckboxChanged(_ sender: NSButton) {
+        PendingSettings.shared.setValue(sender.state == .on, forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+        changeDelegate?.settingsDidChange()
     }
 
     private func createColorPalette(forAccent: Bool) {

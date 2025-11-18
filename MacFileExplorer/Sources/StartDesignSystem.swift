@@ -260,7 +260,10 @@ struct StartDesignSystem {
         container.layer?.cornerRadius = 4
 
         let icon = NSImageView()
-        icon.image = NSImage(systemSymbolName: granted ? Icons.checkmark : Icons.lock, accessibilityDescription: nil)
+        if let sysImage = NSImage(systemSymbolName: granted ? Icons.checkmark : Icons.lock, accessibilityDescription: nil) {
+            let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+            icon.image = useGrayscale ? sysImage.grayscale() : sysImage
+        }
         icon.contentTintColor = .white
         icon.translatesAutoresizingMaskIntoConstraints = false
 

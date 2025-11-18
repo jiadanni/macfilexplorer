@@ -73,7 +73,10 @@ class FavoritesWidgetView: StartWidgetView {
 
         // Icon
         let iconView = NSImageView()
-        iconView.image = NSImage(systemSymbolName: icon, accessibilityDescription: name)
+        if let sysImage = NSImage(systemSymbolName: icon, accessibilityDescription: name) {
+            let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+            iconView.image = useGrayscale ? sysImage.grayscale() : sysImage
+        }
         iconView.contentTintColor = StartDesignSystem.Colors.accent
         iconView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -138,7 +141,10 @@ class FavoritesWidgetView: StartWidgetView {
 
         // Plus icon
         let iconView = NSImageView()
-        iconView.image = NSImage(systemSymbolName: StartDesignSystem.Icons.addFolder, accessibilityDescription: "Add Folder")
+        if let sysImage = NSImage(systemSymbolName: StartDesignSystem.Icons.addFolder, accessibilityDescription: "Add Folder") {
+            let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+            iconView.image = useGrayscale ? sysImage.grayscale() : sysImage
+        }
         iconView.contentTintColor = StartDesignSystem.Colors.accent
         iconView.translatesAutoresizingMaskIntoConstraints = false
 
