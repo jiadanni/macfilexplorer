@@ -1,4 +1,5 @@
 import Cocoa
+import UniformTypeIdentifiers
 
 protocol ViewOptionsDelegate: AnyObject {
     func viewOptionsDidChange(_ options: ViewOptions)
@@ -142,7 +143,7 @@ class ViewOptionsViewController: NSViewController {
 
         // Use actual Finder document icon (large size)
         let fileIcon = NSImageView(frame: NSRect(x: 365, y: yOffset - 30, width: 40, height: 40))
-        fileIcon.image = NSWorkspace.shared.icon(forFileType: "public.data")
+        fileIcon.image = NSWorkspace.shared.icon(for: .data)
         fileIcon.imageScaling = .scaleProportionallyDown
         fileIcon.toolTip = "Large icon size"
         view.addSubview(fileIcon)

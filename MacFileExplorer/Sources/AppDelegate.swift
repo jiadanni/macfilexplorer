@@ -117,6 +117,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Add Go menu with back/forward navigation
         createGoMenu()
+
+        // Add Terminal menu
+        createTerminalMenu()
     }
 
     func createGoMenu() {
@@ -215,6 +218,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             existingGoMenu.submenu = goMenu
         } else {
             mainMenu.insertItem(goMenuItem, at: 3)
+        }
+    }
+
+    func createTerminalMenu() {
+        guard let mainMenu = NSApp.mainMenu else { return }
+
+        let terminalMenu = NSMenu(title: "Terminal")
+
+        // Toggle Terminal with Cmd+`
+        let toggleItem = terminalMenu.addItem(
+            withTitle: "Toggle Terminal",
+            action: #selector(toggleTerminal(_:)),
+            keyEquivalent: "`"
+        )
+        toggleItem.keyEquivalentModifierMask = [.command]
+
+        let terminalMenuItem = NSMenuItem()
+        terminalMenuItem.submenu = terminalMenu
+
+        // Find the "Terminal" menu and replace it, or add it after Go menu
+        if let existingTerminalMenu = mainMenu.item(withTitle: "Terminal") {
+            existingTerminalMenu.submenu = terminalMenu
+        } else {
+            mainMenu.insertItem(terminalMenuItem, at: 4)
         }
     }
 

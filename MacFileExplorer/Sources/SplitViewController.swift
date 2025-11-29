@@ -12,9 +12,9 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     var sidebarViewController: SidebarViewController?
     private var contentSplitViewController: NSSplitViewController?
     private var tabBarController: TabBarController?
-    private var terminalViewController: TerminalViewController?
+    var terminalViewController: TerminalViewController?
     private var terminalSplitItem: NSSplitViewItem?
-    private var isTerminalVisible = false
+    var isTerminalVisible = false
     private var hasInitializedTabs = false
 
     override func viewDidLoad() {
@@ -96,6 +96,15 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
             } else {
                 addNewTab()
             }
+
+            // Restore terminal visibility state
+            let wasVisible = UserDefaults.standard.bool(forKey: "terminalIsVisible")
+            if wasVisible {
+                // Defer toggle to ensure view is fully loaded
+                DispatchQueue.main.async { [weak self] in
+                    self?.toggleTerminal()
+                }
+            }
         }
     }
 
@@ -127,7 +136,13 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
             // Focus the input field
             terminalViewController?.focusInput()
+        } else {
+            // Return focus to file browser when closing terminal
+            view.window?.makeFirstResponder(tabBarController?.view)
         }
+
+        // Remember state for next launch
+        UserDefaults.standard.set(isTerminalVisible, forKey: "terminalIsVisible")
     }
 
     func cutSelection() {

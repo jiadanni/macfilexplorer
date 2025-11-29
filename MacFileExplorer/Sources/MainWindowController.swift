@@ -5,58 +5,66 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
     private var splitViewController: SplitViewController?
 
     init() {
-        // Create the window
+        // Compute a sensible default frame: half the main screen width, centered vertically and horizontally
+        let screenFrame: NSRect
+        if let screen = NSScreen.main {
+            screenFrame = screen.visibleFrame
+        } else {
+            screenFrame = NSScreen.screens.first?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1200, height: 800)
+        }
+
+        // Choose half the screen width and keep a 16:10-ish height ratio, respecting a minimum size.
+        let defaultWidth = max(600.0, floor(screenFrame.width / 2.0))
+        let defaultHeight = max(400.0, floor(defaultWidth * 10.0 / 16.0))
+        let defaultX = screenFrame.origin.x + floor((screenFrame.width - defaultWidth) / 2.0)
+        let defaultY = screenFrame.origin.y + floor((screenFrame.height - defaultHeight) / 2.0)
+
+        let contentRect = NSRect(x: defaultX, y: defaultY, width: defaultWidth, height: defaultHeight)
+
+        // Create the window with computed default frame and allow resizing/zooming
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 800),
+            contentRect: contentRect,
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
 
-        window.center()
-        window.title = NSHomeDirectory() // Show home directory initially
-        window.setFrameAutosaveName("MainWindow")
+        window.title = NSHomeDirectory()
         window.isReleasedWhenClosed = false
         window.backgroundColor = .windowBackgroundColor
-        
-        // Set minimum and maximum window sizes
+
+        // Set minimum size; do not set a strict maximum to allow maximize/fullscreen
         window.minSize = NSSize(width: 600, height: 400)
         window.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        
-        // Ensure window is resizable
-        window.styleMask.insert(.resizable)
 
-        // Disable native window tabs - we have our own custom tab implementation
+        // Allow the standard macOS zoom (green) button behavior
         window.tabbingMode = .disallowed
+
+        // Explicitly ensure window is resizable
+        window.styleMask.insert(.resizable)
 
         super.init(window: window)
 
         // Setup Split View Controller
         let newSplitViewController = SplitViewController()
         newSplitViewController.delegate = self // Set delegate
-        // Force the view to load now
-        _ = newSplitViewController.view
         splitViewController = newSplitViewController
 
         if let splitVC = splitViewController?.splitViewItems.first?.viewController as? SplitPaneViewController {
             splitVC.delegate = self
         }
 
-        // Add split view to the window's content view
-        if let contentView = window.contentView,
-           let splitView = splitViewController?.view {
-            contentView.addSubview(splitView)
+        // IMPORTANT: Set as contentViewController instead of manually adding as subview
+        // This ensures proper window resizing behavior
+        window.contentViewController = newSplitViewController
 
-            // Set up constraints
-            splitView.translatesAutoresizingMaskIntoConstraints = false
+        // Set the window frame AFTER setting contentViewController
+        // This ensures the calculated frame (half screen width) is applied
+        window.setFrame(contentRect, display: false)
 
-            NSLayoutConstraint.activate([
-                splitView.topAnchor.constraint(equalTo: contentView.topAnchor),
-                splitView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-                splitView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-                splitView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
-            ])
-        }
+        // Disable autosave for now to prevent any saved frame interference
+        // TODO: Re-enable after confirming resize works
+        // window.setFrameAutosaveName("MainWindow")
     }
 
     required init?(coder: NSCoder) {

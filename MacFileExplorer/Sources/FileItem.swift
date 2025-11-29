@@ -293,6 +293,45 @@ class FileItem: Hashable {
     // MARK: - Computed Properties
 
     var icon: NSImage {
+        // Use generic SF Symbol icons for protected user folders to avoid TCC permission dialogs
+        // Only applies to folders in the user's home directory
+        if isDirectory {
+            let homePath = FileManager.default.homeDirectoryForCurrentUser.path
+            let parentPath = url.deletingLastPathComponent().path
+
+            if parentPath == homePath {
+                let folderName = url.lastPathComponent
+                switch folderName {
+                case "Desktop":
+                    if let icon = NSImage(systemSymbolName: "desktopcomputer", accessibilityDescription: nil) {
+                        return icon
+                    }
+                case "Documents":
+                    if let icon = NSImage(systemSymbolName: "doc.text", accessibilityDescription: nil) {
+                        return icon
+                    }
+                case "Downloads":
+                    if let icon = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil) {
+                        return icon
+                    }
+                case "Pictures":
+                    if let icon = NSImage(systemSymbolName: "photo", accessibilityDescription: nil) {
+                        return icon
+                    }
+                case "Music":
+                    if let icon = NSImage(systemSymbolName: "music.note", accessibilityDescription: nil) {
+                        return icon
+                    }
+                case "Movies":
+                    if let icon = NSImage(systemSymbolName: "film", accessibilityDescription: nil) {
+                        return icon
+                    }
+                default:
+                    break
+                }
+            }
+        }
+
         let baseIcon = NSWorkspace.shared.icon(forFile: url.path)
         let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
         if useGrayscale {

@@ -43,7 +43,7 @@ class FavoritesWidgetView: StartWidgetView {
         containerStack.orientation = .horizontal
         containerStack.spacing = StartDesignSystem.Spacing.md
         containerStack.alignment = .top
-        containerStack.distribution = .fillEqually
+        containerStack.distribution = .fill
         containerStack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(containerStack)
         
@@ -99,6 +99,9 @@ class FavoritesWidgetView: StartWidgetView {
         card.addSubview(label)
         card.addSubview(button)
 
+        // Set hugging priority to allow resizing
+        card.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
         NSLayoutConstraint.activate([
             iconView.topAnchor.constraint(equalTo: card.topAnchor, constant: StartDesignSystem.Spacing.md),
             iconView.centerXAnchor.constraint(equalTo: card.centerXAnchor),
@@ -115,7 +118,7 @@ class FavoritesWidgetView: StartWidgetView {
             button.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             button.bottomAnchor.constraint(equalTo: card.bottomAnchor),
 
-            card.widthAnchor.constraint(equalToConstant: 100),
+            // Only constrain height, width is flexible
             card.heightAnchor.constraint(equalToConstant: 100)
         ])
 
@@ -166,6 +169,9 @@ class FavoritesWidgetView: StartWidgetView {
         card.addSubview(label)
         card.addSubview(button)
 
+        // Set hugging priority to allow resizing
+        card.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
         NSLayoutConstraint.activate([
             iconView.topAnchor.constraint(equalTo: card.topAnchor, constant: StartDesignSystem.Spacing.md),
             iconView.centerXAnchor.constraint(equalTo: card.centerXAnchor),
@@ -182,7 +188,7 @@ class FavoritesWidgetView: StartWidgetView {
             button.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             button.bottomAnchor.constraint(equalTo: card.bottomAnchor),
 
-            card.widthAnchor.constraint(equalToConstant: 100),
+            // Only constrain height, width is flexible
             card.heightAnchor.constraint(equalToConstant: 100)
         ])
 

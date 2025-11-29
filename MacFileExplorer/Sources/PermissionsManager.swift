@@ -7,9 +7,6 @@ enum PermissionType: String, CaseIterable {
     case photos = "Photos"
     case camera = "Camera"
     case microphone = "Microphone"
-    case contacts = "Contacts"
-    case calendars = "Calendars"
-    case reminders = "Reminders"
 
     var icon: String {
         switch self {
@@ -21,12 +18,6 @@ enum PermissionType: String, CaseIterable {
             return "camera"
         case .microphone:
             return "mic"
-        case .contacts:
-            return "person.crop.circle"
-        case .calendars:
-            return "calendar"
-        case .reminders:
-            return "list.bullet"
         }
     }
 
@@ -40,12 +31,6 @@ enum PermissionType: String, CaseIterable {
             return "Access to your camera"
         case .microphone:
             return "Access to your microphone"
-        case .contacts:
-            return "Access to your contacts"
-        case .calendars:
-            return "Access to your calendars"
-        case .reminders:
-            return "Access to your reminders"
         }
     }
 }
@@ -252,7 +237,7 @@ class PermissionsManager {
 
     func refreshBookmarkIfStale(for url: URL) {
         guard isSandboxed() else { return }
-        guard var datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data] else { return }
+        guard let datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data] else { return }
         var updated: [Data] = []
         for data in datas {
             let entry = resolveBookmarkData(data)
@@ -282,12 +267,6 @@ class PermissionsManager {
             return checkCameraAccess()
         case .microphone:
             return checkMicrophoneAccess()
-        case .contacts:
-            return checkContactsAccess()
-        case .calendars:
-            return checkCalendarsAccess()
-        case .reminders:
-            return checkRemindersAccess()
         }
     }
 
@@ -353,23 +332,7 @@ class PermissionsManager {
         }
     }
 
-    private func checkContactsAccess() -> PermissionStatus {
-        // Contacts framework check
-        // This is a basic implementation
-        return .notApplicable
-    }
 
-    private func checkCalendarsAccess() -> PermissionStatus {
-        // EventKit framework check
-        // This is a basic implementation
-        return .notApplicable
-    }
-
-    private func checkRemindersAccess() -> PermissionStatus {
-        // EventKit framework check for reminders
-        // This is a basic implementation
-        return .notApplicable
-    }
 
     func openSystemPreferences(for type: PermissionType) {
         var urlString = "x-apple.systempreferences:com.apple.preference.security?"
@@ -383,12 +346,6 @@ class PermissionsManager {
             urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
         case .microphone:
             urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
-        case .contacts:
-            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Contacts"
-        case .calendars:
-            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars"
-        case .reminders:
-            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders"
         }
 
         if let url = URL(string: urlString) {

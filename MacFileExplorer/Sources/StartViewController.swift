@@ -31,7 +31,12 @@ class StartViewController: NSViewController {
     // MARK: - Lifecycle
 
     override func loadView() {
-        view = NSView()
+        // Create a custom view that doesn't impose size constraints
+        let customView = NSView()
+        customView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        customView.setContentHuggingPriority(.defaultLow, for: .vertical)
+        customView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        view = customView
     }
 
     override func viewDidLoad() {
@@ -52,28 +57,34 @@ class StartViewController: NSViewController {
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
 
+        // Ensure the view can resize freely
+        view.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
         // Scroll view for content
         scrollView = NSScrollView()
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
         scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        scrollView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         view.addSubview(scrollView)
 
-        // Content stack
+        // Content stack inside a container view to avoid locking scroll/document sizing
+        let contentView = NSView()
+        contentView.wantsLayer = true
+        contentView.layer?.backgroundColor = NSColor.clear.cgColor
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+
         contentStackView = NSStackView()
         contentStackView.orientation = .vertical
         contentStackView.spacing = StartDesignSystem.Spacing.gridSpacing
         contentStackView.alignment = .leading
-        contentStackView.edgeInsets = NSEdgeInsets(
-            top: StartDesignSystem.Spacing.lg,
-            left: StartDesignSystem.Spacing.xxl,
-            bottom: StartDesignSystem.Spacing.xxl,
-            right: StartDesignSystem.Spacing.xxl
-        )
         contentStackView.translatesAutoresizingMaskIntoConstraints = false
 
-        scrollView.documentView = contentStackView
+        contentView.addSubview(contentStackView)
+        scrollView.documentView = contentView
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -81,11 +92,19 @@ class StartViewController: NSViewController {
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 
-            contentStackView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentStackView.leadingAnchor.constraint(greaterThanOrEqualTo: scrollView.leadingAnchor),
-            contentStackView.trailingAnchor.constraint(lessThanOrEqualTo: scrollView.trailingAnchor),
-            contentStackView.centerXAnchor.constraint(equalTo: scrollView.centerXAnchor),
-            contentStackView.widthAnchor.constraint(lessThanOrEqualToConstant: StartDesignSystem.Layout.maxContentWidth)
+            // Pin the document container to the scroll view's contentView
+            contentView.topAnchor.constraint(equalTo: scrollView.contentView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.contentView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.contentView.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.contentView.bottomAnchor),
+            // Make the document container match the visible width (no horizontal scrolling)
+            contentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor),
+
+            // Stack inside the content container with padding
+            contentStackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: StartDesignSystem.Spacing.lg),
+            contentStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: StartDesignSystem.Spacing.xxl),
+            contentStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -StartDesignSystem.Spacing.xxl),
+            contentStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -StartDesignSystem.Spacing.xxl)
         ])
     }
 
@@ -119,6 +138,7 @@ class StartViewController: NSViewController {
         widget.translatesAutoresizingMaskIntoConstraints = false
         contentStackView.addArrangedSubview(widget)
 
+        // Widgets should fill the stack view width
         NSLayoutConstraint.activate([
             widget.leadingAnchor.constraint(equalTo: contentStackView.leadingAnchor),
             widget.trailingAnchor.constraint(equalTo: contentStackView.trailingAnchor)

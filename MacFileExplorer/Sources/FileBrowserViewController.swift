@@ -705,42 +705,47 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         }
         guard let split = previewSplitView else { return }
         
-        // Move content view to split if it's not already there
-        if contentView.superview !== split {
-            // Remove any existing constraints on the content view
-            contentView.removeFromSuperview()
-            split.addArrangedSubview(contentView)
-        }
-        
-        // Ensure preview pane exists
+        // Ensure preview pane exists first
         if previewPaneViewController == nil {
             let previewVC = PreviewPaneViewController()
             previewVC.position = .right
             addChild(previewVC)
             previewPaneViewController = previewVC
-            let pv = previewVC.view
-            pv.translatesAutoresizingMaskIntoConstraints = false
-            pv.setContentHuggingPriority(.defaultLow, for: .horizontal)
-            pv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-            split.addArrangedSubview(pv)
-            
-            // Apply saved width if available
-            let savedWidth = UserDefaults.standard.double(forKey: UserDefaults.Keys.previewPaneWidth.rawValue)
-            if savedWidth > 100 { // apply a reasonable minimum threshold
-                DispatchQueue.main.async { [weak split] in
-                    guard let split = split else { return }
-                    let total = split.bounds.width
-                    let position = max(0, total - CGFloat(savedWidth))
-                    split.setPosition(position, ofDividerAt: 0)
-                }
-            }
+        }
+
+        // Always ensure correct order: content view at index 0, preview at index 1
+        // Remove both views first to reset order
+        contentView.removeFromSuperview()
+        previewPaneViewController?.view.removeFromSuperview()
+
+        // Add content view first (left side)
+        split.insertArrangedSubview(contentView, at: 0)
+
+        // Add preview pane second (right side)
+        let pv = previewPaneViewController!.view
+        pv.translatesAutoresizingMaskIntoConstraints = false
+        pv.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        pv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        split.insertArrangedSubview(pv, at: 1)
+
+        // Set delegate only once
+        if split.delegate == nil {
             split.delegate = self
-            // Show current selection
-            if let sel = currentSingleSelection() { previewVC.previewFile(sel) }
-        } else if previewPaneViewController?.view.superview !== split {
-            // Re-add preview pane if it was removed
-            let pv = previewPaneViewController!.view
-            split.addArrangedSubview(pv)
+        }
+
+        // Apply saved width if available
+        let savedWidth = UserDefaults.standard.double(forKey: UserDefaults.Keys.previewPaneWidth.rawValue)
+        let widthToApply = savedWidth > 100 ? savedWidth : 300.0 // Default to 300 if no saved width
+        DispatchQueue.main.async { [weak split] in
+            guard let split = split else { return }
+            let total = split.bounds.width
+            let position = max(0, total - CGFloat(widthToApply))
+            split.setPosition(position, ofDividerAt: 0)
+        }
+
+        // Show current selection
+        if let sel = currentSingleSelection() {
+            previewPaneViewController?.previewFile(sel)
         }
     }
 
@@ -1041,7 +1046,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         newBrowser.allowsEmptySelection = true
         newBrowser.takesTitleFromPreviousColumn = false
         newBrowser.separatesColumns = true
-        newBrowser.rowHeight = 22.0
+        // Note: rowHeight is deprecated and causes crashes on macOS 15+
+        // NSBrowser automatically sizes rows based on font and cell type
         newBrowser.hasHorizontalScroller = true
         newBrowser.autohidesScroller = true
         newBrowser.minColumnWidth = 180
@@ -1717,6 +1723,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         menu.addItem(tagsMenuItem)
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Show in Finder", action: #selector(contextMenuShowInFinder(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Open in Terminal", action: #selector(contextMenuOpenInTerminal(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "Close Pane", action: #selector(contextMenuClosePane(_:)), keyEquivalent: "")
 
@@ -2625,6 +2632,51 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         delegate?.fileBrowserDidRequestClosePane(self)
     }
 
+    @objc private func contextMenuOpenInTerminal(_ sender: Any) {
+        let items = getSelectedItems()
+        var targetURL: URL
+
+        if let item = items.first {
+            // Determine target directory
+            if item.isDirectory {
+                targetURL = item.url
+            } else {
+                // If file selected, use parent directory
+                targetURL = item.url.deletingLastPathComponent()
+            }
+        } else {
+            // No selection - use current directory
+            targetURL = currentDirectory
+        }
+
+        // Open embedded terminal and navigate to target directory
+        if let splitPaneVC = parent as? SplitPaneViewController,
+           let tabBarController = splitPaneVC.parent as? TabBarController,
+           let splitViewController = tabBarController.parent as? NSSplitViewController,
+           let mainSplitVC = splitViewController.parent as? SplitViewController {
+            // Open terminal if not already visible
+            if !(mainSplitVC.isTerminalVisible) {
+                mainSplitVC.toggleTerminal()
+            }
+            // Change to target directory
+            mainSplitVC.terminalViewController?.changeDirectory(to: targetURL.path)
+        }
+    }
+
+    private func openInExternalTerminal(at url: URL) {
+        // Open Terminal.app at specified directory
+        let config = NSWorkspace.OpenConfiguration()
+        NSWorkspace.shared.open(
+            [url],
+            withApplicationAt: URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"),
+            configuration: config
+        ) { (app, error) in
+            if let error = error {
+                print("Error opening Terminal.app: \(error)")
+            }
+        }
+    }
+
     @objc private func checkboxToggled(_ sender: NSButton) {
         let row = sender.tag
         guard row >= 0, row < outlineView.numberOfRows else { return }
@@ -3408,6 +3460,21 @@ extension FileBrowserViewController: ToolbarDelegate {
     func toolbarDidRequestShowFilter() {
         showFilterPanel()
     }
+
+    func toolbarDidRequestOpenInTerminal() {
+        // Open embedded terminal and navigate to current directory
+        if let splitPaneVC = parent as? SplitPaneViewController,
+           let tabBarController = splitPaneVC.parent as? TabBarController,
+           let splitViewController = tabBarController.parent as? NSSplitViewController,
+           let mainSplitVC = splitViewController.parent as? SplitViewController {
+            // Open terminal if not already visible
+            if !(mainSplitVC.isTerminalVisible) {
+                mainSplitVC.toggleTerminal()
+            }
+            // Change to current directory
+            mainSplitVC.terminalViewController?.changeDirectory(to: currentDirectory.path)
+        }
+    }
 }
 
 // MARK: - NSOutlineViewDataSource
@@ -3708,7 +3775,12 @@ extension FileBrowserViewController: NSBrowserDelegate {
         print("BrowserDelegate: numberOfRowsInColumn: \(column) -> \(count)")
         return count
     }
-    
+
+    func browser(_ browser: NSBrowser, heightOfRow row: Int, inColumn column: Int) -> CGFloat {
+        // Return proper row height for better spacing (22pt is standard for browser rows)
+        return 22.0
+    }
+
     func browser(_ browser: NSBrowser, willDisplayCell cell: Any, atRow row: Int, column: Int) {
         print("BrowserDelegate: willDisplayCell at row \(row), column \(column)")
         guard let cell = cell as? NSBrowserCell,

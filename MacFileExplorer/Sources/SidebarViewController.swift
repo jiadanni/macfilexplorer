@@ -99,10 +99,29 @@ class SidebarViewController: NSViewController {
         NotificationCenter.default.addObserver(forName: .accentColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.refreshSidebarButtons()
         }
+
+        // Listen for volume mount/unmount notifications to keep drives list in sync
+        let workspace = NSWorkspace.shared
+        NotificationCenter.default.addObserver(self, selector: #selector(volumeDidMount(_:)), name: NSWorkspace.didMountNotification, object: workspace)
+        NotificationCenter.default.addObserver(self, selector: #selector(volumeDidUnmount(_:)), name: NSWorkspace.didUnmountNotification, object: workspace)
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self, name: .accentColorDidChangeNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSWorkspace.didMountNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: NSWorkspace.didUnmountNotification, object: nil)
+    }
+
+    @objc private func volumeDidMount(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            self?.loadSidebarItems()
+        }
+    }
+
+    @objc private func volumeDidUnmount(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            self?.loadSidebarItems()
+        }
     }
 
     private func refreshSidebarButtons() {
@@ -626,7 +645,7 @@ class SidebarViewController: NSViewController {
     
     private func expandAndSelectPath(pathComponents: [URL], currentItem: FileItem?, index: Int) {
         guard let item = currentItem else { return }
-        
+
         // If we've reached the target
         if index >= pathComponents.count {
             // We've reached the final target - select it
@@ -637,14 +656,18 @@ class SidebarViewController: NSViewController {
             }
             return
         }
-        
+
         let targetURL = pathComponents[index]
-        
+
+        // Don't auto-load children for user folder to avoid TCC permission dialogs
+        // Only load children if user has explicitly expanded this folder before
+        let isUserHomeFolder = item.url.path == FileManager.default.homeDirectoryForCurrentUser.path
+
         // First, expand the current item so we can see its children
         folderExplorerOutlineView.expandItem(item)
-        
-        // Load children if not loaded
-        if item.children == nil {
+
+        // Load children if not loaded, but skip user home folder to avoid TCC dialogs
+        if item.children == nil && !isUserHomeFolder {
             item.loadChildren(showsHiddenFiles: false) { _ in
                 DispatchQueue.main.async { [weak self] in
                     self?.folderExplorerOutlineView.reloadItem(item, reloadChildren: true)
@@ -998,6 +1021,10 @@ extension SidebarViewController: NSTableViewDelegate {
 
         do {
             try NSWorkspace.shared.unmountAndEjectDevice(at: driveItem.url)
+            // Refresh the drives list after successful ejection
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.loadSidebarItems()
+            }
         } catch {
             let alert = NSAlert()
             alert.messageText = "Eject Failed"

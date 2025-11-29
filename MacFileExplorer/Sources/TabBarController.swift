@@ -18,7 +18,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     private var tabCloseButtons: [NSButton] = []
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 600))
+        view = NSView()
         setupUI()
         
         // Listen for accent color changes

@@ -67,7 +67,8 @@ extension UserDefaults {
         case showPreviewPaneButton = "showPreviewPaneButton"
         case showNewFolderButton = "showNewFolderButton"
         case showSortButton = "showSortButton"
-        
+        case showOpenTerminalButton = "showOpenTerminalButton"
+
         // Column Visibility (List View)
         case columnVisibility = "columnVisibility" // Dictionary: ColumnIdentifier -> Bool (visible)
         
@@ -111,7 +112,7 @@ extension UserDefaults {
         case dismissedWelcome = "dismissedWelcome"         // Bool - user dismissed welcome widget
 
         static var allCases: [Keys] {
-            return [.warnOnExtensionChange, .enableEasySelect, .restoreTabsOnReopen, .showFavorites, .showRecents, .showLocations, .sidebarOrder, .openTerminalByDefault, .showContextMenuHotkeys, .hideOpenWith, .hideGetInfo, .hideCopy, .hideCut, .hidePaste, .hideRename, .hideMoveToTrash, .hideNewFolder, .hideShowInFinder, .expandSidebarToCurrentDirectory, .showStatusBar, .autoRenameOnConflict, .deleteWithBackspaceOnly, .confirmFileOperations, .showOperationProgress, .showBackForwardButtons, .showViewModeButton, .showHiddenFilesButton, .showSplitButtons, .showPreviewPaneButton, .showNewFolderButton, .showSortButton, .columnVisibility, .openSettingsInTab, .folderSortPreferences, .hiddenFilesState, .defaultViewMode, .defaultSortColumn, .defaultSortAscending, .maximumPanes, .showFolderSizes, .showGoHome, .showGoDesktop, .showGoDocuments, .showGoDownloads, .showGoApplications, .showGoUtilities, .showGoLibrary, .showGoComputer, .showGoAirDrop, .showGoNetwork, .showGoiCloudDrive, .showGoRecent, .showGoConnectToServer, .previewPaneWidth, .grantedDirectoriesPaths, .grantedDirectoryBookmarks, .grantedDirectoryBookmarksMigrated, .hasLaunchedBefore, .hasCompletedOnboarding, .showStartOnLaunch, .dismissedWelcome]
+            return [.warnOnExtensionChange, .enableEasySelect, .restoreTabsOnReopen, .showFavorites, .showRecents, .showLocations, .sidebarOrder, .openTerminalByDefault, .showContextMenuHotkeys, .hideOpenWith, .hideGetInfo, .hideCopy, .hideCut, .hidePaste, .hideRename, .hideMoveToTrash, .hideNewFolder, .hideShowInFinder, .expandSidebarToCurrentDirectory, .showStatusBar, .autoRenameOnConflict, .deleteWithBackspaceOnly, .confirmFileOperations, .showOperationProgress, .showBackForwardButtons, .showViewModeButton, .showHiddenFilesButton, .showSplitButtons, .showPreviewPaneButton, .showNewFolderButton, .showSortButton, .showOpenTerminalButton, .columnVisibility, .openSettingsInTab, .folderSortPreferences, .hiddenFilesState, .defaultViewMode, .defaultSortColumn, .defaultSortAscending, .maximumPanes, .showFolderSizes, .showGoHome, .showGoDesktop, .showGoDocuments, .showGoDownloads, .showGoApplications, .showGoUtilities, .showGoLibrary, .showGoComputer, .showGoAirDrop, .showGoNetwork, .showGoiCloudDrive, .showGoRecent, .showGoConnectToServer, .previewPaneWidth, .grantedDirectoriesPaths, .grantedDirectoryBookmarks, .grantedDirectoryBookmarksMigrated, .hasLaunchedBefore, .hasCompletedOnboarding, .showStartOnLaunch, .dismissedWelcome]
         }
     }
 }
@@ -1520,15 +1521,18 @@ class TerminalSettingsViewController: NSViewController {
 
         scrollView.documentView = contentView
 
+        // Anchor the content view to the scroll view's contentView so the top stays pinned
+        let contentContainer = scrollView.contentView
         NSLayoutConstraint.activate([
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentView.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            contentView.widthAnchor.constraint(lessThanOrEqualTo: contentContainer.widthAnchor),
 
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20)
+            stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -20),
         ])
 
         addTerminalSettings()
@@ -1540,12 +1544,20 @@ class TerminalSettingsViewController: NSViewController {
         stackView.addArrangedSubview(titleLabel)
 
         addCheckbox(title: "Open by default", key: .openTerminalByDefault)
-        
+
         // Add description
         let descriptionLabel = NSTextField(labelWithString: "Show the terminal panel by default when opening windows")
         descriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         descriptionLabel.textColor = .secondaryLabelColor
         stackView.addArrangedSubview(descriptionLabel)
+
+        addCheckbox(title: "Show \"Open in Terminal\" toolbar button", key: .showOpenTerminalButton, defaultValue: true)
+
+        // Add description
+        let toolbarButtonDescriptionLabel = NSTextField(labelWithString: "Display a toolbar button to open the current folder in Terminal.app")
+        toolbarButtonDescriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        toolbarButtonDescriptionLabel.textColor = .secondaryLabelColor
+        stackView.addArrangedSubview(toolbarButtonDescriptionLabel)
     }
 
     private func addCheckbox(title: String, key: UserDefaults.Keys, defaultValue: Bool = false) {
@@ -2200,8 +2212,9 @@ class PermissionsSettingsViewController: NSViewController {
         spacer1.heightAnchor.constraint(equalToConstant: 10).isActive = true
         stackView.addArrangedSubview(spacer1)
 
-        // Add permission rows
-        for permissionType in PermissionType.allCases {
+        // Add permission rows (only surface permissions the app might use)
+        let visiblePermissions: [PermissionType] = [.fullDiskAccess]
+        for permissionType in visiblePermissions {
             let permissionRow = createPermissionRow(for: permissionType)
             stackView.addArrangedSubview(permissionRow)
             permissionViews[permissionType] = permissionRow
@@ -2359,6 +2372,14 @@ class PermissionsSettingsViewController: NSViewController {
         refreshButton.bezelStyle = .rounded
         buttonsRow.addArrangedSubview(refreshButton)
 
+        let exportButton = NSButton(title: "Export List", target: self, action: #selector(exportGrantedDirectories(_:)))
+        exportButton.bezelStyle = .rounded
+        buttonsRow.addArrangedSubview(exportButton)
+
+        let helpButton = NSButton(title: "How to revoke", target: self, action: #selector(showRevokeHelp(_:)))
+        helpButton.bezelStyle = .rounded
+        buttonsRow.addArrangedSubview(helpButton)
+
         stackView.addArrangedSubview(buttonsRow)
 
         refreshGrantedDirectories()
@@ -2471,13 +2492,49 @@ class PermissionsSettingsViewController: NSViewController {
         refreshGrantedDirectories()
     }
 
+    @objc private func exportGrantedDirectories(_ sender: NSButton) {
+        let entries = PermissionsManager.shared.resolvedGrantedDirectoryEntries()
+        var lines: [String] = []
+        for entry in entries {
+            if let url = entry.url {
+                lines.append(url.path)
+            } else {
+                lines.append(entry.path)
+            }
+        }
+        let text = lines.joined(separator: "\n")
+        let desktop = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Desktop")
+        let outURL = desktop.appendingPathComponent("granted_directories.txt")
+        do {
+            try text.write(to: outURL, atomically: true, encoding: .utf8)
+            let alert = NSAlert()
+            alert.messageText = "Export Complete"
+            alert.informativeText = "Exported \(lines.count) entries to \(outURL.path)"
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        } catch {
+            let alert = NSAlert(error: error)
+            alert.runModal()
+        }
+    }
+
+    @objc private func showRevokeHelp(_ sender: NSButton) {
+        let alert = NSAlert()
+        alert.messageText = "How to Revoke Directory Access"
+        alert.informativeText = "To revoke a granted folder:\n\n1) Open Settings → Permissions → Granted Directory Access.\n2) Find the folder and click 'Remove' to revoke access.\n\nAlternatively, you can remove saved entries by deleting the keys in your preferences plist (not recommended unless you know what you're doing):\ndefaults write com.macfileexplorer.app grantedDirectoriesPaths -array\ndefaults write com.macfileexplorer.app grantedDirectoryBookmarks -array\n\nAfter removing entries, restart the app to apply changes."
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
     private func refreshGrantedDirectories() {
         directoryListStack.arrangedSubviews.forEach { directoryListStack.removeArrangedSubview($0); $0.removeFromSuperview() }
         let entries = PermissionsManager.shared.resolvedGrantedDirectoryEntries()
         if entries.isEmpty {
-            let emptyLabel = NSTextField(labelWithString: "No directories granted yet.")
+            let emptyLabel = NSTextField(labelWithString: "No directories granted yet. Use 'Add Directory…' to grant persistent access to a folder. You can revoke access later with 'Remove'.")
             emptyLabel.textColor = .secondaryLabelColor
             emptyLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+            emptyLabel.maximumNumberOfLines = 0
+            emptyLabel.preferredMaxLayoutWidth = 500
             directoryListStack.addArrangedSubview(emptyLabel)
         } else {
             for entry in entries {

@@ -22,6 +22,7 @@ protocol ToolbarDelegate: AnyObject {
     func toolbarDidSearchTextChange(_ searchText: String)
     func toolbarDidTogglePreviewPane()
     func toolbarDidRequestShowFilter()
+    func toolbarDidRequestOpenInTerminal()
 }
 
 class ToolbarViewController: NSViewController {
@@ -46,6 +47,7 @@ class ToolbarViewController: NSViewController {
     private var filterButton: NSButton!
     private var previewPaneButton: NSButton!
     private var storageAnalyzerButton: NSButton!
+    private var openTerminalButton: NSButton!
 
     private var currentURL: URL?
     private var canGoBack: Bool = false
@@ -55,7 +57,8 @@ class ToolbarViewController: NSViewController {
     private var showingHiddenFiles: Bool = false
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 40))
+        // Increased height to accommodate two rows: buttons (40) + breadcrumb bar (30)
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 70))
         setupUI()
         // Observe preview pane visibility changes to update toggle button state
         NotificationCenter.default.addObserver(self, selector: #selector(handlePreviewPaneToggled(_:)), name: .previewPaneToggled, object: nil)
@@ -91,6 +94,7 @@ class ToolbarViewController: NSViewController {
         let showNewFolder = UserDefaults.standard.object(forKey: UserDefaults.Keys.showNewFolderButton.rawValue) as? Bool ?? true
         let showSort = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSortButton.rawValue) as? Bool ?? true
         let showStorageAnalyzer = UserDefaults.standard.object(forKey: "showStorageAnalyzerButton") as? Bool ?? true
+        let showOpenTerminal = UserDefaults.standard.object(forKey: UserDefaults.Keys.showOpenTerminalButton.rawValue) as? Bool ?? true
 
         // Back button
         backButton = NSButton()
@@ -236,6 +240,17 @@ class ToolbarViewController: NSViewController {
         storageAnalyzerButton.isHidden = !showStorageAnalyzer
         view.addSubview(storageAnalyzerButton)
 
+        // Open in Terminal button
+        openTerminalButton = NSButton()
+        openTerminalButton.translatesAutoresizingMaskIntoConstraints = false
+        openTerminalButton.bezelStyle = .texturedRounded
+        openTerminalButton.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: "Open in Terminal")
+        openTerminalButton.target = self
+        openTerminalButton.action = #selector(openTerminalButtonClicked(_:))
+        openTerminalButton.toolTip = "Open in Terminal"
+        openTerminalButton.isHidden = !showOpenTerminal
+        view.addSubview(openTerminalButton)
+
         // Sort button
         sortButton = AccentPopUpButton()
         sortButton.translatesAutoresizingMaskIntoConstraints = false
@@ -312,96 +327,101 @@ class ToolbarViewController: NSViewController {
             bottomBorder.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             bottomBorder.heightAnchor.constraint(equalToConstant: 1),
 
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
-            backButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            backButton.widthAnchor.constraint(equalToConstant: 30),
-            backButton.heightAnchor.constraint(equalToConstant: 26),
-
-            forwardButton.leadingAnchor.constraint(equalTo: backButton.trailingAnchor, constant: 4),
-            forwardButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            forwardButton.widthAnchor.constraint(equalToConstant: 30),
-            forwardButton.heightAnchor.constraint(equalToConstant: 26),
-
-            breadcrumbScrollView.leadingAnchor.constraint(equalTo: forwardButton.trailingAnchor, constant: 8),
-            breadcrumbScrollView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            breadcrumbScrollView.heightAnchor.constraint(equalToConstant: 26),
-            breadcrumbScrollView.widthAnchor.constraint(lessThanOrEqualToConstant: 600),
-            breadcrumbScrollView.widthAnchor.constraint(greaterThanOrEqualToConstant: 120),
-            breadcrumbScrollView.trailingAnchor.constraint(lessThanOrEqualTo: listModeButton.leadingAnchor, constant: -8),
-
-            breadcrumbStackView.leadingAnchor.constraint(equalTo: breadcrumbScrollView.leadingAnchor),
-            breadcrumbStackView.topAnchor.constraint(equalTo: breadcrumbScrollView.topAnchor),
-            breadcrumbStackView.bottomAnchor.constraint(equalTo: breadcrumbScrollView.bottomAnchor),
-
-            listModeButton.trailingAnchor.constraint(equalTo: iconsModeButton.leadingAnchor, constant: -4),
-            listModeButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            // Top row: view mode and action buttons
+            listModeButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
+            listModeButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             listModeButton.widthAnchor.constraint(equalToConstant: 30),
             listModeButton.heightAnchor.constraint(equalToConstant: 26),
 
-            iconsModeButton.trailingAnchor.constraint(equalTo: columnsModeButton.leadingAnchor, constant: -4),
-            iconsModeButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            iconsModeButton.leadingAnchor.constraint(equalTo: listModeButton.trailingAnchor, constant: 4),
+            iconsModeButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             iconsModeButton.widthAnchor.constraint(equalToConstant: 30),
             iconsModeButton.heightAnchor.constraint(equalToConstant: 26),
 
-            columnsModeButton.trailingAnchor.constraint(equalTo: windowsListModeButton.leadingAnchor, constant: -4),
-            columnsModeButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            columnsModeButton.leadingAnchor.constraint(equalTo: iconsModeButton.trailingAnchor, constant: 4),
+            columnsModeButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             columnsModeButton.widthAnchor.constraint(equalToConstant: 30),
             columnsModeButton.heightAnchor.constraint(equalToConstant: 26),
 
-            windowsListModeButton.trailingAnchor.constraint(equalTo: hiddenFilesButton.leadingAnchor, constant: -8),
-            windowsListModeButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            windowsListModeButton.leadingAnchor.constraint(equalTo: columnsModeButton.trailingAnchor, constant: 4),
+            windowsListModeButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             windowsListModeButton.widthAnchor.constraint(equalToConstant: 30),
             windowsListModeButton.heightAnchor.constraint(equalToConstant: 26),
-            
-            hiddenFilesButton.trailingAnchor.constraint(equalTo: splitVerticalButton.leadingAnchor, constant: -4),
-            hiddenFilesButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+
+            hiddenFilesButton.leadingAnchor.constraint(equalTo: windowsListModeButton.trailingAnchor, constant: 8),
+            hiddenFilesButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             hiddenFilesButton.widthAnchor.constraint(equalToConstant: 30),
             hiddenFilesButton.heightAnchor.constraint(equalToConstant: 26),
-            
-            splitVerticalButton.trailingAnchor.constraint(equalTo: splitHorizontalButton.leadingAnchor, constant: -4),
-            splitVerticalButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+
+            splitVerticalButton.leadingAnchor.constraint(equalTo: hiddenFilesButton.trailingAnchor, constant: 4),
+            splitVerticalButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             splitVerticalButton.widthAnchor.constraint(equalToConstant: 30),
             splitVerticalButton.heightAnchor.constraint(equalToConstant: 26),
-            
-            splitHorizontalButton.trailingAnchor.constraint(equalTo: previewPaneButton.leadingAnchor, constant: -4),
-            splitHorizontalButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+
+            splitHorizontalButton.leadingAnchor.constraint(equalTo: splitVerticalButton.trailingAnchor, constant: 4),
+            splitHorizontalButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             splitHorizontalButton.widthAnchor.constraint(equalToConstant: 30),
             splitHorizontalButton.heightAnchor.constraint(equalToConstant: 26),
 
-            previewPaneButton.trailingAnchor.constraint(equalTo: newFolderButton.leadingAnchor, constant: -8),
-            previewPaneButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            previewPaneButton.leadingAnchor.constraint(equalTo: splitHorizontalButton.trailingAnchor, constant: 4),
+            previewPaneButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             previewPaneButton.widthAnchor.constraint(equalToConstant: 30),
             previewPaneButton.heightAnchor.constraint(equalToConstant: 26),
 
-            newFolderButton.trailingAnchor.constraint(equalTo: storageAnalyzerButton.leadingAnchor, constant: -8),
-            newFolderButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            newFolderButton.leadingAnchor.constraint(equalTo: previewPaneButton.trailingAnchor, constant: 8),
+            newFolderButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             newFolderButton.widthAnchor.constraint(equalToConstant: 30),
             newFolderButton.heightAnchor.constraint(equalToConstant: 26),
 
-            storageAnalyzerButton.trailingAnchor.constraint(equalTo: sortButton.leadingAnchor, constant: -8),
-            storageAnalyzerButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            storageAnalyzerButton.leadingAnchor.constraint(equalTo: newFolderButton.trailingAnchor, constant: 8),
+            storageAnalyzerButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             storageAnalyzerButton.widthAnchor.constraint(equalToConstant: 30),
             storageAnalyzerButton.heightAnchor.constraint(equalToConstant: 26),
 
+            openTerminalButton.leadingAnchor.constraint(equalTo: storageAnalyzerButton.trailingAnchor, constant: 8),
+            openTerminalButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
+            openTerminalButton.widthAnchor.constraint(equalToConstant: 30),
+            openTerminalButton.heightAnchor.constraint(equalToConstant: 26),
+
             sortButton.trailingAnchor.constraint(equalTo: searchField.leadingAnchor, constant: -8),
-            sortButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            sortButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             sortButton.widthAnchor.constraint(equalToConstant: 44),
             sortButton.heightAnchor.constraint(equalToConstant: 26),
 
             searchField.trailingAnchor.constraint(equalTo: filterButton.leadingAnchor, constant: -8),
-            searchField.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            searchField.topAnchor.constraint(equalTo: view.topAnchor, constant: 9),
             searchField.widthAnchor.constraint(equalToConstant: 150),
             searchField.heightAnchor.constraint(equalToConstant: 22),
-            
+
             filterButton.trailingAnchor.constraint(equalTo: closePaneButton.leadingAnchor, constant: -4),
-            filterButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            filterButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             filterButton.widthAnchor.constraint(equalToConstant: 30),
             filterButton.heightAnchor.constraint(equalToConstant: 26),
 
             closePaneButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
-            closePaneButton.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            closePaneButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             closePaneButton.widthAnchor.constraint(equalToConstant: 30),
-            closePaneButton.heightAnchor.constraint(equalToConstant: 26)
+            closePaneButton.heightAnchor.constraint(equalToConstant: 26),
+
+            // Bottom row: back/forward buttons + breadcrumb/URL bar
+            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
+            backButton.topAnchor.constraint(equalTo: listModeButton.bottomAnchor, constant: 6),
+            backButton.widthAnchor.constraint(equalToConstant: 30),
+            backButton.heightAnchor.constraint(equalToConstant: 26),
+
+            forwardButton.leadingAnchor.constraint(equalTo: backButton.trailingAnchor, constant: 4),
+            forwardButton.topAnchor.constraint(equalTo: listModeButton.bottomAnchor, constant: 6),
+            forwardButton.widthAnchor.constraint(equalToConstant: 30),
+            forwardButton.heightAnchor.constraint(equalToConstant: 26),
+
+            breadcrumbScrollView.leadingAnchor.constraint(equalTo: forwardButton.trailingAnchor, constant: 8),
+            breadcrumbScrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
+            breadcrumbScrollView.topAnchor.constraint(equalTo: listModeButton.bottomAnchor, constant: 6),
+            breadcrumbScrollView.heightAnchor.constraint(equalToConstant: 26),
+
+            breadcrumbStackView.leadingAnchor.constraint(equalTo: breadcrumbScrollView.leadingAnchor),
+            breadcrumbStackView.topAnchor.constraint(equalTo: breadcrumbScrollView.topAnchor),
+            breadcrumbStackView.bottomAnchor.constraint(equalTo: breadcrumbScrollView.bottomAnchor)
         ])
     }
 
@@ -421,10 +441,29 @@ class ToolbarViewController: NSViewController {
     }
 
     func updateViewModeDisplay(for viewMode: ViewMode) {
+        // Update button states
         listModeButton.state = (viewMode == .list) ? .on : .off
         iconsModeButton.state = (viewMode == .icons) ? .on : .off
         columnsModeButton.state = (viewMode == .columns) ? .on : .off
         windowsListModeButton.state = (viewMode == .windowsList) ? .on : .off
+
+        // Add visual highlighting for active button using accent color
+        let accentColor = NSColor.customAccentColor
+        let buttons = [listModeButton, iconsModeButton, columnsModeButton, windowsListModeButton]
+
+        for button in buttons {
+            if button?.state == .on {
+                // Active button: use accent color tint
+                button?.contentTintColor = accentColor
+                button?.layer?.backgroundColor = accentColor.withAlphaComponent(0.15).cgColor
+                button?.layer?.cornerRadius = 4
+                button?.wantsLayer = true
+            } else {
+                // Inactive button: default appearance
+                button?.contentTintColor = nil
+                button?.layer?.backgroundColor = NSColor.clear.cgColor
+            }
+        }
     }
     
     func updateHiddenFilesDisplay(showing: Bool) {
@@ -733,6 +772,10 @@ class ToolbarViewController: NSViewController {
            let tabBarController = splitPaneVC.parent as? TabBarController {
             tabBarController.openStorageAnalyzerTab()
         }
+    }
+
+    @objc private func openTerminalButtonClicked(_ sender: Any) {
+        delegate?.toolbarDidRequestOpenInTerminal()
     }
 
     @objc private func searchFieldChanged(_ sender: NSSearchField) {

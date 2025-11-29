@@ -1,4 +1,5 @@
 import Cocoa
+import Darwin
 
 protocol TerminalViewControllerDelegate: AnyObject {
     func terminalViewControllerDidRequestClose(_ controller: TerminalViewController)
@@ -18,6 +19,13 @@ class TerminalViewController: NSViewController {
     private var commandHistory: [String] = []
     private var historyIndex = 0
 
+    // PTY-based shell session
+    private var masterFileDescriptor: Int32 = -1
+    private var shellTask: Process?
+    private var inputSource: DispatchSourceRead?
+    private var outputQueue = DispatchQueue(label: "com.macfileexplorer.terminal.output")
+    private var inputBuffer = ""
+
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 200))
         setupUI()
@@ -26,17 +34,17 @@ class TerminalViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         currentDirectory = FileManager.default.homeDirectoryForCurrentUser.path
+        startShellSession()
     }
 
     override func viewDidAppear() {
         super.viewDidAppear()
-        // Display prompt after view is fully laid out
-        if textView.string.isEmpty || !textView.string.contains("$") {
-            displayPrompt()
-        }
-        updateInputPlaceholder()
         focusInput()
         inputField.becomeFirstResponder()
+    }
+
+    deinit {
+        terminateShellSession()
     }
 
     private func setupUI() {
@@ -93,7 +101,7 @@ class TerminalViewController: NSViewController {
         inputField.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         inputField.isBordered = false
         inputField.focusRingType = .none
-        inputField.placeholderString = ""
+        inputField.placeholderString = "$"
         inputField.delegate = self
         inputField.target = self
         inputField.action = #selector(handleEnterKey(_:))
@@ -124,26 +132,264 @@ class TerminalViewController: NSViewController {
             inputField.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             inputField.heightAnchor.constraint(equalToConstant: 30)
         ])
-
-        // Display welcome message
-        appendOutput("Terminal Ready - Using shell: \(getShellPath())\n")
-        appendOutput("Type 'help' for available commands\n\n")
     }
-    
+
+    // MARK: - PTY Shell Session Management
+
+    private func startShellSession() {
+        // Get the user's shell
+        let shellPath = getShellPath()
+
+        // Create PTY
+        masterFileDescriptor = posix_openpt(O_RDWR | O_NOCTTY)
+        guard masterFileDescriptor >= 0 else {
+            appendOutput("Failed to create PTY\n", color: .red)
+            return
+        }
+
+        guard grantpt(masterFileDescriptor) == 0,
+              unlockpt(masterFileDescriptor) == 0 else {
+            appendOutput("Failed to configure PTY\n", color: .red)
+            close(masterFileDescriptor)
+            masterFileDescriptor = -1
+            return
+        }
+
+        // Get slave PTY path
+        guard let slaveName = String(validatingUTF8: ptsname(masterFileDescriptor)) else {
+            appendOutput("Failed to get PTY slave name\n", color: .red)
+            close(masterFileDescriptor)
+            masterFileDescriptor = -1
+            return
+        }
+
+        // Spawn shell process
+        shellTask = Process()
+        shellTask?.executableURL = URL(fileURLWithPath: shellPath)
+        shellTask?.arguments = ["-l"]  // Login shell
+
+        // Set environment
+        var environment = ProcessInfo.processInfo.environment
+        environment["TERM"] = "xterm-256color"
+        environment["CLICOLOR"] = "1"
+        environment["COLORTERM"] = "truecolor"
+        environment["PWD"] = currentDirectory
+        shellTask?.environment = environment
+        shellTask?.currentDirectoryURL = URL(fileURLWithPath: currentDirectory)
+
+        // Open slave PTY for stdin/stdout/stderr
+        let slaveFile = open(slaveName, O_RDWR)
+        guard slaveFile >= 0 else {
+            appendOutput("Failed to open PTY slave\n", color: .red)
+            close(masterFileDescriptor)
+            masterFileDescriptor = -1
+            return
+        }
+
+        // Redirect process I/O to slave PTY
+        shellTask?.standardInput = FileHandle(fileDescriptor: slaveFile, closeOnDealloc: false)
+        shellTask?.standardOutput = FileHandle(fileDescriptor: slaveFile, closeOnDealloc: false)
+        shellTask?.standardError = FileHandle(fileDescriptor: slaveFile, closeOnDealloc: false)
+
+        do {
+            try shellTask?.run()
+            close(slaveFile)  // Close slave in parent process
+
+            // Start reading from master PTY
+            startReadingOutput()
+
+            appendOutput("Shell session started (\(shellPath))\n", color: .green)
+        } catch {
+            appendOutput("Failed to start shell: \(error.localizedDescription)\n", color: .red)
+            close(slaveFile)
+            close(masterFileDescriptor)
+            masterFileDescriptor = -1
+        }
+    }
+
+    private func startReadingOutput() {
+        guard masterFileDescriptor >= 0 else { return }
+
+        // Set terminal window size
+        var winsize = winsize()
+        winsize.ws_row = 24
+        winsize.ws_col = 80
+        winsize.ws_xpixel = 0
+        winsize.ws_ypixel = 0
+        _ = ioctl(masterFileDescriptor, TIOCSWINSZ, &winsize)
+
+        // Make file descriptor non-blocking
+        let flags = fcntl(masterFileDescriptor, F_GETFL)
+        _ = fcntl(masterFileDescriptor, F_SETFL, flags | O_NONBLOCK)
+
+        // Create dispatch source to read from PTY
+        inputSource = DispatchSource.makeReadSource(fileDescriptor: masterFileDescriptor, queue: outputQueue)
+
+        inputSource?.setEventHandler { [weak self] in
+            self?.readFromPTY()
+        }
+
+        inputSource?.setCancelHandler { [weak self] in
+            if let fd = self?.masterFileDescriptor, fd >= 0 {
+                close(fd)
+            }
+        }
+
+        inputSource?.resume()
+
+        // Send initial newline to trigger shell prompt
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            self?.writeToPTY("\n")
+        }
+    }
+
+    private func readFromPTY() {
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        let bytesRead = read(masterFileDescriptor, &buffer, buffer.count)
+
+        guard bytesRead > 0 else { return }
+
+        if let output = String(bytes: buffer.prefix(bytesRead), encoding: .utf8) {
+            DispatchQueue.main.async { [weak self] in
+                self?.processOutput(output)
+            }
+        }
+    }
+
+    private func processOutput(_ output: String) {
+        // Parse ANSI escape codes and apply formatting
+        let attributed = parseANSI(output)
+        textView.textStorage?.append(attributed)
+        textView.scrollToEndOfDocument(nil)
+    }
+
+    private func parseANSI(_ text: String) -> NSAttributedString {
+        let result = NSMutableAttributedString()
+        var currentColor: NSColor = NSColor(white: 0.9, alpha: 1.0)
+        var currentBold = false
+
+        var i = text.startIndex
+        while i < text.endIndex {
+            if text[i] == "\u{1B}" {
+                // Check if this is an ANSI escape sequence
+                let nextIdx = text.index(after: i)
+                guard nextIdx < text.endIndex && text[nextIdx] == "[" else {
+                    // Not a valid escape sequence, treat as regular character
+                    let attrs = NSAttributedString(
+                        string: String(text[i]),
+                        attributes: [
+                            .foregroundColor: currentColor,
+                            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: currentBold ? .bold : .regular)
+                        ]
+                    )
+                    result.append(attrs)
+                    i = nextIdx
+                    continue
+                }
+
+                // Found ANSI escape sequence
+                var j = text.index(nextIdx, offsetBy: 1)
+                var code = ""
+                while j < text.endIndex && text[j] != "m" {
+                    code.append(text[j])
+                    j = text.index(after: j)
+                }
+
+                // Parse color code
+                if !code.isEmpty {
+                    let codes = code.split(separator: ";").compactMap { Int($0) }
+                    for c in codes {
+                        switch c {
+                        case 0:  // Reset
+                            currentColor = NSColor(white: 0.9, alpha: 1.0)
+                            currentBold = false
+                        case 1:  // Bold
+                            currentBold = true
+                        case 30: currentColor = .black
+                        case 31: currentColor = .red
+                        case 32: currentColor = .green
+                        case 33: currentColor = .yellow
+                        case 34: currentColor = .blue
+                        case 35: currentColor = .magenta
+                        case 36: currentColor = .cyan
+                        case 37: currentColor = .white
+                        case 90: currentColor = .darkGray
+                        case 91: currentColor = NSColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)
+                        case 92: currentColor = NSColor(red: 0.4, green: 1.0, blue: 0.4, alpha: 1.0)
+                        case 93: currentColor = NSColor(red: 1.0, green: 1.0, blue: 0.4, alpha: 1.0)
+                        case 94: currentColor = NSColor(red: 0.4, green: 0.4, blue: 1.0, alpha: 1.0)
+                        case 95: currentColor = NSColor(red: 1.0, green: 0.4, blue: 1.0, alpha: 1.0)
+                        case 96: currentColor = NSColor(red: 0.4, green: 1.0, blue: 1.0, alpha: 1.0)
+                        case 97: currentColor = NSColor(white: 0.95, alpha: 1.0)
+                        default: break
+                        }
+                    }
+                }
+
+                // Move past the 'm' character if we found it
+                i = j < text.endIndex ? text.index(after: j) : text.endIndex
+            } else {
+                // Regular character
+                var normalText = ""
+                while i < text.endIndex && text[i] != "\u{1B}" {
+                    normalText.append(text[i])
+                    i = text.index(after: i)
+                }
+
+                if !normalText.isEmpty {
+                    let font = currentBold ?
+                        NSFont.monospacedSystemFont(ofSize: 12, weight: .bold) :
+                        NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+
+                    let attrs = NSAttributedString(
+                        string: normalText,
+                        attributes: [
+                            .foregroundColor: currentColor,
+                            .font: font
+                        ]
+                    )
+                    result.append(attrs)
+                }
+            }
+        }
+
+        return result
+    }
+
+    private func writeToPTY(_ text: String) {
+        guard masterFileDescriptor >= 0 else { return }
+
+        if let data = text.data(using: .utf8) {
+            data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
+                _ = write(masterFileDescriptor, bytes.baseAddress, data.count)
+            }
+        }
+    }
+
+    private func terminateShellSession() {
+        inputSource?.cancel()
+        inputSource = nil
+
+        shellTask?.terminate()
+        shellTask = nil
+
+        if masterFileDescriptor >= 0 {
+            close(masterFileDescriptor)
+            masterFileDescriptor = -1
+        }
+    }
+
     private func getShellPath() -> String {
-        // First try SHELL environment variable
         if let shell = ProcessInfo.processInfo.environment["SHELL"] {
             return shell
         }
-        
-        // Fallback to user's default shell from /etc/passwd or use zsh
+
         let userName = NSUserName()
         if let passwdEntry = getpwnam(userName),
            let shellCStr = passwdEntry.pointee.pw_shell {
             return String(cString: shellCStr)
         }
-        
-        // Final fallback to zsh (macOS default since Catalina)
+
         return "/bin/zsh"
     }
 
@@ -151,9 +397,8 @@ class TerminalViewController: NSViewController {
 
     func changeDirectory(to path: String) {
         currentDirectory = path
-        appendOutput("📁 Changed directory to: \(path)\n")
-        displayPrompt()
-        updateInputPlaceholder()
+        // Send cd command to shell
+        writeToPTY("cd '\(path)'\n")
     }
 
     func focusInput() {
@@ -161,34 +406,12 @@ class TerminalViewController: NSViewController {
     }
 
     // MARK: - Private Methods
-    
-    private func updateInputPlaceholder() {
-        inputField.placeholderString = getPromptString()
-    }
 
-    private func getPromptString() -> String {
-        let dirName = (currentDirectory as NSString).lastPathComponent
-        return "\(dirName) $ "
-    }
-    
-    private func displayPrompt() {
-        let promptString = getPromptString()
-        let attributedPrompt = NSAttributedString(
-            string: promptString,
-            attributes: [
-                .foregroundColor: NSColor(red: 0.4, green: 0.8, blue: 0.4, alpha: 1.0),
-                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .bold)
-            ]
-        )
-        textView.textStorage?.append(attributedPrompt)
-        textView.scrollToEndOfDocument(nil)
-    }
-
-    private func appendOutput(_ text: String) {
+    private func appendOutput(_ text: String, color: NSColor = NSColor(white: 0.9, alpha: 1.0)) {
         let attributedString = NSAttributedString(
             string: text,
             attributes: [
-                .foregroundColor: NSColor(white: 0.9, alpha: 1.0),
+                .foregroundColor: color,
                 .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
             ]
         )
@@ -197,232 +420,25 @@ class TerminalViewController: NSViewController {
         textView.scrollToEndOfDocument(nil)
     }
 
-    private func appendErrorOutput(_ text: String) {
-        let attributedString = NSAttributedString(
-            string: text,
-            attributes: [
-                .foregroundColor: NSColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0),
-                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-            ]
-        )
-
-        textView.textStorage?.append(attributedString)
-        textView.scrollToEndOfDocument(nil)
-    }
-
-    private func executeCommand(_ command: String) {
+    @objc private func handleEnterKey(_ sender: NSTextField) {
+        let command = sender.stringValue
         guard !command.isEmpty else {
-            displayPrompt()
+            writeToPTY("\n")
+            sender.stringValue = ""
             return
         }
 
         commandHistory.append(command)
         historyIndex = commandHistory.count
 
-        // Echo the command
-        appendOutput("\(command)\n")
-
-        // Handle built-in commands
-        let components = command.split(separator: " ").map(String.init)
-        guard let cmd = components.first else { 
-            displayPrompt()
-            return
-        }
-
-        switch cmd {
-        case "help":
-            showHelp()
-            displayPrompt()
-        case "clear", "cls":
-            textView.string = ""
-            displayPrompt()
-        case "pwd":
-            appendOutput("\(currentDirectory)\n")
-            displayPrompt()
-        case "ls", "dir":
-            listDirectory()
-            displayPrompt()
-        case "cd":
-            if components.count > 1 {
-                changeToDirectory(components[1])
-            } else {
-                // cd without arguments goes to home
-                changeToDirectory("~")
-            }
-            displayPrompt()
-        case "cat":
-            if components.count > 1 {
-                showFileContents(components[1])
-            } else {
-                appendErrorOutput("Usage: cat <file>\n")
-            }
-            displayPrompt()
-        case "exit", "quit":
-            appendOutput("Terminal cannot be closed from here. Use the View menu to toggle terminal visibility.\n")
-            displayPrompt()
-        default:
-            // Execute external command
-            executeExternalCommand(command)
-            displayPrompt()
-        }
-    }
-
-    private func showHelp() {
-        let helpText = """
-        Available Built-in Commands:
-        - ls, dir           List files in current directory
-        - cd [dir]          Change directory (no args = home)
-        - pwd               Print working directory
-        - cat <file>        Display file contents
-        - clear, cls        Clear terminal screen
-        - help              Show this help message
-
-        You can also run any system command (git, grep, find, etc.)
-
-        """
-        appendOutput(helpText)
-    }
-
-    private func showFileContents(_ filename: String) {
-        var filePath: String
-
-        if filename.hasPrefix("/") {
-            // Absolute path
-            filePath = filename
-        } else if filename.hasPrefix("~") {
-            // Expand tilde
-            let path = (filename as NSString).expandingTildeInPath
-            filePath = path
-        } else {
-            // Relative path
-            filePath = (currentDirectory as NSString).appendingPathComponent(filename)
-        }
-
-        do {
-            let contents = try String(contentsOfFile: filePath, encoding: .utf8)
-            appendOutput(contents)
-            if !contents.hasSuffix("\n") {
-                appendOutput("\n")
-            }
-        } catch {
-            appendErrorOutput("Error reading file: \(error.localizedDescription)\n")
-        }
-    }
-
-    private func listDirectory() {
-        let fileManager = FileManager.default
-        do {
-            let items = try fileManager.contentsOfDirectory(atPath: currentDirectory)
-            let sortedItems = items.sorted()
-
-            for item in sortedItems {
-                let itemPath = (currentDirectory as NSString).appendingPathComponent(item)
-                var isDir: ObjCBool = false
-                fileManager.fileExists(atPath: itemPath, isDirectory: &isDir)
-
-                if isDir.boolValue {
-                    appendOutput("📁 \(item)\n")
-                } else {
-                    appendOutput("📄 \(item)\n")
-                }
-            }
-        } catch {
-            appendErrorOutput("Error: \(error.localizedDescription)\n")
-        }
-    }
-
-    private func changeToDirectory(_ path: String) {
-        var newPath: String
-
-        if path.hasPrefix("/") {
-            // Absolute path
-            newPath = path
-        } else if path == ".." {
-            // Parent directory
-            newPath = (currentDirectory as NSString).deletingLastPathComponent
-        } else if path == "~" {
-            // Home directory
-            newPath = FileManager.default.homeDirectoryForCurrentUser.path
-        } else {
-            // Relative path
-            newPath = (currentDirectory as NSString).appendingPathComponent(path)
-        }
-
-        // Check if directory exists
-        var isDir: ObjCBool = false
-        if FileManager.default.fileExists(atPath: newPath, isDirectory: &isDir), isDir.boolValue {
-            currentDirectory = newPath
-            // Don't call displayPrompt here - it's called after this function returns
-        } else {
-            appendErrorOutput("Error: Directory not found: \(newPath)\n")
-        }
-    }
-
-    private func executeExternalCommand(_ command: String) {
-        let task = Process()
-        task.currentDirectoryURL = URL(fileURLWithPath: currentDirectory)
-
-        // Use the system's default shell
-        let shellPath = getShellPath()
-        task.executableURL = URL(fileURLWithPath: shellPath)
-
-        // Use login shell with -l flag to load full environment
-        task.arguments = ["-l", "-c", command]
-
-        // Set up environment variables
-        var environment = ProcessInfo.processInfo.environment
-        environment["HOME"] = FileManager.default.homeDirectoryForCurrentUser.path
-        environment["USER"] = NSUserName()
-        environment["PWD"] = currentDirectory
-
-        // Ensure PATH includes common locations
-        var pathComponents = (environment["PATH"] ?? "").split(separator: ":").map(String.init)
-        let commonPaths = ["/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin", "/opt/homebrew/bin"]
-        for commonPath in commonPaths {
-            if !pathComponents.contains(commonPath) {
-                pathComponents.append(commonPath)
-            }
-        }
-        environment["PATH"] = pathComponents.joined(separator: ":")
-
-        task.environment = environment
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        task.standardOutput = outputPipe
-        task.standardError = errorPipe
-
-        do {
-            try task.run()
-
-            // Read output asynchronously to prevent deadlocks
-            let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-
-            task.waitUntilExit()
-
-            // Display standard output
-            if let output = String(data: outputData, encoding: .utf8), !output.isEmpty {
-                appendOutput(output)
-            }
-
-            // Display error output in red
-            if let errorOutput = String(data: errorData, encoding: .utf8), !errorOutput.isEmpty {
-                appendErrorOutput(errorOutput)
-            }
-
-            if task.terminationStatus != 0 {
-                appendErrorOutput("Command exited with status: \(task.terminationStatus)\n")
-            }
-        } catch {
-            appendErrorOutput("Error executing command: \(error.localizedDescription)\n")
-        }
-    }
-    
-    @objc private func handleEnterKey(_ sender: NSTextField) {
-        let command = sender.stringValue
-        executeCommand(command)
+        // Send command to PTY
+        writeToPTY(command + "\n")
         sender.stringValue = ""
+    }
+
+    private func handleTabCompletion() {
+        // Send tab character to shell for completion
+        writeToPTY("\t")
     }
 
     @objc private func closeButtonClicked(_ sender: Any) {
@@ -434,7 +450,7 @@ class TerminalViewController: NSViewController {
 
 extension TerminalViewController: NSTextFieldDelegate {
     func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-        // This handles special keys like up/down arrows
+        // Handle special keys
         if commandSelector == #selector(NSResponder.moveUp(_:)) {
             // Up arrow - previous command
             if historyIndex > 0 {
@@ -451,6 +467,10 @@ extension TerminalViewController: NSTextFieldDelegate {
                 historyIndex = commandHistory.count
                 inputField.stringValue = ""
             }
+            return true
+        } else if commandSelector == #selector(NSResponder.insertTab(_:)) {
+            // Tab - trigger completion
+            handleTabCompletion()
             return true
         }
         return false
