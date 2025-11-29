@@ -109,22 +109,20 @@ class StartViewController: NSViewController {
     }
 
     private func setupWidgets() {
-        // Getting Started widget (combines welcome and suggestions, always visible, dismissible)
+        // TESTING: Enable widgets one by one
         gettingStartedWidget = GettingStartedWidgetView()
         gettingStartedWidget?.delegate = self
         addWidget(gettingStartedWidget!)
 
-        // Favorites widget (always visible)
         favoritesWidget = FavoritesWidgetView()
         favoritesWidget.delegate = self
         addWidget(favoritesWidget)
 
-        // Quick Actions (always visible)
         quickActionsWidget = QuickActionsWidgetView()
         quickActionsWidget.delegate = self
         addWidget(quickActionsWidget)
 
-        // Storage Overview (only show if Home folder permission is granted)
+        // Storage Overview
         let homeURL = URL(fileURLWithPath: NSHomeDirectory())
         let hasHomeAccess = FileManager.default.isReadableFile(atPath: homeURL.path)
         if hasHomeAccess {

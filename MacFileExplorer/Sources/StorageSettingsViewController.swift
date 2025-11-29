@@ -37,11 +37,13 @@ class StorageSettingsViewController: NSViewController {
         scrollView.documentView = contentView
         
         NSLayoutConstraint.activate([
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
-            
+            // Properly constrain document view to scroll view's content view
+            contentView.topAnchor.constraint(equalTo: scrollView.contentView.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.contentView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.contentView.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.contentView.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor),
+
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
             stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),

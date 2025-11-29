@@ -24,7 +24,7 @@ class StorageScopeSelectionViewController: NSViewController {
     // MARK: - Lifecycle
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 600))
     }
 
     override func viewDidLoad() {

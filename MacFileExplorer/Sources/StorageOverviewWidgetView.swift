@@ -55,6 +55,7 @@ class StorageOverviewWidgetView: StartWidgetView {
         )
         statusLabel.alignment = .center
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
+        statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         contentView.addSubview(statusLabel)
 
         // Grant access button
@@ -88,6 +89,7 @@ class StorageOverviewWidgetView: StartWidgetView {
         )
         statusLabel.alignment = .center
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
+        statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         contentView.addSubview(statusLabel)
 
         // Button to open analyzer
