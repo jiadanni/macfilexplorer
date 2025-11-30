@@ -24,7 +24,7 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
         // Create the window with computed default frame and allow resizing/zooming
         let window = NSWindow(
             contentRect: contentRect,
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -32,6 +32,10 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
         window.title = NSHomeDirectory()
         window.isReleasedWhenClosed = false
         window.backgroundColor = .windowBackgroundColor
+
+        // Integrate toolbar into title bar like Finder
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
 
         // Set minimum size; do not set a strict maximum to allow maximize/fullscreen
         window.minSize = NSSize(width: 600, height: 400)

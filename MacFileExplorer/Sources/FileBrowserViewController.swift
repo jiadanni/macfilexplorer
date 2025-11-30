@@ -664,7 +664,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             toolbarViewController.view.topAnchor.constraint(equalTo: view.topAnchor),
             toolbarViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             toolbarViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            toolbarViewController.view.heightAnchor.constraint(equalToConstant: 40),
+            toolbarViewController.view.heightAnchor.constraint(equalToConstant: 84),
 
             containerView.topAnchor.constraint(equalTo: toolbarViewController.view.bottomAnchor),
             containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),

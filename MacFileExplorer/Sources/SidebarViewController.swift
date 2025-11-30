@@ -151,7 +151,7 @@ class SidebarViewController: NSViewController {
         view.addSubview(mainSplitView)
 
         NSLayoutConstraint.activate([
-            mainSplitView.topAnchor.constraint(equalTo: view.topAnchor),
+            mainSplitView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             mainSplitView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             mainSplitView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             mainSplitView.bottomAnchor.constraint(equalTo: view.bottomAnchor),

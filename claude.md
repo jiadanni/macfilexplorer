@@ -40,7 +40,18 @@ The favorites widget used a horizontal stack view with `.fillEqually` distributi
 - The `.fill` distribution with low hugging priority allows proper resizing
 - Cards in FavoritesWidgetView should only constrain height, not width
 
+### Additional Fix: StorageOverviewWidget
+**File: `MacFileExplorer/Sources/StorageOverviewWidgetView.swift`**
+
+The StorageOverviewWidget also prevented horizontal resizing due to label compression resistance:
+
+1. **Set low compression resistance** on status labels:
+   - Added: `statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)`
+   - Applied to both placeholder view (line 58) and granted view (line 92)
+   - Allows labels to shrink and wrap text when window resizes
+
 ### Testing
 - Window should resize both horizontally and vertically on Start tab
 - Full screen/maximize should work without crashes
 - Cards should expand/contract naturally with window size
+- All widgets (GettingStarted, Favorites, QuickActions, StorageOverview) allow resizing

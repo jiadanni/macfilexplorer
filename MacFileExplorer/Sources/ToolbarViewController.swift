@@ -57,11 +57,13 @@ class ToolbarViewController: NSViewController {
     private var showingHiddenFiles: Bool = false
 
     override func loadView() {
-        // Increased height to accommodate two rows: buttons (40) + breadcrumb bar (30)
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 70))
+        // Increased height to accommodate two rows: buttons (40) + breadcrumb bar (30) + extra padding
+        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 84))
         setupUI()
         // Observe preview pane visibility changes to update toggle button state
         NotificationCenter.default.addObserver(self, selector: #selector(handlePreviewPaneToggled(_:)), name: .previewPaneToggled, object: nil)
+        // Observe toolbar settings changes so visibility toggles update live
+        NotificationCenter.default.addObserver(self, selector: #selector(handleToolbarSettingsChanged(_:)), name: .toolbarSettingsDidChangeNotification, object: nil)
         // Observe accent color changes
         NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange), name: .accentColorDidChangeNotification, object: nil)
         // Initial state update based on persisted preference
@@ -72,6 +74,7 @@ class ToolbarViewController: NSViewController {
     deinit {
         NotificationCenter.default.removeObserver(self, name: .previewPaneToggled, object: nil)
         NotificationCenter.default.removeObserver(self, name: .accentColorDidChangeNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: .toolbarSettingsDidChangeNotification, object: nil)
     }
 
     private func setupUI() {
@@ -328,7 +331,8 @@ class ToolbarViewController: NSViewController {
             bottomBorder.heightAnchor.constraint(equalToConstant: 1),
 
             // Top row: view mode and action buttons
-            listModeButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
+            // Add padding for window traffic lights (close/minimize/maximize buttons)
+            listModeButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 80),
             listModeButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             listModeButton.widthAnchor.constraint(equalToConstant: 30),
             listModeButton.heightAnchor.constraint(equalToConstant: 26),
@@ -404,7 +408,7 @@ class ToolbarViewController: NSViewController {
             closePaneButton.heightAnchor.constraint(equalToConstant: 26),
 
             // Bottom row: back/forward buttons + breadcrumb/URL bar
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
+            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 80),
             backButton.topAnchor.constraint(equalTo: listModeButton.bottomAnchor, constant: 6),
             backButton.widthAnchor.constraint(equalToConstant: 30),
             backButton.heightAnchor.constraint(equalToConstant: 26),
@@ -423,6 +427,39 @@ class ToolbarViewController: NSViewController {
             breadcrumbStackView.topAnchor.constraint(equalTo: breadcrumbScrollView.topAnchor),
             breadcrumbStackView.bottomAnchor.constraint(equalTo: breadcrumbScrollView.bottomAnchor)
         ])
+    }
+
+    @objc private func handleToolbarSettingsChanged(_ notification: Notification) {
+        // Re-read visibility preferences and apply to UI elements
+        let showBackForward = UserDefaults.standard.object(forKey: UserDefaults.Keys.showBackForwardButtons.rawValue) as? Bool ?? true
+        let showViewMode = UserDefaults.standard.object(forKey: UserDefaults.Keys.showViewModeButton.rawValue) as? Bool ?? true
+        let showHiddenFiles = UserDefaults.standard.object(forKey: UserDefaults.Keys.showHiddenFilesButton.rawValue) as? Bool ?? true
+        let showSplit = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSplitButtons.rawValue) as? Bool ?? true
+        let showPreviewPane = UserDefaults.standard.object(forKey: UserDefaults.Keys.showPreviewPaneButton.rawValue) as? Bool ?? true
+        let showNewFolder = UserDefaults.standard.object(forKey: UserDefaults.Keys.showNewFolderButton.rawValue) as? Bool ?? true
+        let showSort = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSortButton.rawValue) as? Bool ?? true
+        let showStorageAnalyzer = UserDefaults.standard.object(forKey: "showStorageAnalyzerButton") as? Bool ?? true
+        let showOpenTerminal = UserDefaults.standard.object(forKey: UserDefaults.Keys.showOpenTerminalButton.rawValue) as? Bool ?? true
+
+        backButton.isHidden = !showBackForward
+        forwardButton.isHidden = !showBackForward
+
+        listModeButton.isHidden = !showViewMode
+        iconsModeButton.isHidden = !showViewMode
+        columnsModeButton.isHidden = !showViewMode
+        windowsListModeButton.isHidden = !showViewMode
+
+        hiddenFilesButton.isHidden = !showHiddenFiles
+        splitVerticalButton.isHidden = !showSplit
+        splitHorizontalButton.isHidden = !showSplit
+        previewPaneButton.isHidden = !showPreviewPane
+        newFolderButton.isHidden = !showNewFolder
+        sortButton.isHidden = !showSort
+        storageAnalyzerButton.isHidden = !showStorageAnalyzer
+        openTerminalButton.isHidden = !showOpenTerminal
+
+        // Force layout update to account for hidden/shown controls
+        view.needsLayout = true
     }
 
     // MARK: - Public Methods

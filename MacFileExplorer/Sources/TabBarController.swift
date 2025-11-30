@@ -155,14 +155,31 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
             ])
         }
 
-        NSLayoutConstraint.activate([
-            button.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 8),
-            button.topAnchor.constraint(equalTo: container.topAnchor),
-            button.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -1),
-            (closeButton != nil ? button.trailingAnchor.constraint(lessThanOrEqualTo: closeButton!.leadingAnchor, constant: -4) : button.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8)),
-            container.heightAnchor.constraint(equalToConstant: 28),
-            container.widthAnchor.constraint(greaterThanOrEqualToConstant: 130)
-        ])
+        // Core constraints: center the title, vertically stretch, and set container size
+        let centerConstraint = button.centerXAnchor.constraint(equalTo: container.centerXAnchor)
+        let topConstraint = button.topAnchor.constraint(equalTo: container.topAnchor)
+        let bottomConstraint = button.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -1)
+        let heightConstraint = container.heightAnchor.constraint(equalToConstant: 28)
+        let widthConstraint = container.widthAnchor.constraint(greaterThanOrEqualToConstant: 130)
+
+        var edgeConstraints: [NSLayoutConstraint] = []
+        if let cb = closeButton {
+            // Prefer centering; but ensure the title doesn't run into the close button or left edge.
+            let trailingToClose = button.trailingAnchor.constraint(lessThanOrEqualTo: cb.leadingAnchor, constant: -4)
+            let leadingToEdge = button.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 8)
+            trailingToClose.priority = .defaultHigh
+            leadingToEdge.priority = .defaultHigh
+            edgeConstraints.append(contentsOf: [trailingToClose, leadingToEdge])
+        } else {
+            let leadingToEdge = button.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 8)
+            let trailingToEdge = button.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -8)
+            leadingToEdge.priority = .defaultHigh
+            trailingToEdge.priority = .defaultHigh
+            edgeConstraints.append(contentsOf: [leadingToEdge, trailingToEdge])
+        }
+
+        // Activate with center constraints required and edge constraints lower priority so centering wins
+        NSLayoutConstraint.activate([centerConstraint, topConstraint, bottomConstraint, heightConstraint, widthConstraint] + edgeConstraints)
 
         // Track for updates
         tabButtons.append(button)
