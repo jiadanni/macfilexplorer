@@ -90,6 +90,12 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
 
         // Update close button visibility for all panes
         updateClosePaneButtonVisibility()
+
+        // Set zoom controls visibility for newly active pane and others
+        for (index, pane) in panes.enumerated() {
+            let isActivePane = (index == activePaneIndex)
+            pane.setZoomControlsVisible(isActivePane)
+        }
     }
 
     func removeActivePane() {
@@ -232,6 +238,12 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
                 activePaneIndex = index
                 break
             }
+        }
+
+        // Update zoom controls visibility for all panes
+        for (index, pane) in panes.enumerated() {
+            let isActivePane = (index == activePaneIndex)
+            pane.setZoomControlsVisible(isActivePane)
         }
 
         delegate?.splitPaneDirectoryDidChange(to: path)

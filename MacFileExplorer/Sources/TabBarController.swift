@@ -25,6 +25,12 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         NotificationCenter.default.addObserver(forName: .accentColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.updateTabButtons()
         }
+        
+        NotificationCenter.default.addObserver(forName: .zoomDidChangeNotification, object: nil, queue: .main) { [weak self] notification in
+            if let zoomValue = notification.object as? Double {
+                self?.updateZoomLevel(to: zoomValue)
+            }
+        }
     }
     
     deinit {
@@ -50,7 +56,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         tabButtonsStackView = NSStackView()
         tabButtonsStackView.translatesAutoresizingMaskIntoConstraints = false
         tabButtonsStackView.orientation = .horizontal
-        tabButtonsStackView.spacing = 0
+        tabButtonsStackView.spacing = -1
         tabButtonsStackView.alignment = .centerY
         tabBarContainer.addSubview(tabButtonsStackView)
 
@@ -88,22 +94,11 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     }
 
     private func createTabButtonContainer(title: String, index: Int, showClose: Bool) -> NSView {
-        let container = NSView()
+        let container = TabButtonContainerView()
         container.translatesAutoresizingMaskIntoConstraints = false
-        container.wantsLayer = true
-
-        // Set container background based on selection
+        
         let isSelected = index == currentTabIndex
-        if isSelected {
-            // Use accent color for active tab with subtle alpha
-            container.layer?.backgroundColor = NSColor.customAccentColor.withAlphaComponent(0.15).cgColor
-        } else {
-            container.layer?.backgroundColor = NSColor.clear.cgColor
-        }
-
-        // Add subtle rounded corners at the top for Finder-style tabs
-        container.layer?.cornerRadius = 6
-        container.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        container.isSelected = isSelected
 
         let button = NSButton()
         button.title = title
@@ -128,6 +123,12 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         }
 
         container.addSubview(button)
+
+        // Make the entire container clickable by adding a click gesture recognizer.
+        // This ensures the hit area isn't limited to the centered title button.
+        let clickRecognizer = NSClickGestureRecognizer(target: self, action: #selector(tabContainerClicked(_:)))
+        clickRecognizer.buttonMask = 0x1 // left mouse button
+        container.addGestureRecognizer(clickRecognizer)
 
         var closeButton: NSButton?
         if showClose {
@@ -160,7 +161,9 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         let topConstraint = button.topAnchor.constraint(equalTo: container.topAnchor)
         let bottomConstraint = button.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -1)
         let heightConstraint = container.heightAnchor.constraint(equalToConstant: 28)
+        button.lineBreakMode = .byTruncatingTail
         let widthConstraint = container.widthAnchor.constraint(greaterThanOrEqualToConstant: 130)
+        let maxWidthConstraint = container.widthAnchor.constraint(lessThanOrEqualToConstant: 250)
 
         var edgeConstraints: [NSLayoutConstraint] = []
         if let cb = closeButton {
@@ -179,12 +182,26 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         }
 
         // Activate with center constraints required and edge constraints lower priority so centering wins
-        NSLayoutConstraint.activate([centerConstraint, topConstraint, bottomConstraint, heightConstraint, widthConstraint] + edgeConstraints)
+        NSLayoutConstraint.activate([centerConstraint, topConstraint, bottomConstraint, heightConstraint, widthConstraint, maxWidthConstraint] + edgeConstraints)
 
         // Track for updates
         tabButtons.append(button)
         if let cb = closeButton { tabCloseButtons.append(cb) }
+        // Tag the container with the index for hit-testing in the click handler
+        container.identifier = NSUserInterfaceItemIdentifier("\(index)")
         return container
+    }
+
+    @objc private func tabContainerClicked(_ recognizer: NSClickGestureRecognizer) {
+        guard let container = recognizer.view else { return }
+        if let id = container.identifier?.rawValue, let index = Int(id) {
+            tabButtonClicked(tabButtons[index])
+        } else {
+            // Fallback: try to find the button inside the container
+            if let btn = container.subviews.compactMap({ $0 as? NSButton }).first, btn.tag < tabs.count {
+                tabButtonClicked(btn)
+            }
+        }
     }
 
     private func updateTabButtons() {
@@ -210,6 +227,12 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         tabBarContainer.layoutSubtreeIfNeeded()
     }
 
+    private func postTabChangeNotification() {
+        guard currentTabIndex < tabs.count else { return }
+        let currentTabVC = tabs[currentTabIndex]
+        NotificationCenter.default.post(name: .tabDidChangeNotification, object: currentTabVC)
+    }
+
     @objc private func tabButtonClicked(_ sender: NSButton) {
         let index = sender.tag
         guard index < tabs.count else { return }
@@ -222,6 +245,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         if let splitVC = parent as? SplitViewController {
             splitVC.updateTerminalDirectory()
         }
+        postTabChangeNotification()
     }
 
     // MARK: - Public Methods
@@ -243,6 +267,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         currentTabIndex = tabs.count - 1
 
         updateTabButtons()
+        postTabChangeNotification()
     }
 
     func addStartTab() {
@@ -262,6 +287,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         currentTabIndex = tabs.count - 1
 
         updateTabButtons()
+        postTabChangeNotification()
     }
 
     func showStartTab() {
@@ -270,6 +296,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
             if tab is StartViewController {
                 tabView.selectTabViewItem(at: index)
                 currentTabIndex = index
+                postTabChangeNotification()
                 return
             }
         }
@@ -298,6 +325,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         if currentTabIndex >= tabs.count { currentTabIndex = tabs.count - 1 }
         tabView.selectTabViewItem(at: currentTabIndex)
         updateTabButtons()
+        postTabChangeNotification()
     }
 
     @objc private func closeTabButtonClicked(_ sender: NSButton) {
@@ -422,8 +450,9 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         // If settings tab already exists, select it
         if let existingIndex = tabs.firstIndex(where: { $0 is SettingsSplitPaneViewController }) {
             tabView.selectTabViewItem(at: existingIndex)
-            currentTabIndex = existingIndex
+        currentTabIndex = existingIndex
             updateTabButtons()
+            postTabChangeNotification()
             return
         }
         let settingsPane = SettingsSplitPaneViewController()
@@ -435,6 +464,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         tabView.selectTabViewItem(at: tabs.count - 1)
         currentTabIndex = tabs.count - 1
         updateTabButtons()
+        postTabChangeNotification()
     }
 
     // MARK: - Storage Analyzer Tab
@@ -445,6 +475,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
             tabView.selectTabViewItem(at: existingIndex)
             currentTabIndex = existingIndex
             updateTabButtons()
+            postTabChangeNotification()
             return
         }
         let storageAnalyzerVC = StorageAnalyzerTabViewController()
@@ -456,6 +487,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         tabView.selectTabViewItem(at: tabs.count - 1)
         currentTabIndex = tabs.count - 1
         updateTabButtons()
+        postTabChangeNotification()
     }
 
     public func openInNewTab(url: URL) {
@@ -578,6 +610,7 @@ extension TabBarController: StartViewControllerDelegate {
         if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
             splitPane.navigateToURL(url)
         }
+        postTabChangeNotification()
     }
 
     func startViewDidRequestOpenSettings() {

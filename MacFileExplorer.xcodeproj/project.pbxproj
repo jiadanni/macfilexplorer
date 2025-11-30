@@ -49,6 +49,7 @@
 		C357D9E72ECA0EDF001BA891 /* NotificationNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */; };
 		C357D9E82ECA0EDF001BA891 /* ProgressViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */; };
 		C357D9E92ECA0EDF001BA891 /* FileCopyMoveDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E12ECA0EDF001BA891 /* FileCopyMoveDialog.swift */; };
+		FFFAAA000000000000000001 /* FreeFormCollectionViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFFAAA000000000000000001 /* FreeFormCollectionViewLayout.swift */; };
 		C357D9EA2ECA0EDF001BA891 /* ViewOptionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E62ECA0EDF001BA891 /* ViewOptionsViewController.swift */; };
 		C357D9EB2ECA0EDF001BA891 /* ViewOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E52ECA0EDF001BA891 /* ViewOptions.swift */; };
 		C357D9EC2ECA0EDF001BA891 /* PreviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */; };
@@ -108,6 +109,7 @@
 		C2CA98F441BC469AA6AC8B30 /* StartWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartWidgetView.swift; sourceTree = "<group>"; };
 		C357D9DF2ECA0ECB001BA891 /* AboutWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutWindowController.swift; sourceTree = "<group>"; };
 		C357D9E12ECA0EDF001BA891 /* FileCopyMoveDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCopyMoveDialog.swift; sourceTree = "<group>"; };
+		FFFAAA000000000000000001 /* FreeFormCollectionViewLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFormCollectionViewLayout.swift; sourceTree = "<group>"; };
 		C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationNames.swift; sourceTree = "<group>"; };
 		C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewViewController.swift; sourceTree = "<group>"; };
 		C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressViewController.swift; sourceTree = "<group>"; };
@@ -152,6 +154,7 @@
 			isa = PBXGroup;
 			children = (
 				C357D9E12ECA0EDF001BA891 /* FileCopyMoveDialog.swift */,
+				FFFAAA000000000000000001 /* FreeFormCollectionViewLayout.swift */,
 				C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */,
 				C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */,
 				C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */,
@@ -327,6 +330,7 @@
 				C357D9E72ECA0EDF001BA891 /* NotificationNames.swift in Sources */,
 				C357D9E82ECA0EDF001BA891 /* ProgressViewController.swift in Sources */,
 				C357D9E92ECA0EDF001BA891 /* FileCopyMoveDialog.swift in Sources */,
+				FFFAAA000000000000000001 /* FreeFormCollectionViewLayout.swift in Sources */,
 				C357D9EA2ECA0EDF001BA891 /* ViewOptionsViewController.swift in Sources */,
 				C357D9EB2ECA0EDF001BA891 /* ViewOptions.swift in Sources */,
 				C357D9EC2ECA0EDF001BA891 /* PreviewViewController.swift in Sources */,

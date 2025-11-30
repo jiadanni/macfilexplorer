@@ -125,12 +125,15 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     func toggleTerminal() {
         guard let terminalSplitItem = terminalSplitItem else { return }
 
+        print("SplitViewController: toggleTerminal called - currentState=\(isTerminalVisible)")
         isTerminalVisible.toggle()
+        print("SplitViewController: newState=\(isTerminalVisible)")
         terminalSplitItem.animator().isCollapsed = !isTerminalVisible
 
         if isTerminalVisible {
             // Update terminal to current directory when opening
             if let currentPath = tabBarController?.getCurrentPath() {
+                print("  Opening terminal - setting directory to \(currentPath)")
                 terminalViewController?.changeDirectory(to: currentPath)
             }
 
@@ -138,6 +141,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
             terminalViewController?.focusInput()
         } else {
             // Return focus to file browser when closing terminal
+            print("  Closing terminal - restoring focus to tabBarController.view")
             view.window?.makeFirstResponder(tabBarController?.view)
         }
 

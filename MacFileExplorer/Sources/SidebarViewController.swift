@@ -350,6 +350,7 @@ class SidebarViewController: NSViewController {
         folderExplorerOutlineView.dataSource = self
         folderExplorerOutlineView.target = self
         folderExplorerOutlineView.doubleAction = #selector(outlineViewDoubleClicked(_:))
+        folderExplorerOutlineView.action = #selector(outlineViewAction(_:))
         folderExplorerOutlineView.menu = createContextMenu() // Reuse context menu
         folderExplorerOutlineView.menu?.delegate = self
         
@@ -461,8 +462,26 @@ class SidebarViewController: NSViewController {
             item = driveItems[row]
         }
 
-        if let item = item {
-            delegate?.sidebarDidSelectLocation(item.url)
+        guard let selectedItem = item else { return }
+
+        if let event = NSApp.currentEvent, event.modifierFlags.contains(.command) {
+            if let splitVC = parent as? SplitViewController {
+                splitVC.openLocationInNewTab(selectedItem.url)
+            }
+        } else {
+            delegate?.sidebarDidSelectLocation(selectedItem.url)
+        }
+    }
+
+    @objc private func outlineViewAction(_ sender: NSOutlineView) {
+        if let event = NSApp.currentEvent, event.modifierFlags.contains(.command) {
+            let row = sender.clickedRow
+            guard row >= 0 else { return }
+            if let item = sender.item(atRow: row) as? FileItem {
+                if let splitVC = parent as? SplitViewController {
+                    splitVC.openLocationInNewTab(item.url)
+                }
+            }
         }
     }
 

@@ -271,22 +271,21 @@ class PermissionsManager {
     }
 
     private func checkFullDiskAccess() -> PermissionStatus {
-        // Check if we can access a protected directory
-        let testPath = NSHomeDirectory() + "/Library/Safari/CloudTabs.db"
-        let fileManager = FileManager.default
-
-        if fileManager.isReadableFile(atPath: testPath) {
-            return .granted
-        } else if fileManager.fileExists(atPath: testPath) {
-            // File exists but not readable = denied
-            return .denied
-        } else {
-            // Try another protected location
-            let alternativePath = NSHomeDirectory() + "/Library/Mail"
-            if fileManager.isReadableFile(atPath: alternativePath) {
-                return .granted
-            }
+        // A reliable way to check for Full Disk Access is to try to access a protected folder's contents.
+        // We use the user's Documents directory for this check.
+        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            // This is unlikely to fail, but if it does, we can't determine the status.
             return .notDetermined
+        }
+
+        do {
+            // Attempt to list the contents of the Documents directory.
+            // If this succeeds, we have the necessary permissions.
+            _ = try FileManager.default.contentsOfDirectory(atPath: documentsURL.path)
+            return .granted
+        } catch {
+            // If an error occurs, it's very likely due to lack of permissions, so we can infer a 'denied' state.
+            return .denied
         }
     }
 

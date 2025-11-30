@@ -207,8 +207,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
     weak var delegate: FileBrowserDelegate?
 
-    private var toolbarViewController: ToolbarViewController!
-    private var statusBarViewController: StatusBarViewController!
+    internal var toolbarViewController: ToolbarViewController!
+    internal var statusBarViewController: StatusBarViewController!
     private var containerView: NSView! // New container view
     private var scrollView: NSScrollView! // For outlineView
     private var outlineView: NSOutlineView!
@@ -389,7 +389,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
     deinit {
         NotificationCenter.default.removeObserver(self, name: .globalFolderColorDidChangeNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .showFileExtensionsDidChangeNotification, object: nil)
+        Notification.default.removeObserver(self, name: .showFileExtensionsDidChangeNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: .easySelectDidChangeNotification, object: nil)
     }
 
@@ -630,7 +630,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         scrollView.documentView = outlineView
         
         // Column visibility preferences (initialize defaults if missing)
-        var columnVisibility = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.columnVisibility.rawValue) as? [String: Bool] ?? [:]
+        var columnVisibility = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.columnVisibility.rawValue) as? [String: Bool] ?? [: ]
         if columnVisibility.isEmpty {
             columnVisibility = [
                 "NameColumn": true,
@@ -846,7 +846,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 ]
                 NSLayoutConstraint.activate(activeConstraints)
             }
-            outlineView.reloadData()
+            outlineView.reloadData() // Reloads the outline view
 
             // Use dispatch to ensure window is ready
             DispatchQueue.main.async { [weak self] in
@@ -888,23 +888,39 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             // Configure layout based on viewMode
             if viewMode == .windowsList {
                 let flowLayout = NSCollectionViewFlowLayout()
-                flowLayout.itemSize = NSSize(width: 200, height: 20) // Width of an item, height of a row
+                let baseWidth: CGFloat = 150
+                let baseHeight: CGFloat = 20
+                let baseLineSpacing: CGFloat = 2
+                let baseInteritemSpacing: CGFloat = 10
+                flowLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
                 flowLayout.sectionInset = NSEdgeInsets(top: 5, left: 5, bottom: 5, right: 5)
-                flowLayout.minimumLineSpacing = 1 // Vertical spacing between rows in a column
-                flowLayout.minimumInteritemSpacing = 5 // Horizontal spacing between columns
-                flowLayout.scrollDirection = .vertical // Vertical scrolling for list view
+                flowLayout.minimumLineSpacing = baseLineSpacing * zoomLevel
+                flowLayout.minimumInteritemSpacing = baseInteritemSpacing * zoomLevel
+                flowLayout.scrollDirection = .horizontal
                 collectionView.collectionViewLayout = flowLayout
                 freeFormLayout = nil
             } else { // .icons mode
-                // Use free-form layout for icon view
-                let layout = FreeFormCollectionViewLayout()
-                // Base size: 110 width (85 icon + padding), 130 height (85 icon + spacing + label)
-                layout.itemSize = NSSize(width: CGFloat(110 * zoomLevel), height: CGFloat(130 * zoomLevel))
-                layout.isFreeForm = isFreeFormEnabled
-                layout.gridSpacing = CGFloat(10 * zoomLevel)
-                layout.sectionInset = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
-                collectionView.collectionViewLayout = layout
-                freeFormLayout = layout
+                if let freeFormLayout = freeFormLayout {
+                    // Update free-form layout item size and spacing
+                    let baseWidth: CGFloat = 110  // Matches icon base: 85pt + padding
+                    let baseHeight: CGFloat = 130 // Matches icon base: 85pt + spacing + label
+                    let baseSpacing: CGFloat = 10
+                    freeFormLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
+                    freeFormLayout.gridSpacing = baseSpacing * zoomLevel
+                    freeFormLayout.invalidateLayout()
+                } else {
+                    // Fallback to flow layout (shouldn't happen)
+                    let flowLayout = NSCollectionViewFlowLayout()
+                    let baseWidth: CGFloat = 110
+                    let baseHeight: CGFloat = 130
+                    let baseSpacing: CGFloat = 10
+                    flowLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
+                    flowLayout.sectionInset = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+                    flowLayout.minimumLineSpacing = baseSpacing * zoomLevel
+                    flowLayout.minimumInteritemSpacing = baseSpacing * zoomLevel
+                    flowLayout.scrollDirection = .vertical
+                    collectionView.collectionViewLayout = flowLayout
+                }
             }
 
             collectionView.reloadData()
@@ -920,7 +936,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             if browserView == nil {
                 enqueueBrowserSetupIfNeeded()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-                    guard let self else { return }
+                    guard let self else {
+                        return
+                    }
                     if self.browserView != nil && self.browserSetupState == .ready {
                         let msg = "DEBUG: Retrying displayFiles after browser ready; suppressedDisplayCalls=\(self.suppressedDisplayCalls)"
                         print(msg)
@@ -959,7 +977,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             }
             
             // Use dispatch to ensure layout is complete before loading data
-            print("displayFiles: Setting up browser view, rootItem has \(rootItem?.children?.count ?? 0) children")
+            print("displayFiles: Setting up browser view, rootItem has \(self.rootItem?.children?.count ?? 0) children")
             DispatchQueue.main.async { [weak self] in
                 guard let self, let browserView = self.browserView else { return }
 
@@ -1046,6 +1064,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         newBrowser.allowsEmptySelection = true
         newBrowser.takesTitleFromPreviousColumn = false
         newBrowser.separatesColumns = true
+        newBrowser.dividerStyle = .thin
         // Note: rowHeight is deprecated and causes crashes on macOS 15+
         // NSBrowser automatically sizes rows based on font and cell type
         newBrowser.hasHorizontalScroller = true
@@ -1104,7 +1123,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         }
     }
     
-    private var draggedItemsInitialPositions: [IndexPath: CGPoint] = [:]
+    private var draggedItemsInitialPositions: [IndexPath: CGPoint] = [: ]
     
     // MARK: - NSGestureRecognizerDelegate
     
@@ -1113,9 +1132,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         guard let panGesture = gestureRecognizer as? NSPanGestureRecognizer,
               currentViewMode == .icons,
               isFreeFormEnabled,
-              let collectionView = collectionView else {
-            return false
-        }
+              let collectionView = collectionView else { return false }
         
         let location = panGesture.location(in: collectionView)
         guard let hitIndexPath = collectionView.indexPathForItem(at: location) else { return false }
@@ -1124,9 +1141,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     
     @objc private func handleIconDrag(_ sender: NSPanGestureRecognizer) {
         // Only allow dragging in icon view with free-form enabled
-        guard currentViewMode == .icons, isFreeFormEnabled, let collectionView = collectionView, let layout = freeFormLayout else {
-            return
-        }
+        guard currentViewMode == .icons, isFreeFormEnabled, let collectionView = collectionView, let layout = freeFormLayout else { return }
         
         let location = sender.location(in: collectionView)
         
@@ -1284,8 +1299,6 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 }
                 self.outlineView.expandItem(nil, expandChildren: true) // This expands the *root* item
 
-                // Set up file system monitoring (correctly handled)
-
                 self.delegate?.directoryDidChange(to: targetURL.path)
                 self.updateStatusBar()
             }
@@ -1336,16 +1349,12 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             }
         case "DateModifiedColumn":
             items.sort { item1, item2 in
-                guard let date1 = item1.modificationDate, let date2 = item2.modificationDate else {
-                    return false
-                }
+                guard let date1 = item1.modificationDate, let date2 = item2.modificationDate else { return false }
                 return sortAscending ? date1 < date2 : date1 > date2
             }
         case "DateCreatedColumn":
             items.sort { item1, item2 in
-                guard let date1 = item1.creationDate, let date2 = item2.creationDate else {
-                    return false
-                }
+                guard let date1 = item1.creationDate, let date2 = item2.creationDate else { return false }
                 return sortAscending ? date1 < date2 : date1 > date2
             }
         case "TypeColumn":
@@ -1363,10 +1372,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         rootItem.children = items
 
         // Sort children recursively
-        items.forEach { item in
-            if item.isDirectory, var children = item.children {
+        items.forEach {
+            if $0.isDirectory, var children = $0.children {
                 sortChildren(&children)
-                item.children = children
+                $0.children = children
             }
         }
     }
@@ -1387,16 +1396,12 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             }
         case "DateModifiedColumn":
             children.sort { item1, item2 in
-                guard let date1 = item1.modificationDate, let date2 = item2.modificationDate else {
-                    return false
-                }
+                guard let date1 = item1.modificationDate, let date2 = item2.modificationDate else { return false }
                 return sortAscending ? date1 < date2 : date1 > date2
             }
         case "DateCreatedColumn":
             children.sort { item1, item2 in
-                guard let date1 = item1.creationDate, let date2 = item2.creationDate else {
-                    return false
-                }
+                guard let date1 = item1.creationDate, let date2 = item2.creationDate else { return false }
                 return sortAscending ? date1 < date2 : date1 > date2
             }
         case "TypeColumn":
@@ -1485,7 +1490,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
         // Filter children based on search text and filter criteria
         if var children = rootItem.children {
-            children = children.filter { item in
+            children = children.filter {
                 // Apply text search filter
                 if hasSearchText, let searchText = searchFilter {
                     if !item.name.localizedCaseInsensitiveContains(searchText) {
@@ -1521,6 +1526,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     // MARK: - Public Methods
+
+    func setZoomControlsVisible(_ visible: Bool) {
+        statusBarViewController.setZoomControlsVisible(visible)
+    }
 
     func setZoomLevel(_ level: Double) {
         zoomLevel = max(0.5, min(2.0, level)) // Clamp between 0.5 and 2.0
@@ -1577,6 +1586,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 flowLayout.minimumInteritemSpacing = baseInteritemSpacing * zoomLevel
                 flowLayout.scrollDirection = .horizontal
                 collectionView.collectionViewLayout = flowLayout
+                freeFormLayout = nil
             } else { // .icons mode
                 if let freeFormLayout = freeFormLayout {
                     // Update free-form layout item size and spacing
@@ -1600,12 +1610,15 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                     collectionView.collectionViewLayout = flowLayout
                 }
             }
-        case .list:
-            // For outline view, adjust row height
-            if let outlineView = outlineView {
-                let baseRowHeight: CGFloat = 20
-                outlineView.rowHeight = baseRowHeight * zoomLevel
+
+            collectionView.reloadData()
+
+            // Use dispatch to ensure window is ready
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.view.window?.makeFirstResponder(self.view)
             }
+            
         case .columns:
             // Browser view doesn't need zoom adjustments
             break
@@ -1753,7 +1766,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
     private func createHeaderColumnsMenu() -> NSMenu {
         let menu = NSMenu(title: "Columns")
-        let visibility = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.columnVisibility.rawValue) as? [String: Bool] ?? [:]
+        let visibility = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.columnVisibility.rawValue) as? [String: Bool] ?? [: ]
         for column in outlineView.tableColumns {
             let identifier = column.identifier.rawValue
             let title = column.title
@@ -1775,7 +1788,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
     @objc private func toggleColumnVisibility(_ sender: NSMenuItem) {
         guard let identifier = sender.representedObject as? String, identifier != "NameColumn" else { return }
-        var visibility = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.columnVisibility.rawValue) as? [String: Bool] ?? [:]
+        var visibility = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.columnVisibility.rawValue) as? [String: Bool] ?? [: ]
         let current = visibility[identifier] ?? true
         visibility[identifier] = !current
         UserDefaults.standard.set(visibility, forKey: UserDefaults.Keys.columnVisibility.rawValue)
@@ -1934,6 +1947,15 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                     }
                 }
             }
+            // If no selection, check if there's a clicked column/row (for context menu)
+            let clickedColumn = browserView.clickedColumn
+            let clickedRow = browserView.clickedRow(inColumn: clickedColumn)
+            if clickedColumn >= 0 && clickedRow >= 0 {
+                if let item = fileItemForColumn(clickedColumn),
+                   let children = item.children, clickedRow < children.count {
+                    items.append(children[clickedRow])
+                }
+            }
         }
 
         return items
@@ -1978,7 +2000,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
         let alert = NSAlert()
         alert.messageText = "Add New Tag"
-        alert.informativeText = "Enter a new tag for the selected items:"
+        alert.informativeText = "Enter the name for the selected items:"
         alert.addButton(withTitle: "Add")
         alert.addButton(withTitle: "Cancel")
 
@@ -2005,1381 +2027,378 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         }
     }
 
-    @objc private func contextMenuOpen(_ sender: Any) {
+    private func getSelectedFileURLs() -> [URL] {
+        return getSelectedItems().map { $0.url }
+    }
+
+    @objc func contextMenuOpen(_ sender: Any) {
         let items = getSelectedItems()
-        items.forEach { item in
+        if items.count == 1 {
+            let item = items[0]
             if item.isDirectory {
                 loadDirectory(item.url)
             } else {
                 NSWorkspace.shared.open(item.url)
             }
+        } else if items.count > 1 {
+            NSWorkspace.shared.open(items.map { $0.url })
         }
     }
 
-    @objc private func contextMenuOpenInNewTab(_ sender: Any) {
+    @objc func contextMenuOpenInNewTab(_ sender: Any) {
         let items = getSelectedItems()
-        // Only open directories in new tabs
-        let directories = items.filter { $0.isDirectory }
-
-        directories.forEach { item in
-            delegate?.openInNewTab(url: item.url)
+        if items.count == 1 {
+            let item = items[0]
+            if item.isDirectory {
+                delegate?.openInNewTab(url: item.url)
+            }
         }
     }
 
-    @objc private func contextMenuOpenWith(_ sender: Any) {
+    @objc func contextMenuOpenWith(_ sender: Any) {
         let items = getSelectedItems()
-        guard let firstItem = items.first else { return }
-
-        NSWorkspace.shared.openApplication(at: firstItem.url, configuration: NSWorkspace.OpenConfiguration())
+        guard let item = items.first, items.count == 1, !item.isDirectory else { return }
+        
+        let openWithMenu = NSMenu()
+        let url = item.url as CFURL
+        let defaultAppURL = LSCopyDefaultApplicationURLForURL(url, .all, nil)?.takeRetainedValue() as? URL
+        let appURLs = LSCopyApplicationURLsForURL(url, .all)?.takeRetainedValue() as? [URL] ?? []
+        
+        for appURL in appURLs {
+            let appName = appURL.deletingPathExtension().lastPathComponent
+            let menuItem = NSMenuItem(title: appName, action: #selector(openWithApp(_:)), keyEquivalent: "")
+            menuItem.target = self
+            menuItem.representedObject = appURL
+            menuItem.image = NSWorkspace.shared.icon(forFile: appURL.path)
+            if appURL == defaultAppURL {
+                menuItem.state = .on
+            }
+            openWithMenu.addItem(menuItem)
+        }
+        
+        openWithMenu.addItem(NSMenuItem.separator())
+        openWithMenu.addItem(withTitle: "Other...", action: #selector(openWithOther(_:)), keyEquivalent: "")
+        
+        // Show menu at mouse location
+        if let event = NSApp.currentEvent {
+            NSMenu.popUpContextMenu(openWithMenu, with: event, for: view)
+        }
     }
 
-    @objc private func contextMenuGetInfo(_ sender: Any) {
+    @objc func openWithApp(_ sender: NSMenuItem) {
+        guard let appURL = sender.representedObject as? URL else { return }
         let items = getSelectedItems()
-        guard let item = items.first else { return }
-
-        let alert = NSAlert()
-        alert.messageText = "File Information"
-        alert.informativeText = formatFileInfo(for: item)
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Show in Finder")
-
-        let response = alert.runModal()
-        if response == .alertSecondButtonReturn {
-            // Show in Finder was clicked
-            NSWorkspace.shared.activateFileViewerSelecting([item.url])
-        }
+        guard let item = items.first, items.count == 1 else { return }
+        
+        NSWorkspace.shared.open([item.url], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration())
     }
 
-    private func formatFileInfo(for item: FileItem) -> String {
-        var info = ""
-        info += "Name: \(item.name)\n"
-        info += "Kind: \(item.kind)\n"
-        info += "Size: \(item.sizeString)\n"
-        info += "Modified: \(item.formattedDate)\n"
-        info += "Created: \(item.formattedCreationDate)\n"
-        info += "Location: \(item.url.deletingLastPathComponent().path)\n"
-        if !item.permissions.isEmpty {
-            info += "Permissions: \(item.permissions)\n"
-        }
-        if !item.owner.isEmpty {
-            info += "Owner: \(item.owner)\n"
-        }
-        return info
-    }
-
-    @objc private func contextMenuCopy(_ sender: Any) {
+    @objc func openWithOther(_ sender: Any) {
         let items = getSelectedItems()
+        guard let item = items.first, items.count == 1 else { return }
+        
+        let openPanel = NSOpenPanel()
+        openPanel.directoryURL = URL(fileURLWithPath: "/Applications")
+        openPanel.allowedContentTypes = [.application]
+        openPanel.allowsMultipleSelection = false
+        
+        if openPanel.runModal() == .OK, let appURL = openPanel.url {
+            NSWorkspace.shared.open([item.url], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration())
+        }
+    }
+
+    @objc func contextMenuGetInfo(_ sender: Any) {
+        let items = getSelectedItems()
+        guard !items.isEmpty else { return }
+        // NSWorkspace.shared.showInformation(for: items.map { $0.url })
+        // Implement custom Get Info window
+    }
+
+    @objc func contextMenuCopy(_ sender: Any) {
+        let items = getSelectedItems()
+        guard !items.isEmpty else { return }
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.writeObjects(items.map { $0.url as NSURL })
+    }
+    
+    @objc private func contextMenuCopyTo(_ sender: Any) {
+        let items = getSelectedItems()
+        guard !items.isEmpty else { return }
+
+        let openPanel = NSOpenPanel()
+        openPanel.title = "Copy To..."
+        openPanel.prompt = "Copy"
+        openPanel.canChooseFiles = false
+        openPanel.canChooseDirectories = true
+        openPanel.allowsMultipleSelection = false
+        openPanel.canCreateDirectories = true
+
+        openPanel.begin { [weak self] response in
+            guard response == .OK, let destinationURL = openPanel.url else { return }
+            self?.performFileOperation(.copy, items: items.map { $0.url }, destination: destinationURL)
+        }
     }
 
     @objc private func contextMenuCut(_ sender: Any) {
         let items = getSelectedItems()
         guard !items.isEmpty else { return }
-
+        
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-
-        // Write URLs to pasteboard
-        pasteboard.writeObjects(items.map { $0.url as NSURL })
-
-        // Write a custom type to indicate a "cut" operation
-        pasteboard.setString("cut", forType: NSPasteboard.PasteboardType("com.macfileexplorer.cutOperation"))
-
-        // Reload views to show visual change
-        outlineView.reloadData()
-        collectionView.reloadData()
-        browserView.reloadColumn(browserView.lastColumn)
-    }
-
-    @objc private func contextMenuCopyTo(_ sender: Any) {
-        let items = getSelectedItems()
-        guard !items.isEmpty else { return }
-
-        // Folder selection dialog
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.message = "Choose destination folder to copy \(items.count) item(s)"
-
-        guard panel.runModal() == .OK, let destinationURL = panel.url else { return }
-
-        let confirmEnabled = UserDefaults.standard.bool(forKey: UserDefaults.Keys.confirmFileOperations.rawValue)
-        if confirmEnabled {
-            let sizeSheet = SizeCalculationViewController()
-            let token = CancellationToken()
-            sizeSheet.cancelHandler = { token.cancel() }
-            presentAsSheet(sizeSheet)
-            self.gatherTotalSizeAsync(urls: items.map { $0.url }, token: token, progress: { processedFiles, bytes in
-                sizeSheet.updateStatus("Scanning... \(processedFiles) files, \(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))")
-            }, completion: { totalBytes, wasCancelled in
-                self.dismiss(sizeSheet)
-                if wasCancelled {
-                    self.showInfo("Scan canceled: \(ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)) counted.")
-                    return
-                }
-                let sizeString = ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)
-                let availableSpace = try? destinationURL.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage
-                let availableSpaceString = availableSpace.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "N/A"
-                let alert = NSAlert()
-                alert.messageText = "Copy Items"
-                alert.informativeText = "Are you sure you want to copy \(items.count) item(s) (\(sizeString)) to \(destinationURL.lastPathComponent)?\n\nAvailable space: \(availableSpaceString)"
-                alert.addButton(withTitle: "Copy")
-                alert.addButton(withTitle: "Cancel")
-                if alert.runModal() == .alertFirstButtonReturn {
-                    self.performCopy(items: items, to: destinationURL, precomputedBytes: totalBytes)
-                }
-            })
-        } else {
-            performCopy(items: items, to: destinationURL, precomputedBytes: nil)
-        }
+        pasteboard.declareTypes([.fileURL], owner: nil)
+        
+        let fileURLs = items.map { $0.url as NSURL }
+        pasteboard.writeObjects(fileURLs)
+        
+        // Add a custom type to indicate it's a cut operation
+        pasteboard.setString("cut", forType: .string)
     }
 
     @objc private func contextMenuMoveTo(_ sender: Any) {
         let items = getSelectedItems()
         guard !items.isEmpty else { return }
 
-        // Show folder selection dialog
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.message = "Choose destination folder to move \(items.count) item(s)"
+        let openPanel = NSOpenPanel()
+        openPanel.title = "Move To..."
+        openPanel.prompt = "Move"
+        openPanel.canChooseFiles = false
+        openPanel.canChooseDirectories = true
+        openPanel.allowsMultipleSelection = false
+        openPanel.canCreateDirectories = true
 
-        guard panel.runModal() == .OK, let destinationURL = panel.url else { return }
-
-        let confirmEnabled = UserDefaults.standard.bool(forKey: UserDefaults.Keys.confirmFileOperations.rawValue)
-        if confirmEnabled {
-            let sizeSheet = SizeCalculationViewController()
-            let token = CancellationToken()
-            sizeSheet.cancelHandler = { token.cancel() }
-            presentAsSheet(sizeSheet)
-            self.gatherTotalSizeAsync(urls: items.map { $0.url }, token: token, progress: { processedFiles, bytes in
-                sizeSheet.updateStatus("Scanning... \(processedFiles) files, \(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))")
-            }, completion: { totalBytes, wasCancelled in
-                self.dismiss(sizeSheet)
-                if wasCancelled {
-                    self.showInfo("Scan canceled: \(ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)) counted.")
-                    return
-                }
-                let sizeString = ByteCountFormatter.string(fromByteCount: totalBytes, countStyle: .file)
-                let availableSpace = try? destinationURL.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage
-                let availableSpaceString = availableSpace.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "N/A"
-                let alert = NSAlert()
-                alert.messageText = "Move Items"
-                alert.informativeText = "Are you sure you want to move \(items.count) item(s) (\(sizeString)) to \(destinationURL.lastPathComponent)?\n\nAvailable space: \(availableSpaceString)"
-                alert.addButton(withTitle: "Move")
-                alert.addButton(withTitle: "Cancel")
-                if alert.runModal() == .alertFirstButtonReturn {
-                    self.performMove(items: items, to: destinationURL, precomputedBytes: totalBytes)
-                }
-            })
-        } else {
-            performMove(items: items, to: destinationURL, precomputedBytes: nil)
+        openPanel.begin { [weak self] response in
+            guard response == .OK, let destinationURL = openPanel.url else { return }
+            self?.performFileOperation(.move, items: items.map { $0.url }, destination: destinationURL)
         }
-    }
-
-    // Helper method to check if a file is in the cut state
-    private func isFileCut(_ url: URL) -> Bool {
-        let pasteboard = NSPasteboard.general
-        guard pasteboard.string(forType: NSPasteboard.PasteboardType("com.macfileexplorer.cutOperation")) == "cut",
-              let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] else {
-            return false
-        }
-        return urls.contains(url)
     }
 
     @objc private func contextMenuPaste(_ sender: Any) {
-        let fileManager = FileManager.default
-        let destinationFolderURL = self.currentDirectory
         let pasteboard = NSPasteboard.general
+        guard let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], !fileURLs.isEmpty else { return }
 
-        // Check if it's a "cut" operation
-        let isCutOperation = pasteboard.string(forType: NSPasteboard.PasteboardType("com.macfileexplorer.cutOperation")) == "cut"
+        let isCut = pasteboard.string(forType: .string) == "cut"
+        let operation: FileOperationType = isCut ? .move : .copy
 
-        guard let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL], !urls.isEmpty else { return }
-
-        // Calculate total size (shallow: individual items, deeper enumeration for directories)
-        let confirmEnabled = UserDefaults.standard.bool(forKey: UserDefaults.Keys.confirmFileOperations.rawValue)
-        let showProgress = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showOperationProgress.rawValue)
-
-        let proceedWithPaste: (Int64) -> Void = { totalSize in
-            let sizeString = ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
-            let availableSpace = try? destinationFolderURL.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage
-            let availableSpaceString = availableSpace.map { ByteCountFormatter.string(fromByteCount: $0, countStyle: .file) } ?? "N/A"
-
-            if confirmEnabled {
-                let alert = NSAlert()
-                alert.messageText = isCutOperation ? "Move Items" : "Copy Items"
-                alert.informativeText = "Are you sure you want to \(isCutOperation ? "move" : "copy") \(urls.count) item(s) (\(sizeString)) into \(destinationFolderURL.lastPathComponent)?\n\nAvailable space: \(availableSpaceString)"
-                alert.addButton(withTitle: isCutOperation ? "Move" : "Copy")
-                alert.addButton(withTitle: "Cancel")
-                if alert.runModal() != .alertFirstButtonReturn { return }
-            }
-
-            let start = Date()
-            var progressVC: ProgressViewController? = nil
-            if showProgress {
-                let pvc = ProgressViewController()
-                self.presentAsSheet(pvc)
-                progressVC = pvc
-            }
-
-            DispatchQueue.global(qos: .userInitiated).async {
-                let total = urls.count
-                for (index, url) in urls.enumerated() {
-                    let destinationURL = destinationFolderURL.appendingPathComponent(url.lastPathComponent)
-                    do {
-                        if isCutOperation {
-                            try fileManager.moveItem(at: url, to: destinationURL)
-                        } else {
-                            try fileManager.copyItem(at: url, to: destinationURL)
-                        }
-                        if let pvc = progressVC {
-                            let percent = Double(index + 1) / Double(total) * 100
-                            DispatchQueue.main.async {
-                                pvc.updateProgress(percent: percent, status: "\(isCutOperation ? "Moving" : "Copying") \(url.lastPathComponent)...")
-                            }
-                        }
-                    } catch {
-                        DispatchQueue.main.async { self.showError("Failed to \(isCutOperation ? "move" : "copy") '\(url.lastPathComponent)': \(error.localizedDescription)") }
-                    }
-                }
-                DispatchQueue.main.async {
-                    if let pvc = progressVC { self.dismiss(pvc) }
-                    pasteboard.clearContents()
-                    self.refreshCurrentDirectory()
-                    self.outlineView.reloadData()
-                    self.collectionView.reloadData()
-                    self.browserView.reloadColumn(self.browserView.lastColumn)
-                    OperationMetricsManager.append(type: isCutOperation ? "paste-move" : "paste-copy", bytes: totalSize, files: urls.count, start: start, end: Date())
-                }
-            }
+        performFileOperation(operation, items: fileURLs, destination: currentDirectory)
+        
+        // Clear pasteboard after a cut operation
+        if isCut {
+            pasteboard.clearContents()
         }
-
-        // Asynchronous size calculation with cancellation & throttled progress
-        let sizeSheet = SizeCalculationViewController()
-        let token = CancellationToken()
-        sizeSheet.cancelHandler = { token.cancel() }
-        self.presentAsSheet(sizeSheet)
-        self.gatherTotalSizeAsync(urls: urls, token: token, progress: { processedFiles, bytes in
-            sizeSheet.updateStatus("Scanning... \(processedFiles) files, \(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))")
-        }, completion: { total, wasCancelled in
-            self.dismiss(sizeSheet)
-            if wasCancelled {
-                self.showInfo("Scan canceled: \(ByteCountFormatter.string(fromByteCount: total, countStyle: .file)) counted.")
-                return
-            }
-            proceedWithPaste(total)
-        })
     }
 
     @objc private func contextMenuRename(_ sender: Any) {
-        let items = getSelectedItems()
-        guard let item = items.first, items.count == 1 else { return }
+        let selectedItems = getSelectedItems()
+        guard let item = selectedItems.first, selectedItems.count == 1 else { return }
 
-        let alert = NSAlert()
-        alert.messageText = "Rename"
-        alert.informativeText = "Enter new name for '\(item.name)':"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Rename")
-        alert.addButton(withTitle: "Cancel")
-
-        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
-        textField.stringValue = item.name
-        alert.accessoryView = textField
-
-        if alert.runModal() == .alertFirstButtonReturn {
-            let newName = textField.stringValue
-            guard !newName.isEmpty else { return }
-
-            let newURL = item.url.deletingLastPathComponent().appendingPathComponent(newName)
-            do {
-                try FileManager.default.moveItem(at: item.url, to: newURL)
-                refreshCurrentDirectory()
-            } catch {
-                showError("Failed to rename: \(error.localizedDescription)")
+        if let outlineView = self.outlineView, currentViewMode == .list, let row = outlineView.item(atRow: outlineView.selectedRow) as? FileItem, row == item {
+            let rowView = outlineView.rowView(atRow: outlineView.selectedRow, makeIfNecessary: false)
+            if let cell = rowView?.view(atColumn: 0) as? NSTableCellView, let textField = cell.textField {
+                textField.isEditable = true
+                view.window?.makeFirstResponder(textField)
             }
         }
+        // Similar logic needed for collectionView and browserView
     }
 
-    @objc private func contextMenuDelete(_ sender: Any) {
+    @objc func contextMenuDelete(_ sender: Any) {
         let items = getSelectedItems()
         guard !items.isEmpty else { return }
 
-        let totalSize = items.reduce(0) { $0 + $1.size }
-        let sizeString = ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
-
+        // Confirmation dialog
         let alert = NSAlert()
-        alert.messageText = "Move to Trash"
-        alert.informativeText = "Are you sure you want to move \(items.count) item(s) (\(sizeString)) to trash?"
+        alert.messageText = "Delete \(items.count) item(s)?"
+        alert.informativeText = "Are you sure you want to move \(items.count) item(s) to the Trash?"
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Move to Trash")
         alert.addButton(withTitle: "Cancel")
 
-        let confirmEnabled = UserDefaults.standard.bool(forKey: UserDefaults.Keys.confirmFileOperations.rawValue)
-        let showProgress = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showOperationProgress.rawValue)
-        if (!confirmEnabled || alert.runModal() == .alertFirstButtonReturn) {
-            var progressVC: ProgressViewController? = nil
-            var processed = 0
-            let total = items.count
-            let start = Date()
-            var totalBytes: Int64 = 0
-            if showProgress {
-                let pvc = ProgressViewController()
-                self.presentAsSheet(pvc)
-                progressVC = pvc
-            }
-            for item in items {
-                NSWorkspace.shared.recycle([item.url]) { [weak self] _, _ in
-                    guard let self else { return }
-                    processed += 1
-                    if let attrs = try? FileManager.default.attributesOfItem(atPath: item.url.path), let sz = attrs[.size] as? Int64 { totalBytes += sz }
-                    if let pvc = progressVC {
-                        let percent = Double(processed) / Double(total) * 100
-                        pvc.updateProgress(percent: percent, status: "Deleting \(item.name)...")
-                    }
-                    if processed == total {
-                        if let pvc = progressVC { self.dismiss(pvc) }
-                        self.refreshCurrentDirectory()
-                        OperationMetricsManager.append(type: "delete", bytes: totalBytes, files: items.count, start: start, end: Date())
-                    }
+        if alert.runModal() == .alertFirstButtonReturn {
+            performFileOperation(.delete, items: items.map { $0.url }, destination: nil)
+        }
+    }
+
+    @objc func contextMenuNewFolder(_ sender: Any) {
+        let newFolderName = "Untitled Folder"
+        var finalName = newFolderName
+        var counter = 1
+        while FileManager.default.fileExists(atPath: currentDirectory.appendingPathComponent(finalName).path) {
+            finalName = "\(newFolderName) \(counter)"
+            counter += 1
+        }
+        
+        let newFolderURL = currentDirectory.appendingPathComponent(finalName)
+        
+        do {
+            try FileManager.default.createDirectory(at: newFolderURL, withIntermediateDirectories: false, attributes: nil)
+            refreshCurrentDirectory()
+        } catch {
+            showError("Failed to create folder: \(error.localizedDescription)")
+        }
+    }
+
+    @objc func contextMenuNewFile(_ sender: Any) {
+        let alert = NSAlert()
+        alert.messageText = "New File"
+        alert.informativeText = "Enter the name for the new file:"
+        
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+        textField.stringValue = "untitled.txt"
+        alert.accessoryView = textField
+        
+        alert.addButton(withTitle: "Create")
+        alert.addButton(withTitle: "Cancel")
+        
+        if alert.runModal() == .alertFirstButtonReturn {
+            let newFileName = textField.stringValue
+            if !newFileName.isEmpty {
+                let newFileURL = currentDirectory.appendingPathComponent(newFileName)
+                if !FileManager.default.fileExists(atPath: newFileURL.path) {
+                    FileManager.default.createFile(atPath: newFileURL.path, contents: nil, attributes: nil)
+                    refreshCurrentDirectory()
+                } else {
+                    showError("A file with this name already exists.")
                 }
             }
         }
     }
-        // MARK: - Perform Operations Helpers
-        private func performCopy(items: [FileItem], to destinationURL: URL, precomputedBytes: Int64?) {
-            let showProgress = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showOperationProgress.rawValue)
-            var progressVC: ProgressViewController? = nil
-            let start = Date()
-            var totalBytes: Int64 = precomputedBytes ?? 0
-            if showProgress {
-                let pvc = ProgressViewController()
-                presentAsSheet(pvc)
-                progressVC = pvc
-            }
-            DispatchQueue.global(qos: .userInitiated).async {
-                let fm = FileManager.default
-                let total = items.count
-                for (index, item) in items.enumerated() {
-                    let destinationItemURL = destinationURL.appendingPathComponent(item.name)
-                    do {
-                        if precomputedBytes == nil, let attrs = try? fm.attributesOfItem(atPath: item.url.path), let sz = attrs[.size] as? Int64 { totalBytes += sz }
-                        try fm.copyItem(at: item.url, to: destinationItemURL)
-                        if let pvc = progressVC {
-                            let percent = Double(index + 1) / Double(total) * 100
-                            DispatchQueue.main.async { pvc.updateProgress(percent: percent, status: "Copying \(item.name)...") }
-                        }
-                    } catch {
-                        DispatchQueue.main.async { self.showError("Failed to copy '\(item.name)': \(error.localizedDescription)") }
-                    }
-                }
-                DispatchQueue.main.async {
-                    if let pvc = progressVC { self.dismiss(pvc) }
-                    self.refreshCurrentDirectory()
-                    OperationMetricsManager.append(type: "copy", bytes: totalBytes, files: items.count, start: start, end: Date())
-                }
-            }
-        }
-
-        private func performMove(items: [FileItem], to destinationURL: URL, precomputedBytes: Int64?) {
-            let showProgress = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showOperationProgress.rawValue)
-            var progressVC: ProgressViewController? = nil
-            let start = Date()
-            var totalBytes: Int64 = precomputedBytes ?? 0
-            if showProgress {
-                let pvc = ProgressViewController()
-                presentAsSheet(pvc)
-                progressVC = pvc
-            }
-            DispatchQueue.global(qos: .userInitiated).async {
-                let fm = FileManager.default
-                let total = items.count
-                for (index, item) in items.enumerated() {
-                    let destinationItemURL = destinationURL.appendingPathComponent(item.name)
-                    do {
-                        if precomputedBytes == nil, let attrs = try? fm.attributesOfItem(atPath: item.url.path), let sz = attrs[.size] as? Int64 { totalBytes += sz }
-                        try fm.moveItem(at: item.url, to: destinationItemURL)
-                        if let pvc = progressVC {
-                            let percent = Double(index + 1) / Double(total) * 100
-                            DispatchQueue.main.async { pvc.updateProgress(percent: percent, status: "Moving \(item.name)...") }
-                        }
-                    } catch {
-                        DispatchQueue.main.async { self.showError("Failed to move '\(item.name)': \(error.localizedDescription)") }
-                    }
-                }
-                DispatchQueue.main.async {
-                    if let pvc = progressVC { self.dismiss(pvc) }
-                    self.refreshCurrentDirectory()
-                    OperationMetricsManager.append(type: "move", bytes: totalBytes, files: items.count, start: start, end: Date())
-                }
-            }
-        }
-
-        // Throttled, cancellable size enumeration
-        private func gatherTotalSizeAsync(urls: [URL], token: CancellationToken, progress: @escaping (_ processedFiles: Int, _ totalBytes: Int64) -> Void, completion: @escaping (Int64, Bool) -> Void) {
-            DispatchQueue.global(qos: .utility).async {
-                let fm = FileManager.default
-                var total: Int64 = 0
-                var processed = 0
-                let throttleInterval: TimeInterval = 0.25
-                var lastUpdate = Date.timeIntervalSinceReferenceDate
-                for root in urls {
-                    if token.isCancelled { break }
-                    if let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
-                        for case let fileURL as URL in enumerator {
-                            if token.isCancelled { break }
-                            if let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey]) {
-                                if let isDir = values.isDirectory, !isDir, let fileSize = values.fileSize { total += Int64(fileSize) }
-                            }
-                            processed += 1
-                            let now = Date.timeIntervalSinceReferenceDate
-                            if now - lastUpdate >= throttleInterval {
-                                lastUpdate = now
-                                DispatchQueue.main.async { progress(processed, total) }
-                            }
-                        }
-                    } else {
-                        if let attrs = try? fm.attributesOfItem(atPath: root.path), let size = attrs[.size] as? Int64 { total += size }
-                        processed += 1
-                    }
-                }
-                DispatchQueue.main.async { completion(total, token.isCancelled) }
-            }
-        }
-    // MARK: - Advanced Copy/Move
 
     @objc private func contextMenuAdvancedCopyTo(_ sender: Any) {
-        let items = getSelectedItems()
-        guard !items.isEmpty else { return }
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.message = "Choose destination folder for advanced copy of \(items.count) item(s)"
-        if panel.runModal() == .OK, let destinationURL = panel.url {
-            let dialog = FileCopyMoveDialog(operationType: .copy, sourceFiles: items.map { $0.url }, destination: destinationURL)
-            dialog.showWindow(self)
-        }
+        // Implement advanced copy dialog (e.g., with options to overwrite, skip, etc.)
     }
 
     @objc private func contextMenuAdvancedMoveTo(_ sender: Any) {
+        // Implement advanced move dialog
+    }
+
+    @objc func contextMenuShowInFinder(_ sender: Any) {
         let items = getSelectedItems()
-        guard !items.isEmpty else { return }
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.message = "Choose destination folder for advanced move of \(items.count) item(s)"
-        if panel.runModal() == .OK, let destinationURL = panel.url {
-            let dialog = FileCopyMoveDialog(operationType: .move, sourceFiles: items.map { $0.url }, destination: destinationURL)
-            dialog.showWindow(self)
+        if items.isEmpty {
+            NSWorkspace.shared.activateFileViewerSelecting([currentDirectory])
+        } else {
+            NSWorkspace.shared.activateFileViewerSelecting(items.map { $0.url })
         }
-    }
-
-    // MARK: - Size Calculation Helper
-    private func totalSizeOfURLs(_ urls: [URL]) -> Int64 {
-        var total: Int64 = 0
-        let fm = FileManager.default
-        for url in urls {
-            if let enumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
-                for case let fileURL as URL in enumerator {
-                    do {
-                        let values = try fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
-                        if let isDir = values.isDirectory, !isDir, let fileSize = values.fileSize {
-                            total += Int64(fileSize)
-                        }
-                    } catch {
-                        // Ignore individual file size errors
-                    }
-                }
-            } else {
-                if let attrs = try? fm.attributesOfItem(atPath: url.path), let size = attrs[.size] as? Int64 {
-                    total += size
-                }
-            }
-        }
-        return total
-    }
-
-    @objc private func contextMenuNewFolder(_ sender: Any) {
-        let alert = NSAlert()
-        alert.messageText = "New Folder"
-        alert.informativeText = "Enter name for new folder:"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Create")
-        alert.addButton(withTitle: "Cancel")
-
-        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
-        textField.stringValue = "Untitled Folder"
-        alert.accessoryView = textField
-
-        if alert.runModal() == .alertFirstButtonReturn {
-            let folderName = textField.stringValue
-            guard !folderName.isEmpty else { return }
-
-            let newFolderURL = currentDirectory.appendingPathComponent(folderName)
-            do {
-                try FileManager.default.createDirectory(at: newFolderURL, withIntermediateDirectories: false)
-                refreshCurrentDirectory()
-            } catch {
-                showError("Failed to create folder: \(error.localizedDescription)")
-            }
-        }
-    }
-
-    @objc private func contextMenuNewFile(_ sender: Any) {
-        let alert = NSAlert()
-        alert.messageText = "New File"
-        alert.informativeText = "Enter name for new file (including extension):"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Create")
-        alert.addButton(withTitle: "Cancel")
-
-        // Create a container view for the text field and label
-        let containerView = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 50))
-
-        // Add a helpful label
-        let label = NSTextField(labelWithString: "File name:")
-        label.frame = NSRect(x: 0, y: 26, width: 300, height: 17)
-        label.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
-        label.textColor = .secondaryLabelColor
-        containerView.addSubview(label)
-
-        // Add text field
-        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
-        textField.stringValue = "untitled.txt"
-        textField.placeholderString = "e.g., document.txt, notes.md, script.sh"
-        containerView.addSubview(textField)
-
-        alert.accessoryView = containerView
-
-        // Make the window appear and select the filename (without extension)
-        DispatchQueue.main.async {
-            textField.becomeFirstResponder()
-            // Select just the filename part (before the last dot)
-            if let dotRange = textField.stringValue.range(of: ".", options: .backwards) {
-                let filenameLength = textField.stringValue.distance(from: textField.stringValue.startIndex, to: dotRange.lowerBound)
-                textField.currentEditor()?.selectedRange = NSRange(location: 0, length: filenameLength)
-            }
-        }
-
-        if alert.runModal() == .alertFirstButtonReturn {
-            let fileName = textField.stringValue.trimmingCharacters(in: .whitespaces)
-            guard !fileName.isEmpty else {
-                showError("File name cannot be empty")
-                return
-            }
-
-            // Validate filename (no path separators)
-            if fileName.contains("/") || fileName.contains("\\") {
-                showError("File name cannot contain / or \\ characters")
-                return
-            }
-
-            let newFileURL = currentDirectory.appendingPathComponent(fileName)
-
-            // Check if file already exists
-            if FileManager.default.fileExists(atPath: newFileURL.path) {
-                let confirmAlert = NSAlert()
-                confirmAlert.messageText = "File Already Exists"
-                confirmAlert.informativeText = "A file named \"\(fileName)\" already exists. Do you want to replace it?"
-                confirmAlert.alertStyle = .warning
-                confirmAlert.addButton(withTitle: "Replace")
-                confirmAlert.addButton(withTitle: "Cancel")
-
-                if confirmAlert.runModal() != .alertFirstButtonReturn {
-                    return
-                }
-            }
-
-            do {
-                // Create an empty file
-                try Data().write(to: newFileURL)
-                refreshCurrentDirectory()
-
-                // Select the newly created file
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                    self?.selectFile(at: newFileURL)
-                }
-            } catch {
-                showError("Failed to create file: \(error.localizedDescription)")
-            }
-        }
-    }
-
-
-
-    @objc private func contextMenuShowInFinder(_ sender: Any) {
-        let items = getSelectedItems()
-        guard !items.isEmpty else { return }
-
-        NSWorkspace.shared.activateFileViewerSelecting(items.map { $0.url })
-    }
-
-    @objc private func contextMenuAddToFavorites(_ sender: Any) {
-        let items = getSelectedItems()
-        guard let item = items.first, items.count == 1 else { return }
-
-        delegate?.fileBrowserDidRequestAddToFavorites(self, item: item)
     }
     
-    @objc private func contextMenuClosePane(_ sender: Any) {
+    @objc func contextMenuOpenInTerminal(_ sender: Any) {
+        delegate?.toolbarDidRequestOpenInTerminal()
+    }
+
+    @objc func contextMenuClosePane(_ sender: Any) {
         delegate?.fileBrowserDidRequestClosePane(self)
     }
 
-    @objc private func contextMenuOpenInTerminal(_ sender: Any) {
+    @objc func contextMenuAddToFavorites(_ sender: Any) {
         let items = getSelectedItems()
-        var targetURL: URL
-
-        if let item = items.first {
-            // Determine target directory
-            if item.isDirectory {
-                targetURL = item.url
-            } else {
-                // If file selected, use parent directory
-                targetURL = item.url.deletingLastPathComponent()
-            }
-        } else {
-            // No selection - use current directory
-            targetURL = currentDirectory
-        }
-
-        // Open embedded terminal and navigate to target directory
-        if let splitPaneVC = parent as? SplitPaneViewController,
-           let tabBarController = splitPaneVC.parent as? TabBarController,
-           let splitViewController = tabBarController.parent as? NSSplitViewController,
-           let mainSplitVC = splitViewController.parent as? SplitViewController {
-            // Open terminal if not already visible
-            if !(mainSplitVC.isTerminalVisible) {
-                mainSplitVC.toggleTerminal()
-            }
-            // Change to target directory
-            mainSplitVC.terminalViewController?.changeDirectory(to: targetURL.path)
-        }
-    }
-
-    private func openInExternalTerminal(at url: URL) {
-        // Open Terminal.app at specified directory
-        let config = NSWorkspace.OpenConfiguration()
-        NSWorkspace.shared.open(
-            [url],
-            withApplicationAt: URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"),
-            configuration: config
-        ) { (app, error) in
-            if let error = error {
-                print("Error opening Terminal.app: \(error)")
-            }
-        }
-    }
-
-    @objc private func checkboxToggled(_ sender: NSButton) {
-        let row = sender.tag
-        guard row >= 0, row < outlineView.numberOfRows else { return }
-
-        if sender.state == .on {
-            // Add to selection
-            outlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: true)
-        } else {
-            // Remove from selection
-            var currentSelection = outlineView.selectedRowIndexes
-            currentSelection.remove(row)
-            outlineView.selectRowIndexes(currentSelection, byExtendingSelection: false)
-        }
-    }
-
-    private func showError(_ message: String) {
-        showBanner(message: message, style: .error)
-    }
-
-    private func selectFile(at url: URL) {
-        // Find the file item in the current directory
-        guard let children = rootItem.children,
-              let index = children.firstIndex(where: { $0.url == url }) else { return }
-
-        // Select in outline view
-        if currentViewMode == .list {
-            let row = outlineView.row(forItem: children[index])
-            if row >= 0 {
-                outlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
-                outlineView.scrollRowToVisible(row)
-            }
-        } else if currentViewMode == .icons || currentViewMode == .windowsList {
-            // Select in collection view
-            let indexPath = IndexPath(item: index, section: 0)
-            collectionView?.selectItems(at: Set([indexPath]), scrollPosition: .centeredVertically)
-        }
-    }
-
-    enum BannerStyle { case info, error }
-
-    private func showBanner(message: String, style: BannerStyle, duration: TimeInterval = 3.0) {
-        // Cancel previous dismissal
-        bannerDismissWorkItem?.cancel()
-        if bannerContainer == nil {
-            let container = NSView()
-            container.wantsLayer = true
-            container.layer?.cornerRadius = 8
-            container.translatesAutoresizingMaskIntoConstraints = false
-
-            let label = NSTextField(labelWithString: message)
-            label.translatesAutoresizingMaskIntoConstraints = false
-            label.lineBreakMode = .byTruncatingTail
-            label.maximumNumberOfLines = 3
-            label.font = NSFont.systemFont(ofSize: 12)
-            container.addSubview(label)
-
-            view.addSubview(container)
-            NSLayoutConstraint.activate([
-                container.topAnchor.constraint(equalTo: view.topAnchor, constant: 8),
-                container.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-                label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
-                label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
-                label.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
-                label.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -8)
-            ])
-            bannerContainer = container
-        }
-        guard let container = bannerContainer, let label = container.subviews.first as? NSTextField else { return }
-        label.stringValue = message
-        switch style {
-        case .info:
-            container.layer?.backgroundColor = NSColor(calibratedRed: 0.2, green: 0.55, blue: 0.9, alpha: 0.92).cgColor
-        case .error:
-            container.layer?.backgroundColor = NSColor(calibratedRed: 0.85, green: 0.25, blue: 0.25, alpha: 0.92).cgColor
-        }
-        container.alphaValue = 0
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.15
-            container.animator().alphaValue = 1
-        }
-        let workItem = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.3
-                container.animator().alphaValue = 0
-            } completionHandler: {
-                container.removeFromSuperview()
-                self.bannerContainer = nil
-            }
-        }
-        bannerDismissWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
-    }
-    private func globalFolderColorDidChange() {
-        // Reload all views to apply the new global folder color
-        outlineView.reloadData()
-        collectionView?.reloadData()
-        browserView?.reloadColumn(browserView?.lastColumn ?? 0)
-    }
-
-    private func settingsDidChange() {
-        // Reload all views to apply changed settings (like file extensions, easy select, etc.)
-        outlineView.reloadData()
-        collectionView?.reloadData()
-        browserView?.reloadColumn(browserView?.lastColumn ?? 0)
+        guard let item = items.first, items.count == 1 else { return }
+        delegate?.fileBrowserDidRequestAddToFavorites(self, item: item)
     }
     
-    private func updateStatusBar() {
-        // Calculate selected items size
-        var totalSelectedSize: Int64 = 0
-        let selectedFileItems = getSelectedItems()
-        for item in selectedFileItems {
-            totalSelectedSize += item.size
-        }
-
-        // Calculate disk space
-        let diskSpace = calculateDiskSpace()
-
-        // Update the local status bar
-        statusBarViewController?.updateFileInformation(selectedCount: selectedFileItems.count, totalSize: totalSelectedSize, diskSpace: diskSpace)
-
-        // Also notify delegate (for backwards compatibility)
-        if selectedFileItems.count > 0 {
-            delegate?.fileBrowser(self, didUpdateSelection: selectedFileItems.count, totalSize: totalSelectedSize)
+    private func performFileOperation(_ operation: FileOperationType, items: [URL], destination: URL?) {
+        guard !items.isEmpty else { return }
+        
+        // If confirmation is enabled, show the dialog first
+        let confirmOps = UserDefaults.standard.bool(forKey: UserDefaults.Keys.confirmFileOperations.rawValue)
+        
+        if confirmOps && operation != .delete {
+            // Use the existing FileCopyMoveDialog initializer which starts the operation.
+            let opType: FileCopyMoveDialog.OperationType = (operation == .copy) ? .copy : .move
+            let confirmationDialog = FileCopyMoveDialog(operationType: opType, sourceFiles: items, destination: destination ?? currentDirectory)
+            presentAsSheet(confirmationDialog)
         } else {
-            delegate?.fileBrowser(self, didUpdateDiskSpace: diskSpace)
+            // Execute immediately without confirmation
+            executeFileOperation(operation, items: items, destination: destination)
         }
     }
     
-    private func calculateDiskSpace() -> String? {
-        let fileURL = currentDirectory
-        do {
-            let values = try fileURL.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
-            if let capacity = values.volumeAvailableCapacityForImportantUsage {
-                return ByteCountFormatter.string(fromByteCount: capacity, countStyle: .file)
-            }
-        } catch {
-            print("Error getting disk space: \(error.localizedDescription)")
+    private func executeFileOperation(_ operation: FileOperationType, items: [URL], destination: URL?) {
+        let showProgress = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showOperationProgress.rawValue)
+        let progressVC = showProgress ? ProgressViewController() : nil
+        if let progressVC = progressVC {
+            presentAsSheet(progressVC)
         }
-        return nil
-    }
-}
-
-
-// MARK: - NSOutlineViewDelegate
-
-extension FileBrowserViewController: NSOutlineViewDelegate {
-    func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
-        guard let fileItem = item as? FileItem else { return nil }
-
-        let identifier = tableColumn?.identifier.rawValue ?? ""
-
-        if identifier == "NameColumn" {
-            let cellView = NSTableCellView()
-            let textField = NSTextField()
-            textField.isBordered = false
-            textField.backgroundColor = .clear
-            textField.isEditable = false
-            textField.stringValue = fileItem.displayName
-            textField.lineBreakMode = .byTruncatingTail
-
-            let imageView = NSImageView()
-            imageView.image = fileItem.icon
-            imageView.imageScaling = .scaleProportionallyDown
-
-            // Check if Easy Select is enabled
-            let easySelectEnabled = UserDefaults.standard.bool(forKey: UserDefaults.Keys.enableEasySelect.rawValue)
-
-            imageView.translatesAutoresizingMaskIntoConstraints = false
-            textField.translatesAutoresizingMaskIntoConstraints = false
-
-            if easySelectEnabled {
-                // Add checkbox for Easy Select mode
-                let checkbox = NSButton(checkboxWithTitle: "", target: nil, action: nil)
-                checkbox.translatesAutoresizingMaskIntoConstraints = false
-                checkbox.state = outlineView.selectedRowIndexes.contains(outlineView.row(forItem: item)) ? .on : .off
-                checkbox.tag = outlineView.row(forItem: item)
-                checkbox.target = self
-                checkbox.action = #selector(checkboxToggled(_:))
-
-                cellView.addSubview(checkbox)
-                cellView.addSubview(imageView)
-                cellView.addSubview(textField)
-
-                NSLayoutConstraint.activate([
-                    checkbox.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                    checkbox.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                    checkbox.widthAnchor.constraint(equalToConstant: 18),
-
-                    imageView.leadingAnchor.constraint(equalTo: checkbox.trailingAnchor, constant: 4),
-                    imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                    imageView.widthAnchor.constraint(equalToConstant: 16),
-                    imageView.heightAnchor.constraint(equalToConstant: 16),
-
-                    textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
-                    textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                    textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
-                ])
-            } else {
-                // Standard layout without checkbox
-                cellView.addSubview(imageView)
-                cellView.addSubview(textField)
-
-                NSLayoutConstraint.activate([
-                    imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                    imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                    imageView.widthAnchor.constraint(equalToConstant: 16),
-                    imageView.heightAnchor.constraint(equalToConstant: 16),
-
-                    textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
-                    textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                    textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
-                ])
-            }
-
-            cellView.imageView = imageView
-            cellView.textField = textField
-
-            // Apply dimmed appearance for cut files
-            if isFileCut(fileItem.url) {
-                imageView.alphaValue = 0.5
-                textField.alphaValue = 0.5
-            } else {
-                imageView.alphaValue = 1.0
-                textField.alphaValue = 1.0
-            }
-
-            return cellView
-        } else if identifier == "SizeColumn" {
-            let cellView = NSTableCellView()
-            let textField = NSTextField()
-            textField.isBordered = false
-            textField.backgroundColor = .clear
-            textField.isEditable = false
-            textField.alignment = .right  // Right-align like Windows Explorer
-            textField.stringValue = fileItem.sizeString
-
-            // If folder sizes should be shown and this is a directory, calculate it asynchronously
-            if fileItem.isDirectory && UserDefaults.standard.bool(forKey: "showFolderSizes") {
-                // Show placeholder while calculating
-                if fileItem.size == 0 {
-                    textField.stringValue = "Calculating..."
-                    textField.textColor = .secondaryLabelColor
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let fileManager = FileManager.default
+            let autoRename = UserDefaults.standard.bool(forKey: UserDefaults.Keys.autoRenameOnConflict.rawValue)
+            var totalSize: Int64 = 0
+            let startTime = Date()
+            
+            for (index, sourceURL) in items.enumerated() {
+                var targetURL = destination?.appendingPathComponent(sourceURL.lastPathComponent)
+                
+                if operation == .delete {
+                    do {
+                        try fileManager.trashItem(at: sourceURL, resultingItemURL: nil)
+                    } catch {
+                        DispatchQueue.main.async {
+                            self?.showError("Failed to move '\(sourceURL.lastPathComponent)' to Trash: \(error.localizedDescription)")
+                        }
+                    }
+                } else if var targetURL = targetURL {
+                    // Handle name conflicts
+                    if autoRename && fileManager.fileExists(atPath: targetURL.path) {
+                        var counter = 1
+                        let nameWithoutExt = (sourceURL.lastPathComponent as NSString).deletingPathExtension
+                        let ext = (sourceURL.lastPathComponent as NSString).pathExtension
+                        repeat {
+                            let newName = ext.isEmpty ? "\(nameWithoutExt) \(counter)" : "\(nameWithoutExt) \(counter).\(ext)"
+                            targetURL = destination!.appendingPathComponent(newName)
+                            counter += 1
+                        } while fileManager.fileExists(atPath: targetURL.path)
+                    }
                     
-                    // Calculate folder size asynchronously
-                    fileItem.calculateFolderSize { [weak textField] totalSize in
-                        textField?.stringValue = ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
-                        textField?.textColor = .labelColor
+                    do {
+                        if operation == .copy {
+                            try fileManager.copyItem(at: sourceURL, to: targetURL)
+                        } else { // .move
+                            try fileManager.moveItem(at: sourceURL, to: targetURL)
+                        }
+                    } catch {
+                        DispatchQueue.main.async {
+                            self?.showError("Failed to \(operation.rawValue) '\(sourceURL.lastPathComponent)': \(error.localizedDescription)")
+                        }
                     }
                 }
-            }
-
-            cellView.addSubview(textField)
-            textField.translatesAutoresizingMaskIntoConstraints = false
-
-            NSLayoutConstraint.activate([
-                textField.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
-            ])
-
-            cellView.textField = textField
-
-            // Apply dimmed appearance for cut files
-            if isFileCut(fileItem.url) {
-                textField.alphaValue = 0.5
-            } else {
-                textField.alphaValue = 1.0
-            }
-
-            return cellView
-        } else if identifier == "DateModifiedColumn" {
-            let cellView = NSTableCellView()
-            let textField = NSTextField()
-            textField.isBordered = false
-            textField.backgroundColor = .clear
-            textField.isEditable = false
-            textField.stringValue = fileItem.formattedDate
-
-            cellView.addSubview(textField)
-            textField.translatesAutoresizingMaskIntoConstraints = false
-
-            NSLayoutConstraint.activate([
-                textField.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
-            ])
-
-            cellView.textField = textField
-
-            // Apply dimmed appearance for cut files
-            if isFileCut(fileItem.url) {
-                textField.alphaValue = 0.5
-            } else {
-                textField.alphaValue = 1.0
-            }
-
-            return cellView
-        } else if identifier == "TypeColumn" {
-            let cellView = NSTableCellView()
-            let textField = NSTextField()
-            textField.isBordered = false
-            textField.backgroundColor = .clear
-            textField.isEditable = false
-            textField.stringValue = fileItem.kind
-            textField.lineBreakMode = .byTruncatingTail
-            textField.cell?.truncatesLastVisibleLine = true
-            textField.maximumNumberOfLines = 1
-
-            cellView.addSubview(textField)
-            textField.translatesAutoresizingMaskIntoConstraints = false
-
-            NSLayoutConstraint.activate([
-                textField.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
-            ])
-
-            cellView.textField = textField
-            return cellView
-        } else if identifier == "DateCreatedColumn" {
-            let cellView = NSTableCellView()
-            let textField = NSTextField()
-            textField.isBordered = false
-            textField.backgroundColor = .clear
-            textField.isEditable = false
-            textField.stringValue = fileItem.formattedCreationDate
-
-            cellView.addSubview(textField)
-            textField.translatesAutoresizingMaskIntoConstraints = false
-
-            NSLayoutConstraint.activate([
-                textField.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
-            ])
-
-            cellView.textField = textField
-
-            // Apply dimmed appearance for cut files
-            if isFileCut(fileItem.url) {
-                textField.alphaValue = 0.5
-            } else {
-                textField.alphaValue = 1.0
-            }
-
-            return cellView
-        } else if identifier == "TagsColumn" {
-            let cellView = NSTableCellView()
-            let textField = NSTextField()
-            textField.isBordered = false
-            textField.backgroundColor = .clear
-            textField.isEditable = false
-            textField.stringValue = fileItem.tags.joined(separator: ", ")
-            textField.lineBreakMode = .byTruncatingTail
-            textField.cell?.truncatesLastVisibleLine = true
-            textField.maximumNumberOfLines = 1
-
-            cellView.addSubview(textField)
-            textField.translatesAutoresizingMaskIntoConstraints = false
-
-            NSLayoutConstraint.activate([
-                textField.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
-            ])
-
-            cellView.textField = textField
-            return cellView
-        }
-
-        return nil
-    }
-
-    func outlineView(_ outlineView: NSOutlineView, sortDescriptorsDidChange oldDescriptors: [NSSortDescriptor]) {
-        guard let sortDescriptor = outlineView.sortDescriptors.first else { return }
-        if let columnIdentifier = outlineView.tableColumns.first(where: { $0.sortDescriptorPrototype === sortDescriptor })?.identifier.rawValue {
-            sortColumn = columnIdentifier
-            sortAscending = sortDescriptor.ascending
-            sortItems()
-            outlineView.reloadData()
-        }
-    }
-
-    func outlineView(_ outlineView: NSOutlineView, shouldSelectItem item: Any) -> Bool {
-        let clickedRow = outlineView.clickedRow
-        let currentTime = Date().timeIntervalSinceReferenceDate
-        let timeSinceLastClick = currentTime - lastClickTime
-
-        // Check if this is a delayed second click on the same row
-        if clickedRow == lastClickedRow &&
-           clickedRow == outlineView.selectedRow &&
-           timeSinceLastClick > renameClickDelay &&
-           timeSinceLastClick < 2.0 { // Maximum time window for rename
-            // Trigger rename
-            if let fileItem = item as? FileItem {
-                DispatchQueue.main.async { [weak self] in
-                    self?.contextMenuRename(fileItem)
-                }
-            }
-            return false // Don't change selection
-        }
-
-        lastClickedRow = clickedRow
-        lastClickTime = currentTime
-        return true
-    }
-
-    func outlineViewSelectionDidChange(_ notification: Notification) {
-        let selectedRows = outlineView.selectedRowIndexes
-        if selectedRows.count == 1, let selectedRow = selectedRows.first {
-            if let selectedFileItem = outlineView.item(atRow: selectedRow) as? FileItem {
-                delegate?.fileBrowser(self, didSelectFile: selectedFileItem)
-                updatePreviewPane(with: selectedFileItem)
-            } else {
-                delegate?.fileBrowser(self, didSelectFile: nil)
-                updatePreviewPane(with: nil)
-            }
-        } else {
-            delegate?.fileBrowser(self, didSelectFile: nil)
-            updatePreviewPane(with: nil)
-        }
-        updateStatusBar()
-    }
-
-    func outlineView(_ outlineView: NSOutlineView, writeItems items: [Any], to pasteboard: NSPasteboard) -> Bool {
-        let fileItems = items.compactMap { $0 as? FileItem }
-        guard !fileItems.isEmpty else { return false }
-
-        let urls = fileItems.map { $0.url as NSURL }
-        pasteboard.clearContents()
-        pasteboard.writeObjects(urls)
-        return true
-    }
-
-    func outlineView(_ outlineView: NSOutlineView, validateDrop info: NSDraggingInfo, proposedItem item: Any?, proposedChildIndex index: Int) -> NSDragOperation {
-        guard let targetItem = item as? FileItem, targetItem.isDirectory else {
-            return []
-        }
-
-        // Check modifier keys to determine operation
-        // Option key = copy, no modifier = move
-        let modifierFlags = NSEvent.modifierFlags
-        if modifierFlags.contains(.option) {
-            return .copy
-        } else {
-            return .move
-        }
-    }
-
-    func outlineView(_ outlineView: NSOutlineView, acceptDrop info: NSDraggingInfo, item: Any?, childIndex index: Int) -> Bool {
-        guard let targetItem = item as? FileItem,
-              let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else {
-            return false
-        }
-
-        let destinationURL = targetItem.url
-
-        // Determine operation based on dragging info
-        let isCopyOperation = info.draggingSourceOperationMask.contains(.copy)
-
-        // Check disk space before proceeding
-        if !checkDiskSpace(for: urls, destination: destinationURL, operation: isCopyOperation ? "copy" : "move") {
-            return false
-        }
-
-        let fileManager = FileManager.default
-        var allSucceeded = true
-
-        for sourceURL in urls {
-            let fileName = sourceURL.lastPathComponent
-            var targetURL = destinationURL.appendingPathComponent(fileName)
-
-            // Skip if source and destination are the same
-            if sourceURL == targetURL {
-                continue
-            }
-
-            // Handle name conflicts by appending a number
-            var counter = 1
-            let fileExtension = targetURL.pathExtension
-            let baseFileName = targetURL.deletingPathExtension().lastPathComponent
-
-            while fileManager.fileExists(atPath: targetURL.path) {
-                let newFileName: String
-                if !fileExtension.isEmpty {
-                    newFileName = "\(baseFileName) \(counter).\(fileExtension)"
-                } else {
-                    newFileName = "\(baseFileName) \(counter)"
-                }
-                targetURL = destinationURL.appendingPathComponent(newFileName)
-                counter += 1
-            }
-
-            do {
-                if isCopyOperation {
-                    try fileManager.copyItem(at: sourceURL, to: targetURL)
-                } else {
-                    try fileManager.moveItem(at: sourceURL, to: targetURL)
-                }
-            } catch {
-                print("Failed to \(isCopyOperation ? "copy" : "move") \(sourceURL) to \(targetURL): \(error)")
-                allSucceeded = false
-            }
-        }
-
-        // Reload the view to show changes
-        if allSucceeded {
-            refreshCurrentDirectory()
-        }
-
-        return allSucceeded
-    }
-}
-
-// MARK: - Free Form Collection View Layout
-
-class FreeFormCollectionViewLayout: NSCollectionViewLayout {
-    
-    // Store item positions - keyed by index path
-    private var itemPositions: [IndexPath: CGPoint] = [:]
-    private var itemAttributes: [IndexPath: NSCollectionViewLayoutAttributes] = [:]
-    
-    // Item size
-    var itemSize: NSSize = NSSize(width: 100, height: 120)
-    
-    // Flag to enable/disable free form positioning
-    var isFreeForm: Bool = true {
-        didSet {
-            if !isFreeForm {
-                // Reset to grid when disabled
-                resetToGrid()
-            }
-        }
-    }
-    
-    // Grid settings
-    var gridSpacing: CGFloat = 10
-    var sectionInset: NSEdgeInsets = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
-    
-    override var collectionViewContentSize: NSSize {
-        guard let collectionView = collectionView else { return .zero }
-        
-        if isFreeForm && !itemPositions.isEmpty {
-            // Calculate bounds based on positioned items
-            var maxX: CGFloat = 0
-            var maxY: CGFloat = 0
-            
-            for (_, position) in itemPositions {
-                maxX = max(maxX, position.x + itemSize.width)
-                maxY = max(maxY, position.y + itemSize.height)
-            }
-            
-            return NSSize(width: max(maxX + sectionInset.right, collectionView.bounds.width),
-                         height: max(maxY + sectionInset.bottom, collectionView.bounds.height))
-        } else {
-            // Grid layout - calculate based on number of items
-            let numberOfItems = collectionView.numberOfItems(inSection: 0)
-            guard numberOfItems > 0 else { return collectionView.bounds.size }
-            
-            let availableWidth = collectionView.bounds.width - sectionInset.left - sectionInset.right
-            let columns = max(1, Int(availableWidth / (itemSize.width + gridSpacing)))
-            let rows = Int(ceil(Double(numberOfItems) / Double(columns)))
-            
-            let contentHeight = sectionInset.top + CGFloat(rows) * (itemSize.height + gridSpacing) + sectionInset.bottom
-            
-            return NSSize(width: collectionView.bounds.width, height: max(contentHeight, collectionView.bounds.height))
-        }
-    }
-    
-    override func prepare() {
-        super.prepare()
-        
-        guard let collectionView = collectionView else { return }
-        
-        itemAttributes.removeAll()
-        
-        let numberOfItems = collectionView.numberOfItems(inSection: 0)
-        
-        for item in 0..<numberOfItems {
-            let indexPath = IndexPath(item: item, section: 0)
-            let attributes = NSCollectionViewLayoutAttributes(forItemWith: indexPath)
-            
-            let position: CGPoint
-            
-            if isFreeForm, let savedPosition = itemPositions[indexPath] {
-                // Use saved free-form position
-                position = savedPosition
-            } else {
-                // Calculate grid position
-                position = gridPosition(for: item)
-                if isFreeForm {
-                    // Save initial grid position for free-form mode
-                    itemPositions[indexPath] = position
-                }
-            }
-            
-            attributes.frame = NSRect(origin: position, size: itemSize)
-            itemAttributes[indexPath] = attributes
-        }
-    }
-    
-    override func layoutAttributesForElements(in rect: NSRect) -> [NSCollectionViewLayoutAttributes] {
-        return itemAttributes.values.filter { $0.frame.intersects(rect) }
-    }
-    
-    override func layoutAttributesForItem(at indexPath: IndexPath) -> NSCollectionViewLayoutAttributes? {
-        return itemAttributes[indexPath]
-    }
-    
-    // MARK: - Position Management
-    
-    func setPosition(_ position: CGPoint, for indexPath: IndexPath) {
-        itemPositions[indexPath] = position
-        invalidateLayout()
-    }
-    
-    func setPositionWithoutInvalidation(_ position: CGPoint, for indexPath: IndexPath) {
-        itemPositions[indexPath] = position
-    }
-    
-    func position(for indexPath: IndexPath) -> CGPoint? {
-        return itemPositions[indexPath]
-    }
-    
-    func resetToGrid() {
-        itemPositions.removeAll()
-        invalidateLayout()
-    }
-    
-    func snapToGrid() {
-        // Snap all items to nearest grid position
-        guard let collectionView = collectionView else { return }
-        
-        let numberOfItems = collectionView.numberOfItems(inSection: 0)
-        var gridPositions: [CGPoint] = []
-        
-        // Calculate all grid positions
-        for item in 0..<numberOfItems {
-            gridPositions.append(gridPosition(for: item))
-        }
-        
-        // For each item, find the closest available grid position
-        var usedPositions = Set<Int>()
-        var newPositions: [IndexPath: CGPoint] = [:]
-        
-        for item in 0..<numberOfItems {
-            let indexPath = IndexPath(item: item, section: 0)
-            guard let currentPos = itemPositions[indexPath] else { continue }
-            
-            // Find closest grid position
-            var closestIndex = 0
-            var closestDistance = CGFloat.greatestFiniteMagnitude
-            
-            for (index, gridPos) in gridPositions.enumerated() {
-                if usedPositions.contains(index) { continue }
                 
-                let distance = hypot(currentPos.x - gridPos.x, currentPos.y - gridPos.y)
-                if distance < closestDistance {
-                    closestDistance = distance
-                    closestIndex = index
+                // Update progress
+                DispatchQueue.main.async {
+                    progressVC?.updateProgress(to: Double(index + 1) / Double(items.count), description: "Processing: \(sourceURL.lastPathComponent)")
                 }
             }
             
-            usedPositions.insert(closestIndex)
-            newPositions[indexPath] = gridPositions[closestIndex]
+            // Finalize
+            OperationMetricsManager.append(type: operation.rawValue, bytes: totalSize, files: items.count, start: startTime, end: Date())
+            DispatchQueue.main.async {
+                progressVC?.dismiss(self)
+                self?.refreshCurrentDirectory()
+            }
         }
-        
-        itemPositions = newPositions
-        invalidateLayout()
-    }
-    
-    private func gridPosition(for item: Int) -> CGPoint {
-        guard let collectionView = collectionView else { return .zero }
-        
-        let availableWidth = collectionView.bounds.width - sectionInset.left - sectionInset.right
-        let columns = max(1, Int(availableWidth / (itemSize.width + gridSpacing)))
-        
-        let row = item / columns
-        let column = item % columns
-        
-        let x = sectionInset.left + CGFloat(column) * (itemSize.width + gridSpacing)
-        let y = sectionInset.top + CGFloat(row) * (itemSize.height + gridSpacing)
-        
-        return CGPoint(x: x, y: y)
     }
 }
-
+enum FileOperationType: String {
+    case copy = "copy"
+    case move = "move"
+    case delete = "delete"
+}
 // MARK: - ToolbarDelegate
 
 extension FileBrowserViewController: ToolbarDelegate {
     func toolbarDidRequestBack() {
-        guard currentHistoryIndex > 0 else { return }
-        currentHistoryIndex -= 1
-        let url = navigationHistory[currentHistoryIndex]
-        loadDirectory(url, addToHistory: false)
+        if currentHistoryIndex > 0 {
+            let previousURL = navigationHistory[currentHistoryIndex - 1]
+            currentHistoryIndex -= 1
+            loadDirectory(previousURL, addToHistory: false)
+        }
     }
 
     func toolbarDidRequestForward() {
-        guard currentHistoryIndex < navigationHistory.count - 1 else { return }
-        currentHistoryIndex += 1
-        let url = navigationHistory[currentHistoryIndex]
-        loadDirectory(url, addToHistory: false)
+        if currentHistoryIndex < navigationHistory.count - 1 {
+            let nextURL = navigationHistory[currentHistoryIndex + 1]
+            currentHistoryIndex += 1
+            loadDirectory(nextURL, addToHistory: false)
+        }
     }
 
     func toolbarDidRequestNavigate(to url: URL) {
@@ -3389,22 +2408,18 @@ extension FileBrowserViewController: ToolbarDelegate {
     func toolbarDidChangeSortColumn(_ column: String, ascending: Bool) {
         sortColumn = column
         sortAscending = ascending
-        if let tableColumn = outlineView.tableColumn(withIdentifier: NSUserInterfaceItemIdentifier(column)),
-           let sortDescriptor = tableColumn.sortDescriptorPrototype {
-            outlineView.sortDescriptors = [sortDescriptor]
-        }
+        toolbarViewController.updateSortDisplay(column: column, ascending: ascending)
         sortItems()
         outlineView.reloadData()
-        toolbarViewController?.updateSortDisplay(column: column, ascending: ascending)
-        // Persist preference for this folder
-        let path = currentDirectory.path
-        var prefs = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.folderSortPreferences.rawValue) as? [String:String] ?? [:]
-        prefs[path] = "\(column)|\(ascending ? "asc" : "desc")"
+        
+        // Persist folder-specific sort preference
+        var prefs = UserDefaults.standard.dictionary(forKey: UserDefaults.Keys.folderSortPreferences.rawValue) as? [String:String] ?? [: ]
+        prefs[currentDirectory.path] = "\(column)|\(ascending ? "asc" : "desc")"
         UserDefaults.standard.set(prefs, forKey: UserDefaults.Keys.folderSortPreferences.rawValue)
     }
 
     func toolbarDidRequestNavigateToHistoryIndex(_ index: Int) {
-        guard index >= 0 && index < navigationHistory.count else { return }
+        guard index >= 0, index < navigationHistory.count else { return }
         currentHistoryIndex = index
         let url = navigationHistory[index]
         loadDirectory(url, addToHistory: false)
@@ -3416,30 +2431,21 @@ extension FileBrowserViewController: ToolbarDelegate {
 
     func toolbarDidToggleHiddenFiles(show: Bool) {
         showsHiddenFiles = show
-        UserDefaults.standard.set(showsHiddenFiles, forKey: UserDefaults.Keys.hiddenFilesState.rawValue)
+        // Persist hidden files state globally
+        UserDefaults.standard.set(show, forKey: UserDefaults.Keys.hiddenFilesState.rawValue)
         refreshCurrentDirectory()
-        toolbarViewController?.updateHiddenFilesDisplay(showing: show)
     }
     
-    func toggleHiddenFilesState() {
-        toolbarDidToggleHiddenFiles(show: !showsHiddenFiles)
-        NotificationCenter.default.post(name: Notification.Name("hiddenFilesToggled"), object: nil)
-    }
-
-    func isShowingHiddenFiles() -> Bool {
-        return showsHiddenFiles
-    }
-
     func toolbarDidChangeViewMode(_ viewMode: ViewMode) {
         currentViewMode = viewMode
-        displayFiles(for: viewMode)
         toolbarViewController?.updateViewModeDisplay(for: viewMode)
+        displayFiles(for: viewMode)
     }
-
+    
     func toolbarDidRequestSplitVertically() {
         delegate?.fileBrowserDidRequestSplit(self, orientation: .vertical)
     }
-
+    
     func toolbarDidRequestSplitHorizontally() {
         delegate?.fileBrowserDidRequestSplit(self, orientation: .horizontal)
     }
@@ -3449,197 +2455,41 @@ extension FileBrowserViewController: ToolbarDelegate {
     }
 
     func toolbarDidSearchTextChange(_ searchText: String) {
-        searchFilter = searchText.isEmpty ? nil : searchText
-        loadDirectory(currentDirectory, addToHistory: false, isSearch: !searchText.isEmpty)
+        searchFilter = searchText
+        refreshCurrentDirectory()
     }
 
     func toolbarDidTogglePreviewPane() {
-        previewVisible ? hidePreviewPane() : showPreviewPane()
+        if previewVisible { hidePreviewPane() } else { showPreviewPane() }
+        UserDefaults.standard.set(previewVisible, forKey: UserDefaults.Keys.showPreviewPane.rawValue)
+        NotificationCenter.default.post(name: .previewPaneToggled, object: nil)
     }
     
     func toolbarDidRequestShowFilter() {
         showFilterPanel()
     }
-
-    func toolbarDidRequestOpenInTerminal() {
-        // Open embedded terminal and navigate to current directory
-        if let splitPaneVC = parent as? SplitPaneViewController,
-           let tabBarController = splitPaneVC.parent as? TabBarController,
-           let splitViewController = tabBarController.parent as? NSSplitViewController,
-           let mainSplitVC = splitViewController.parent as? SplitViewController {
-            // Open terminal if not already visible
-            if !(mainSplitVC.isTerminalVisible) {
-                mainSplitVC.toggleTerminal()
-            }
-            // Change to current directory
-            mainSplitVC.terminalViewController?.changeDirectory(to: currentDirectory.path)
-        }
-    }
-}
-
-// MARK: - NSOutlineViewDataSource
-
-extension FileBrowserViewController: NSOutlineViewDataSource {
-    func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
-        // Guard against nil rootItem to prevent crashes during initialization
-        guard let rootItem = rootItem else { return 0 }
-
-        if item == nil {
-            return rootItem.children?.count ?? 0
-        }
-        guard let fileItem = item as? FileItem else { return 0 }
-        return fileItem.children?.count ?? 0
-    }
-
-    func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
-        // Guard against nil rootItem to prevent crashes during initialization
-        guard let rootItem = rootItem else { return FileItem(url: currentDirectory) }
-
-        if item == nil {
-            guard let children = rootItem.children, index >= 0, index < children.count else {
-                return FileItem(url: currentDirectory)
-            }
-            return children[index]
-        }
-        guard let fileItem = item as? FileItem else {
-            return FileItem(url: currentDirectory)
-        }
-        guard let children = fileItem.children, index >= 0, index < children.count else {
-            return FileItem(url: currentDirectory)
-        }
-        return children[index]
-    }
-
-    func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
-        guard let fileItem = item as? FileItem else { return false }
-        return fileItem.isDirectory && (fileItem.children?.count ?? 0) > 0
-    }
     
-    // MARK: - Drag and Drop Support
-
-    private func calculateTotalSize(of urls: [URL]) -> Int64 {
-        let fileManager = FileManager.default
-        var totalSize: Int64 = 0
-
-        for url in urls {
-            do {
-                let resourceValues = try url.resourceValues(forKeys: [.totalFileSizeKey, .isDirectoryKey])
-
-                if let isDirectory = resourceValues.isDirectory, isDirectory {
-                    // For directories, calculate size recursively
-                    if let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.totalFileSizeKey], options: [.skipsHiddenFiles]) {
-                        for case let fileURL as URL in enumerator {
-                            if let fileSize = try? fileURL.resourceValues(forKeys: [.totalFileSizeKey]).totalFileSize {
-                                totalSize += Int64(fileSize)
-                            }
-                        }
-                    }
-                } else if let fileSize = resourceValues.totalFileSize {
-                    totalSize += Int64(fileSize)
-                }
-            } catch {
-                print("Error calculating size for \(url): \(error)")
-            }
-        }
-
-        return totalSize
-    }
-
-    private func getAvailableSpace(at url: URL) -> Int64? {
-        do {
-            let resourceValues = try url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
-            return resourceValues.volumeAvailableCapacityForImportantUsage
-        } catch {
-            print("Error getting available space for \(url): \(error)")
-            return nil
-        }
-    }
-
-    private func checkDiskSpace(for urls: [URL], destination: URL, operation: String) -> Bool {
-        let totalSize = calculateTotalSize(of: urls)
-
-        guard let availableSpace = getAvailableSpace(at: destination) else {
-            // If we can't determine space, allow the operation
-            return true
-        }
-
-        // Check if there's enough space (with a small buffer)
-        if totalSize > availableSpace {
-            let alert = NSAlert()
-            alert.messageText = "Insufficient Disk Space"
-            alert.informativeText = String(format: "The destination does not have enough space to %@ these items.\n\nRequired: %@\nAvailable: %@",
-                                         operation,
-                                         ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file),
-                                         ByteCountFormatter.string(fromByteCount: availableSpace, countStyle: .file))
-            alert.alertStyle = .critical
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
-            return false
-        } else if totalSize > availableSpace * 9 / 10 {
-            // Warning if less than 10% space will remain
-            let alert = NSAlert()
-            alert.messageText = "Low Disk Space Warning"
-            alert.informativeText = String(format: "The destination will have very little space remaining after this operation.\n\nRequired: %@\nAvailable: %@\n\nDo you want to continue?",
-                                         ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file),
-                                         ByteCountFormatter.string(fromByteCount: availableSpace, countStyle: .file))
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: "Continue")
-            alert.addButton(withTitle: "Cancel")
-            return alert.runModal() == .alertFirstButtonReturn
-        }
-
-        return true
-    }
-
-    func outlineView(_ outlineView: NSOutlineView, pasteboardWriterForItem item: Any) -> NSPasteboardWriting? {
-        guard let fileItem = item as? FileItem else { return nil }
-        return fileItem.url as NSURL
+    func toolbarDidRequestOpenInTerminal() {
+        delegate?.toolbarDidRequestOpenInTerminal()
     }
 }
 
 // MARK: - NSCollectionViewDataSource
 
 extension FileBrowserViewController: NSCollectionViewDataSource {
+    func numberOfSections(in collectionView: NSCollectionView) -> Int {
+        return 1
+    }
+
     func collectionView(_ collectionView: NSCollectionView, numberOfItemsInSection section: Int) -> Int {
-        guard let rootItem = rootItem else {
-            print("CollectionViewDataSource: rootItem is nil")
-            return 0
-        }
-        let count = rootItem.children?.count ?? 0
-        print("CollectionViewDataSource: numberOfItemsInSection: \(count)")
-        return count
+        return rootItem?.children?.count ?? 0
     }
 
     func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
-        print("CollectionViewDataSource: itemForRepresentedObjectAt: \(indexPath)")
-        
-        // Verify rootItem exists and has children
-        guard let rootItem = rootItem, 
-              let children = rootItem.children, 
-              indexPath.item < children.count else {
-            print("CollectionViewDataSource: rootItem or children are nil, or indexPath is out of bounds")
-            // Return a basic item as fallback
-            let fallbackItem = NSCollectionViewItem()
-            fallbackItem.loadView()
-            return fallbackItem
+        let item = FileIconItem()
+        if let fileItem = rootItem?.children?[indexPath.item] {
+            item.fileItem = fileItem
         }
-
-        // Create item manually instead of using makeItem(withIdentifier:)
-        // This avoids NSCollectionView's complex instantiation which doesn't work well
-        // with our custom loadView() implementation
-        let item = FileIconItem(nibName: nil, bundle: nil)
-
-        // Set the layout mode, zoom level, and checkbox visibility before loading the view
-        item.isListMode = (currentViewMode == .windowsList)
-        item.zoomLevel = zoomLevel
-        item.showCheckbox = UserDefaults.standard.bool(forKey: UserDefaults.Keys.enableEasySelect.rawValue)
-
-        item.loadView() // Explicitly load the view
-        item.viewDidLoad() // Explicitly call viewDidLoad to set up UI
-        item.fileItem = children[indexPath.item]
-
-        print("Successfully created and configured FileIconItem for \(children[indexPath.item].name) in \(item.isListMode ? "list" : "icon") mode")
-
         return item
     }
 }
@@ -3648,348 +2498,339 @@ extension FileBrowserViewController: NSCollectionViewDataSource {
 
 extension FileBrowserViewController: NSCollectionViewDelegate {
     func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
-        let selectedFileItems = indexPaths.compactMap { indexPath -> FileItem? in
-            guard let item = self.rootItem.children?[indexPath.item] else { return nil }
-            return item
-        }
-
-        if selectedFileItems.count == 1 {
-            delegate?.fileBrowser(self, didSelectFile: selectedFileItems.first)
-            updatePreviewPane(with: selectedFileItems.first)
+        updateStatusBarForCollectionView()
+        
+        let items = indexPaths.compactMap { rootItem.children?[$0.item] }
+        if items.count == 1 {
+            updatePreviewPane(with: items.first)
         } else {
-            delegate?.fileBrowser(self, didSelectFile: nil)
             updatePreviewPane(with: nil)
         }
-        updateStatusBar()
     }
 
-    func collectionView(_ collectionView: NSCollectionView, writeItemsAt indexPaths: Set<IndexPath>, to pasteboard: NSPasteboard) -> Bool {
-        let fileItems = indexPaths.compactMap { indexPath -> FileItem? in
-            guard let item = self.rootItem.children?[indexPath.item] else { return nil }
-            return item
+    func collectionView(_ collectionView: NSCollectionView, didDeselectItemsAt indexPaths: Set<IndexPath>) {
+        updateStatusBarForCollectionView()
+        if collectionView.selectionIndexPaths.count == 1, let firstPath = collectionView.selectionIndexPaths.first {
+            let item = rootItem.children?[firstPath.item]
+            updatePreviewPane(with: item)
+        } else {
+            updatePreviewPane(with: nil)
         }
-        guard !fileItems.isEmpty else { return false }
+    }
 
-        let urls = fileItems.map { $0.url as NSURL }
-        pasteboard.clearContents()
-        pasteboard.writeObjects(urls)
+    private func updateStatusBarForCollectionView() {
+        let selectedIndexPaths = collectionView.selectionIndexPaths
+        let selectedCount = selectedIndexPaths.count
+        var totalSize: Int64 = 0
+        
+        selectedIndexPaths.forEach {
+            if let item = rootItem.children?[$0.item] {
+                totalSize += item.size
+            }
+        }
+        
+        delegate?.fileBrowser(self, didUpdateSelection: selectedCount, totalSize: totalSize)
+    }
+    
+    // MARK: - Drag and Drop for CollectionView
+    
+    func collectionView(_ collectionView: NSCollectionView, canDragItemsAt indexPaths: Set<IndexPath>, with event: NSEvent) -> Bool {
         return true
     }
-
-    func collectionView(_ collectionView: NSCollectionView, validateDrop draggingInfo: NSDraggingInfo, proposedIndexPath: AutoreleasingUnsafeMutablePointer<NSIndexPath>, dropOperation: UnsafeMutablePointer<NSCollectionView.DropOperation>) -> NSDragOperation {
-        // Check modifier keys to determine operation
-        // Option key = copy, no modifier = move
-        let modifierFlags = NSEvent.modifierFlags
-        let operation: NSDragOperation = modifierFlags.contains(.option) ? .copy : .move
-
-        if dropOperation.pointee == .on {
-            let indexPath = proposedIndexPath.pointee
-            guard let item = self.rootItem.children?[indexPath.item], item.isDirectory else {
-                return []
-            }
-            return operation
-        }
-        // Allow dropping on the background (current directory)
-        return operation
+    
+    func collectionView(_ collectionView: NSCollectionView, pasteboardWriterForItemAt indexPath: IndexPath) -> NSPasteboardWriting? {
+        guard let item = rootItem.children?[indexPath.item] else { return nil }
+        return item.url as NSURL
     }
-
-    func collectionView(_ collectionView: NSCollectionView, acceptDrop draggingInfo: NSDraggingInfo, indexPath: IndexPath, dropOperation: NSCollectionView.DropOperation) -> Bool {
-        guard let urls = draggingInfo.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else {
-            return false
+    
+    func collectionView(_ collectionView: NSCollectionView, validateDrop draggingInfo: NSDraggingInfo, proposedIndexPath: UnsafeMutablePointer<IndexPath>, dropOperation: UnsafeMutablePointer<NSCollectionView.DropOperation>) -> NSDragOperation {
+        // Allow dropping onto an item (folder) or between items
+        if dropOperation.pointee == .on {
+            return .copy
+        } else {
+            return .move
         }
-
+    }
+    
+    func collectionView(_ collectionView: NSCollectionView, acceptDrop draggingInfo: NSDraggingInfo, indexPath: IndexPath, dropOperation: NSCollectionView.DropOperation) -> Bool {
+        guard let urls = draggingInfo.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else { return false }
+        
+        // Determine destination
         let destinationURL: URL
-        if dropOperation == .on, let item = self.rootItem.children?[indexPath.item], item.isDirectory {
+        if dropOperation == .on {
+            // Dropped onto a folder
+            guard let item = rootItem.children?[indexPath.item], item.isDirectory else { return false }
             destinationURL = item.url
         } else {
-            destinationURL = self.currentDirectory
+            // Dropped between items, use current directory
+            destinationURL = currentDirectory
         }
-
-        // Determine operation based on dragging info
-        let isCopyOperation = draggingInfo.draggingSourceOperationMask.contains(.copy)
-
-        // Check disk space before proceeding
-        if !checkDiskSpace(for: urls, destination: destinationURL, operation: isCopyOperation ? "copy" : "move") {
-            return false
-        }
-
-        let fileManager = FileManager.default
-        var allSucceeded = true
-
-        for sourceURL in urls {
-            let fileName = sourceURL.lastPathComponent
-            var targetURL = destinationURL.appendingPathComponent(fileName)
-
-            // Skip if source and destination are the same
-            if sourceURL == targetURL {
-                continue
-            }
-
-            // Handle name conflicts by appending a number
-            var counter = 1
-            let fileExtension = targetURL.pathExtension
-            let baseFileName = targetURL.deletingPathExtension().lastPathComponent
-
-            while fileManager.fileExists(atPath: targetURL.path) {
-                let newFileName: String
-                if !fileExtension.isEmpty {
-                    newFileName = "\(baseFileName) \(counter).\(fileExtension)"
-                } else {
-                    newFileName = "\(baseFileName) \(counter)"
-                }
-                targetURL = destinationURL.appendingPathComponent(newFileName)
-                counter += 1
-            }
-
-            do {
-                if isCopyOperation {
-                    try fileManager.copyItem(at: sourceURL, to: targetURL)
-                } else {
-                    try fileManager.moveItem(at: sourceURL, to: targetURL)
-                }
-            } catch {
-                print("Failed to \(isCopyOperation ? "copy" : "move") \(sourceURL) to \(targetURL): \(error)")
-                allSucceeded = false
-            }
-        }
-
-        // Reload the view to show changes
-        if allSucceeded {
-            refreshCurrentDirectory()
-        }
-
-        return allSucceeded
+        
+        // Perform the move/copy
+        performFileOperation(.move, items: urls, destination: destinationURL)
+        return true
     }
 }
 
 // MARK: - NSBrowserDelegate
 
 extension FileBrowserViewController: NSBrowserDelegate {
-    func browser(_ browser: NSBrowser, numberOfRowsInColumn column: Int) -> Int {
-        print("BrowserDelegate: numberOfRowsInColumn: \(column)")
-        guard let item = fileItemForColumn(column) else {
-            print("BrowserDelegate: fileItemForColumn returned nil for column \(column)")
-            return 0
-        }
-        let count = item.children?.count ?? 0
-        print("BrowserDelegate: numberOfRowsInColumn: \(column) -> \(count)")
-        return count
+    func rootItem(for browser: NSBrowser) -> Any? {
+        return rootItem
     }
 
-    func browser(_ browser: NSBrowser, heightOfRow row: Int, inColumn column: Int) -> CGFloat {
-        // Return proper row height for better spacing (22pt is standard for browser rows)
-        return 22.0
+    func browser(_ browser: NSBrowser, numberOfChildrenOfItem item: Any?) -> Int {
+        guard let fileItem = item as? FileItem else { return 0 }
+        if fileItem.children == nil {
+            fileItem.loadChildren(showsHiddenFiles: showsHiddenFiles)
+        }
+        return fileItem.children?.count ?? 0
+    }
+
+    func browser(_ browser: NSBrowser, child index: Int, ofItem item: Any?) -> Any {
+        guard let fileItem = item as? FileItem else {
+            fatalError("Invalid item for browser")
+        }
+        return fileItem.children?[index] as Any
+    }
+
+    func browser(_ browser: NSBrowser, isLeafItem item: Any?) -> Bool {
+        guard let fileItem = item as? FileItem else { return true }
+        return !fileItem.isDirectory
+    }
+
+    func browser(_ browser: NSBrowser, objectValueForItem item: Any?) -> Any? {
+        guard let fileItem = item as? FileItem else { return nil }
+        return fileItem.displayName
     }
 
     func browser(_ browser: NSBrowser, willDisplayCell cell: Any, atRow row: Int, column: Int) {
-        print("BrowserDelegate: willDisplayCell at row \(row), column \(column)")
-        guard let cell = cell as? NSBrowserCell,
-              let item = fileItemForColumn(column),
-              let children = item.children,
-              row < children.count else {
-            print("BrowserDelegate: willDisplayCell guard failed")
-            return
-        }
-
-        let fileItem = children[row]
-        cell.title = fileItem.displayName
-        cell.isLeaf = !fileItem.isDirectory
-
-        if fileItem.isDirectory {
-            let icon = NSWorkspace.shared.icon(forFile: fileItem.url.path)
-
-            // Apply custom folder color if set
-            if let customColor = ColorManager.shared.getColor(for: fileItem.url) {
-                // Create a tinted version of the icon
-                let tintedIcon = icon.copy() as! NSImage
-                tintedIcon.lockFocus()
-                customColor.set()
-                let imageRect = NSRect(origin: .zero, size: tintedIcon.size)
-                imageRect.fill(using: .sourceAtop)
-                tintedIcon.unlockFocus()
-                cell.image = tintedIcon
-            } else {
-                cell.image = icon
-            }
-        } else {
-            cell.image = NSWorkspace.shared.icon(forFile: fileItem.url.path)
-        }
-    }
-    
-    func browser(_ browser: NSBrowser, selectRow row: Int, inColumn column: Int) -> Bool {
-        print("BrowserDelegate: selectRow \(row) in column \(column)")
-
-        // Get the item for the current column
-        guard let item = fileItemForColumn(column),
-              let children = item.children,
-              row < children.count else {
-            print("BrowserDelegate: selectRow guard failed")
-            return true
-        }
-
-        let selectedItem = children[row]
-        print("BrowserDelegate: Selected item: \(selectedItem.name), isDirectory: \(selectedItem.isDirectory)")
-
-        // If this is a directory, load its children
-        if selectedItem.isDirectory {
-            // Load children if not already loaded
-            if selectedItem.children == nil || selectedItem.children?.isEmpty == true {
-                print("BrowserDelegate: Loading children for \(selectedItem.name)")
-                selectedItem.loadChildren(showsHiddenFiles: showsHiddenFiles) { [weak self] errorMessage in
-                    DispatchQueue.main.async {
-                        self?.showError(errorMessage)
-                    }
-                }
-                // Sort the children
-                if var childrenToSort = selectedItem.children {
-                    sortChildren(&childrenToSort)
-                    selectedItem.children = childrenToSort
-                }
-            }
-        }
-
-        return true
-    }
-    
-    func browser(_ browser: NSBrowser, titleOfColumn column: Int) -> String? {
-        if column == 0 {
-            return currentDirectory.lastPathComponent
-        }
+        guard let browserCell = cell as? NSBrowserCell else { return }
         
-        let item = fileItemForColumn(column - 1)
-        let selectedRow = browser.selectedRow(inColumn: column - 1)
+        // Get the item for the cell
+        let parentItem = fileItemForColumn(column)
+        guard let children = parentItem?.children, row < children.count else { return }
+        let item = children[row]
         
-        if let children = item?.children, selectedRow >= 0, selectedRow < children.count {
-            return children[selectedRow].name
-        }
-        
-        return nil
+        browserCell.image = item.icon
+        browserCell.title = item.displayName
+        browserCell.isLeaf = !item.isDirectory
     }
     
     private func fileItemForColumn(_ column: Int) -> FileItem? {
-        print("BrowserDelegate: fileItemForColumn: \(column)")
         if column == 0 {
             return rootItem
         }
         
-        var item = rootItem
-        for col in 0..<column {
-            let selectedRow = browserView.selectedRow(inColumn: col)
-            guard selectedRow >= 0,
-                  let children = item?.children,
-                  selectedRow < children.count else {
-                print("BrowserDelegate: fileItemForColumn guard failed at column \(col)")
+        let path = browserView.path(toColumn: column)
+        var currentItem = rootItem
+        
+        let components = path.components(separatedBy: browserView.pathSeparator)
+        for component in components.dropFirst() { // Drop root
+            if let child = currentItem?.children?.first(where: { $0.displayName == component }) {
+                currentItem = child
+            } else {
                 return nil
             }
-            item = children[selectedRow]
+        }
+        return currentItem
+    }
+
+    func browser(_ browser: NSBrowser, selectionDidChangeInColumn column: Int) {
+        updateStatusBarForBrowser()
+        
+        // Get selected item
+        let selectedRows = browser.selectedRowIndexes(inColumn: column)
+        guard let selectedRow = selectedRows?.first else {
+            updatePreviewPane(with: nil)
+            return
         }
         
-        return item
-    }
-
-    func browser(_ browser: NSBrowser, didChangeSelectionInColumn column: Int) {
-        if let selectedRows = browser.selectedRowIndexes(inColumn: column),
-           selectedRows.count == 1,
-           let selectedRow = selectedRows.first {
-            if let item = fileItemForColumn(column),
-               let children = item.children,
-               selectedRow < children.count {
-                delegate?.fileBrowser(self, didSelectFile: children[selectedRow])
-                updatePreviewPane(with: children[selectedRow])
-            } else {
-                delegate?.fileBrowser(self, didSelectFile: nil)
-                updatePreviewPane(with: nil)
-            }
+        if let parentItem = fileItemForColumn(column),
+           let children = parentItem.children, selectedRow < children.count {
+            let selectedItem = children[selectedRow]
+            updatePreviewPane(with: selectedItem)
         } else {
-            delegate?.fileBrowser(self, didSelectFile: nil)
             updatePreviewPane(with: nil)
         }
-        updateStatusBar()
     }
-}
-// MARK: - Quick Look
-
-extension FileBrowserViewController {
-
-    override func acceptsPreviewPanelControl(_ panel: QLPreviewPanel!) -> Bool {
-        return true
-    }
-
-    override func beginPreviewPanelControl(_ panel: QLPreviewPanel!) {
-        panel.delegate = self
-        panel.dataSource = self
-    }
-
-    override func endPreviewPanelControl(_ panel: QLPreviewPanel!) {
-        panel.delegate = nil
-        panel.dataSource = nil
-    }
-
-    private func toggleQuickLook() {
-        if QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isVisible {
-            QLPreviewPanel.shared().orderOut(nil)
-        } else {
-            QLPreviewPanel.shared().makeKeyAndOrderFront(nil)
+    
+    private func updateStatusBarForBrowser() {
+        let selectedColumn = browserView.selectedColumn
+        guard selectedColumn >= 0 else {
+            delegate?.fileBrowser(self, didUpdateSelection: 0, totalSize: 0)
+            return
         }
+        
+        let selectedRows = browserView.selectedRowIndexes(inColumn: selectedColumn)
+        let selectedCount = selectedRows?.count ?? 0
+        var totalSize: Int64 = 0
+        
+        selectedRows?.forEach {
+            if let parentItem = fileItemForColumn(selectedColumn),
+               let children = parentItem.children, $0 < children.count {
+                totalSize += children[$0].size
+            }
+        }
+        
+        delegate?.fileBrowser(self, didUpdateSelection: selectedCount, totalSize: totalSize)
     }
 
-    // MARK: - QLPreviewPanelDataSource
+    // MARK: - Drag and Drop for Browser View
+    
+    func browser(_ browser: NSBrowser, writeRowsWith rowIndexes: IndexSet, inColumn column: Int, to pboard: NSPasteboard) -> Bool {
+        guard let parentItem = fileItemForColumn(column),
+              let children = parentItem.children else { return false }
+        
+        let itemsToDrag = rowIndexes.compactMap { children[$0] }
+        let urls = itemsToDrag.map { $0.url as NSURL }
+        
+        pboard.clearContents()
+        return pboard.writeObjects(urls)
+    }
+    
+    func browser(_ browser: NSBrowser, validateDrop info: NSDraggingInfo, proposedItem item: Any?, proposedChildIndex index: Int) -> NSDragOperation {
+        // Only accept file URLs
+        guard info.draggingPasteboard.canReadObject(forClasses: [NSURL.self]) else { return [] }
 
+        // Determine the target directory for the drop
+        let targetDirectoryItem: FileItem?
+        if let fileItem = item as? FileItem {
+            // Dropping on a specific item. Only allow if it's a directory.
+            guard fileItem.isDirectory else { return [] }
+            targetDirectoryItem = fileItem
+        } else {
+            // Dropping into empty space in a column. This means dropping into the directory represented by that column.
+            let proposedColumn = browser.column(at: info.draggingLocation)
+            guard proposedColumn >= 0 else { return [] }
+            targetDirectoryItem = fileItemForColumn(proposedColumn)
+        }
+        
+        guard let destinationURL = targetDirectoryItem?.url else { return [] }
+
+        // Determine operation based on modifier keys (Option key for copy)
+        var operation: NSDragOperation = []
+        if info.modifierFlags.contains(.option) {
+            operation = .copy
+        } else {
+            operation = .move
+        }
+        
+        // Prevent dropping a dragged item onto itself or into one of its subfolders.
+        if let draggedURLs = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] {
+            for draggedURL in draggedURLs {
+                if draggedURL == destinationURL || destinationURL.path.hasPrefix(draggedURL.path + "/") {
+                    return []
+                }
+            }
+        }
+        
+        // The source operation mask tells us what the source is willing to do.
+        // We should only return an operation that the source also supports.
+        if !info.draggingSourceOperationMask.contains(operation) {
+            return []
+        }
+
+        return operation
+    }
+    
+        func browser(_ browser: NSBrowser, acceptDrop info: NSDraggingInfo, item: Any?, childIndex index: Int) -> Bool {
+    
+            guard let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else {
+    
+                return false
+    
+            }
+    
+            
+    
+            // Determine the target directory for the drop
+    
+            let targetDirectoryItem: FileItem?
+    
+            if let fileItem = item as? FileItem {
+    
+                // Dropping on a specific item. Only allow if it's a directory.
+    
+                guard fileItem.isDirectory else { return false }
+    
+                targetDirectoryItem = fileItem
+    
+            } else {
+    
+                // Dropping into empty space in a column. This means dropping into the directory represented by that column.
+    
+                let proposedColumn = browser.column(at: info.draggingLocation)
+    
+                guard proposedColumn >= 0 else { return false }
+    
+                targetDirectoryItem = fileItemForColumn(proposedColumn)
+    
+            }
+    
+            
+    
+            guard let destinationURL = targetDirectoryItem?.url else { return false }
+    
+    
+    
+            // Determine operation from validateDrop's return value (draggingDestinationOperationMask)
+    
+            let operation: FileOperationType
+    
+            if info.draggingDestinationOperationMask.contains(.copy) {
+    
+                operation = .copy
+    
+            } else if info.draggingDestinationOperationMask.contains(.move) {
+    
+                operation = .move
+    
+            } else {
+    
+                return false // Should not happen if validateDrop is correct
+    
+            }
+    
+            
+    
+            performFileOperation(operation, items: urls, destination: destinationURL)
+    
+            return true
+    
+        }
+    
+    }
+    
+    // MARK: - Notification Handling
+    
+    extension FileBrowserViewController {
+    
+        @objc private func handleTabDidChange(_ notification: Notification) {
+    
+            if let tabVC = notification.object as? NSViewController {
+    
+                // The zoom slider should only be visible for the main file browser view, which is contained in a SplitPaneViewController.
+    
+                // Other special tab types like Start, Settings, etc., should not show it.
+    
+                let isZoomable = tabVC is SplitPaneViewController
+    
+                statusBarViewController.setZoomControlsVisible(isZoomable)
+    
+            }
+    
+        }
+
+    }
+
+// MARK: - QLPreviewPanelDataSource / QLPreviewPanelDelegate stubs
+extension FileBrowserViewController {
     func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
-        let items = getSelectedItems()
-        return items.count
+        return 0
     }
 
     func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> QLPreviewItem! {
-        let items = getSelectedItems()
-        guard index < items.count else { return nil }
-        return items[index].url as QLPreviewItem
-    }
-
-    // MARK: - QLPreviewPanelDelegate
-
-    func previewPanel(_ panel: QLPreviewPanel!, handle event: NSEvent!) -> Bool {
-        // Handle keyboard events in the preview panel
-        if event.type == .keyDown {
-            if event.keyCode == 49 { // Spacebar - close preview
-                panel.orderOut(nil)
-                return true
-            } else if event.keyCode == 53 { // Escape - close preview
-                panel.orderOut(nil)
-                return true
-            }
-        }
-        return false
-    }
-
-    func previewPanel(_ panel: QLPreviewPanel!, sourceFrameOnScreenFor item: QLPreviewItem!) -> NSRect {
-        // Return the frame of the selected item for animation
-        guard let url = item as? URL else { return .zero }
-
-        // Find the item in the current view
-        let items = getSelectedItems()
-        guard let index = items.firstIndex(where: { $0.url == url }) else { return .zero }
-
-        // Get the frame based on current view mode
-        switch currentViewMode {
-        case .list:
-            let row = outlineView.selectedRow
-            if row >= 0 {
-                let rowRect = outlineView.rect(ofRow: row)
-                return view.window?.convertToScreen(view.convert(rowRect, to: nil)) ?? .zero
-            }
-        case .icons, .windowsList:
-            if let collectionView = collectionView {
-                let indexPath = IndexPath(item: index, section: 0)
-                if let itemFrame = collectionView.layoutAttributesForItem(at: indexPath)?.frame {
-                    return view.window?.convertToScreen(view.convert(itemFrame, to: nil)) ?? .zero
-                }
-            }
-        case .columns:
-            // For column view, use a default position
-            return .zero
-        }
-
-        return .zero
+        return nil
     }
 }

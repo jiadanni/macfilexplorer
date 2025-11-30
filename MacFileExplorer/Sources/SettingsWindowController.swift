@@ -58,6 +58,12 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
         super.windowDidLoad()
     }
 
+    override func showWindow(_ sender: Any?) {
+        super.showWindow(sender)
+        // Observe pending settings changes to enable Apply button
+        NotificationCenter.default.addObserver(self, selector: #selector(pendingSettingsChanged), name: .pendingSettingsDidChange, object: nil)
+    }
+
     private func setupButtonBar(in containerView: NSView, settingsVC: SettingsViewController) {
         // Add settings view controller's view
         let settingsView = settingsVC.view
@@ -187,6 +193,10 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
 
     func enableApplyButton() {
         applyButton?.isEnabled = true
+    }
+
+    @objc private func pendingSettingsChanged() {
+        enableApplyButton()
     }
 
     // MARK: - Button Actions
@@ -338,8 +348,5 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
     }
 }
 
-// MARK: - Notification Names
+// Notification names moved to NotificationNames.swift
 
-extension Notification.Name {
-    static let settingsDidChange = Notification.Name("settingsDidChange")
-}

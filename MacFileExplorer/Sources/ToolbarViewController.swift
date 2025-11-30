@@ -25,7 +25,7 @@ protocol ToolbarDelegate: AnyObject {
     func toolbarDidRequestOpenInTerminal()
 }
 
-class ToolbarViewController: NSViewController {
+class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
 
     weak var delegate: ToolbarDelegate?
 
@@ -44,6 +44,11 @@ class ToolbarViewController: NSViewController {
     private var newFolderButton: NSButton!
     private var closePaneButton: NSButton!
     private var searchField: NSSearchField!
+    private var searchButton: NSButton!
+    private var isSearchFieldVisible = false
+    private var leftButtonsStackView: NSStackView!
+    private var overflowButton: NSButton!
+    private var overflowMenu: NSMenu!
     private var filterButton: NSButton!
     private var previewPaneButton: NSButton!
     private var storageAnalyzerButton: NSButton!
@@ -254,6 +259,55 @@ class ToolbarViewController: NSViewController {
         openTerminalButton.isHidden = !showOpenTerminal
         view.addSubview(openTerminalButton)
 
+        // Left buttons stack - will contain many of the action buttons so we can hide them responsively
+        leftButtonsStackView = NSStackView()
+        leftButtonsStackView.translatesAutoresizingMaskIntoConstraints = false
+        leftButtonsStackView.orientation = .horizontal
+        leftButtonsStackView.alignment = .centerY
+        leftButtonsStackView.spacing = 6
+        leftButtonsStackView.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+        view.addSubview(leftButtonsStackView)
+
+        // Create New Folder button early so it can be added into the left stack
+        newFolderButton = NSButton()
+        newFolderButton.translatesAutoresizingMaskIntoConstraints = false
+        newFolderButton.bezelStyle = .texturedRounded
+        newFolderButton.image = NSImage(systemSymbolName: "folder.badge.plus", accessibilityDescription: "New Folder")
+        newFolderButton.target = self
+        newFolderButton.action = #selector(newFolderButtonClicked(_:))
+        newFolderButton.toolTip = "New Folder (⇧⌘N)"
+        newFolderButton.isHidden = !showNewFolder
+        view.addSubview(newFolderButton)
+
+        // Add primary left buttons into stack in desired order
+        leftButtonsStackView.addArrangedSubview(listModeButton)
+        leftButtonsStackView.addArrangedSubview(iconsModeButton)
+        leftButtonsStackView.addArrangedSubview(columnsModeButton)
+        leftButtonsStackView.addArrangedSubview(windowsListModeButton)
+        leftButtonsStackView.addArrangedSubview(hiddenFilesButton)
+        leftButtonsStackView.addArrangedSubview(splitVerticalButton)
+        leftButtonsStackView.addArrangedSubview(splitHorizontalButton)
+        leftButtonsStackView.addArrangedSubview(previewPaneButton)
+        leftButtonsStackView.addArrangedSubview(newFolderButton)
+        leftButtonsStackView.addArrangedSubview(storageAnalyzerButton)
+        leftButtonsStackView.addArrangedSubview(openTerminalButton)
+
+
+        // Create overflow button (hidden by default)
+        overflowButton = NSButton()
+        overflowButton.translatesAutoresizingMaskIntoConstraints = false
+        overflowButton.bezelStyle = .texturedRounded
+        overflowButton.image = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: "More")
+        overflowButton.isBordered = false
+        overflowButton.target = self
+        overflowButton.action = #selector(overflowButtonClicked(_:))
+        overflowButton.toolTip = "More"
+        overflowButton.isHidden = true
+        leftButtonsStackView.addArrangedSubview(overflowButton)
+
+        // Overflow menu
+        overflowMenu = NSMenu()
+
         // Sort button
         sortButton = AccentPopUpButton()
         sortButton.translatesAutoresizingMaskIntoConstraints = false
@@ -301,6 +355,16 @@ class ToolbarViewController: NSViewController {
         closePaneButton.isHidden = true // Hidden by default, shown when there are multiple panes
         view.addSubview(closePaneButton)
 
+        // Search Button
+        searchButton = NSButton()
+        searchButton.translatesAutoresizingMaskIntoConstraints = false
+        searchButton.bezelStyle = .texturedRounded
+        searchButton.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Search")
+        searchButton.target = self
+        searchButton.action = #selector(searchButtonClicked(_:))
+        searchButton.toolTip = "Search (⌘F)"
+        view.addSubview(searchButton)
+        
         // Search Field
         searchField = NSSearchField()
         searchField.translatesAutoresizingMaskIntoConstraints = false
@@ -310,6 +374,8 @@ class ToolbarViewController: NSViewController {
         searchField.sendsWholeSearchString = false
         searchField.sendsSearchStringImmediately = true
         searchField.toolTip = "Search (⌘F)"
+        searchField.isHidden = true // Hidden by default
+        searchField.delegate = self
         view.addSubview(searchField)
         
         // Filter button
@@ -330,67 +396,49 @@ class ToolbarViewController: NSViewController {
             bottomBorder.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             bottomBorder.heightAnchor.constraint(equalToConstant: 1),
 
-            // Top row: view mode and action buttons
-            // Add padding for window traffic lights (close/minimize/maximize buttons)
-            listModeButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 80),
-            listModeButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
+
+            // Top row: left buttons stack
+            leftButtonsStackView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
+            leftButtonsStackView.trailingAnchor.constraint(lessThanOrEqualTo: sortButton.leadingAnchor, constant: -8),
+            leftButtonsStackView.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
+            leftButtonsStackView.heightAnchor.constraint(equalToConstant: 26),
+
+            // Ensure each standard button keeps its intrinsic size
             listModeButton.widthAnchor.constraint(equalToConstant: 30),
             listModeButton.heightAnchor.constraint(equalToConstant: 26),
-
-            iconsModeButton.leadingAnchor.constraint(equalTo: listModeButton.trailingAnchor, constant: 4),
-            iconsModeButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             iconsModeButton.widthAnchor.constraint(equalToConstant: 30),
             iconsModeButton.heightAnchor.constraint(equalToConstant: 26),
-
-            columnsModeButton.leadingAnchor.constraint(equalTo: iconsModeButton.trailingAnchor, constant: 4),
-            columnsModeButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             columnsModeButton.widthAnchor.constraint(equalToConstant: 30),
             columnsModeButton.heightAnchor.constraint(equalToConstant: 26),
-
-            windowsListModeButton.leadingAnchor.constraint(equalTo: columnsModeButton.trailingAnchor, constant: 4),
-            windowsListModeButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             windowsListModeButton.widthAnchor.constraint(equalToConstant: 30),
             windowsListModeButton.heightAnchor.constraint(equalToConstant: 26),
-
-            hiddenFilesButton.leadingAnchor.constraint(equalTo: windowsListModeButton.trailingAnchor, constant: 8),
-            hiddenFilesButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             hiddenFilesButton.widthAnchor.constraint(equalToConstant: 30),
             hiddenFilesButton.heightAnchor.constraint(equalToConstant: 26),
-
-            splitVerticalButton.leadingAnchor.constraint(equalTo: hiddenFilesButton.trailingAnchor, constant: 4),
-            splitVerticalButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             splitVerticalButton.widthAnchor.constraint(equalToConstant: 30),
             splitVerticalButton.heightAnchor.constraint(equalToConstant: 26),
-
-            splitHorizontalButton.leadingAnchor.constraint(equalTo: splitVerticalButton.trailingAnchor, constant: 4),
-            splitHorizontalButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             splitHorizontalButton.widthAnchor.constraint(equalToConstant: 30),
             splitHorizontalButton.heightAnchor.constraint(equalToConstant: 26),
-
-            previewPaneButton.leadingAnchor.constraint(equalTo: splitHorizontalButton.trailingAnchor, constant: 4),
-            previewPaneButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             previewPaneButton.widthAnchor.constraint(equalToConstant: 30),
             previewPaneButton.heightAnchor.constraint(equalToConstant: 26),
-
-            newFolderButton.leadingAnchor.constraint(equalTo: previewPaneButton.trailingAnchor, constant: 8),
-            newFolderButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             newFolderButton.widthAnchor.constraint(equalToConstant: 30),
             newFolderButton.heightAnchor.constraint(equalToConstant: 26),
-
-            storageAnalyzerButton.leadingAnchor.constraint(equalTo: newFolderButton.trailingAnchor, constant: 8),
-            storageAnalyzerButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             storageAnalyzerButton.widthAnchor.constraint(equalToConstant: 30),
             storageAnalyzerButton.heightAnchor.constraint(equalToConstant: 26),
-
-            openTerminalButton.leadingAnchor.constraint(equalTo: storageAnalyzerButton.trailingAnchor, constant: 8),
-            openTerminalButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             openTerminalButton.widthAnchor.constraint(equalToConstant: 30),
             openTerminalButton.heightAnchor.constraint(equalToConstant: 26),
+            overflowButton.widthAnchor.constraint(equalToConstant: 26),
+            overflowButton.heightAnchor.constraint(equalToConstant: 26),
 
-            sortButton.trailingAnchor.constraint(equalTo: searchField.leadingAnchor, constant: -8),
+            // Keep sort/search area at the right side as before
+            sortButton.trailingAnchor.constraint(equalTo: searchButton.leadingAnchor, constant: -8),
             sortButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             sortButton.widthAnchor.constraint(equalToConstant: 44),
             sortButton.heightAnchor.constraint(equalToConstant: 26),
+
+            searchButton.trailingAnchor.constraint(equalTo: filterButton.leadingAnchor, constant: -8),
+            searchButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
+            searchButton.widthAnchor.constraint(equalToConstant: 30),
+            searchButton.heightAnchor.constraint(equalToConstant: 26),
 
             searchField.trailingAnchor.constraint(equalTo: filterButton.leadingAnchor, constant: -8),
             searchField.topAnchor.constraint(equalTo: view.topAnchor, constant: 9),
@@ -408,7 +456,7 @@ class ToolbarViewController: NSViewController {
             closePaneButton.heightAnchor.constraint(equalToConstant: 26),
 
             // Bottom row: back/forward buttons + breadcrumb/URL bar
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 80),
+            backButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
             backButton.topAnchor.constraint(equalTo: listModeButton.bottomAnchor, constant: 6),
             backButton.widthAnchor.constraint(equalToConstant: 30),
             backButton.heightAnchor.constraint(equalToConstant: 26),
@@ -427,6 +475,14 @@ class ToolbarViewController: NSViewController {
             breadcrumbStackView.topAnchor.constraint(equalTo: breadcrumbScrollView.topAnchor),
             breadcrumbStackView.bottomAnchor.constraint(equalTo: breadcrumbScrollView.bottomAnchor)
         ])
+
+        // Ensure the primary action buttons keep their intrinsic size before breadcrumb compresses
+        for viewItem in leftButtonsStackView.arrangedSubviews {
+            if let btn = viewItem as? NSButton {
+                btn.setContentHuggingPriority(.required, for: .horizontal)
+                btn.setContentCompressionResistancePriority(.required, for: .horizontal)
+            }
+        }
     }
 
     @objc private func handleToolbarSettingsChanged(_ notification: Notification) {
@@ -578,6 +634,100 @@ class ToolbarViewController: NSViewController {
             }
         }
     }
+    
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        adjustOverflowIfNeeded()
+    }
+
+    private func adjustOverflowIfNeeded() {
+        // Determine available horizontal space for left buttons
+        let leftInset: CGFloat = 12
+        
+        var rightHandControlsMinX: CGFloat = view.bounds.width - 8 // Start with trailing padding
+        if !closePaneButton.isHidden { rightHandControlsMinX = min(rightHandControlsMinX, closePaneButton.frame.minX) }
+        if !filterButton.isHidden { rightHandControlsMinX = min(rightHandControlsMinX, filterButton.frame.minX) }
+        if isSearchFieldVisible, !searchField.isHidden {
+             rightHandControlsMinX = min(rightHandControlsMinX, searchField.frame.minX)
+        } else if !searchButton.isHidden {
+             rightHandControlsMinX = min(rightHandControlsMinX, searchButton.frame.minX)
+        }
+        if !sortButton.isHidden { rightHandControlsMinX = min(rightHandControlsMinX, sortButton.frame.minX) }
+
+        let rightEdge = rightHandControlsMinX - 8 // 8px padding
+
+        var usedX: CGFloat = leftInset
+
+        // Decide which buttons fit; move extras into overflow
+        var overflowItems: [NSButton] = []
+        let allButtons: [NSButton?] = [listModeButton, iconsModeButton, columnsModeButton, windowsListModeButton, hiddenFilesButton, splitVerticalButton, splitHorizontalButton, previewPaneButton, newFolderButton, storageAnalyzerButton, openTerminalButton]
+
+        for btn in allButtons {
+            guard let b = btn else { continue }
+            
+            let key = buttonToPreferenceKey(b)
+            let userWantsVisible = key == nil || (UserDefaults.standard.object(forKey: key!) as? Bool ?? true)
+
+            if !userWantsVisible {
+                if !b.isHidden { b.isHidden = true }
+                continue
+            }
+
+            let w = b.frame.width
+            if usedX + w > rightEdge {
+                // hide and move to overflow
+                b.isHidden = true
+                overflowItems.append(b)
+            } else {
+                b.isHidden = false
+                usedX += w + leftButtonsStackView.spacing
+            }
+        }
+
+        // Show or hide overflow button depending on items
+        if overflowItems.isEmpty {
+            overflowButton.isHidden = true
+            overflowMenu.removeAllItems()
+        } else {
+            overflowButton.isHidden = false
+            overflowMenu.removeAllItems()
+            for b in overflowItems {
+                let item = NSMenuItem(title: b.toolTip ?? b.title, action: b.action, keyEquivalent: "")
+                item.target = b.target
+                overflowMenu.addItem(item)
+            }
+        }
+    }
+
+    private func buttonToPreferenceKey(_ button: NSButton) -> String? {
+        switch button {
+        case backButton, forwardButton:
+            return UserDefaults.Keys.showBackForwardButtons.rawValue
+        case listModeButton, iconsModeButton, columnsModeButton, windowsListModeButton:
+            return UserDefaults.Keys.showViewModeButton.rawValue
+        case hiddenFilesButton:
+            return UserDefaults.Keys.showHiddenFilesButton.rawValue
+        case splitVerticalButton, splitHorizontalButton:
+            return UserDefaults.Keys.showSplitButtons.rawValue
+        case previewPaneButton:
+            return UserDefaults.Keys.showPreviewPaneButton.rawValue
+        case newFolderButton:
+            return UserDefaults.Keys.showNewFolderButton.rawValue
+        case sortButton:
+            return UserDefaults.Keys.showSortButton.rawValue
+        case storageAnalyzerButton:
+            return "showStorageAnalyzerButton"
+        case openTerminalButton:
+            return UserDefaults.Keys.showOpenTerminalButton.rawValue
+        default:
+            return nil
+        }
+    }
+
+    @objc private func overflowButtonClicked(_ sender: NSButton) {
+        let location = NSPoint(x: 0, y: sender.bounds.height)
+        overflowMenu.popUp(positioning: nil, at: location, in: sender)
+    }
 
     @objc private func accentColorDidChange() {
         // Update preview pane button color if it's active
@@ -656,6 +806,13 @@ class ToolbarViewController: NSViewController {
     }
 
     // MARK: - Actions
+
+    @objc private func searchButtonClicked(_ sender: NSButton) {
+        isSearchFieldVisible = true
+        searchButton.isHidden = true
+        searchField.isHidden = false
+        view.window?.makeFirstResponder(searchField)
+    }
 
     @objc private func backButtonClicked(_ sender: NSButton) {
         let event = NSApp.currentEvent
@@ -786,6 +943,8 @@ class ToolbarViewController: NSViewController {
         delegate?.toolbarDidChangeViewMode(.windowsList)
     }
 
+
+
     @objc private func splitVerticallyClicked(_ sender: Any) {
         delegate?.toolbarDidRequestSplitVertically()
     }
@@ -812,6 +971,7 @@ class ToolbarViewController: NSViewController {
     }
 
     @objc private func openTerminalButtonClicked(_ sender: Any) {
+        print("ToolbarViewController: openTerminalButtonClicked")
         delegate?.toolbarDidRequestOpenInTerminal()
     }
 
@@ -830,5 +990,35 @@ extension ToolbarViewController {
         // Determine current visibility from UserDefaults (since notification carries no userInfo)
         let showing = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
         updatePreviewPaneDisplay(showing: showing)
+    }
+}
+
+// MARK: - NSSearchFieldDelegate
+extension ToolbarViewController {
+    func controlTextDidEndEditing(_ obj: Notification) {
+        // This is called when the search field loses focus
+        if isSearchFieldVisible {
+            isSearchFieldVisible = false
+            searchButton.isHidden = false
+            searchField.isHidden = true
+            if searchField.stringValue != "" {
+                searchField.stringValue = ""
+                delegate?.toolbarDidSearchTextChange("")
+            }
+        }
+    }
+
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+            // This is the Escape key
+            if isSearchFieldVisible {
+                // End editing, which will trigger controlTextDidEndEditing
+                view.window?.makeFirstResponder(nil)
+                searchField.stringValue = ""
+                delegate?.toolbarDidSearchTextChange("")
+                return true
+            }
+        }
+        return false // Let the system handle other commands
     }
 }

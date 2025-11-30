@@ -397,11 +397,13 @@ class TerminalViewController: NSViewController {
 
     func changeDirectory(to path: String) {
         currentDirectory = path
+        print("TerminalViewController: changeDirectory to \(path)")
         // Send cd command to shell
         writeToPTY("cd '\(path)'\n")
     }
 
     func focusInput() {
+        print("TerminalViewController: focusInput called")
         view.window?.makeFirstResponder(inputField)
     }
 

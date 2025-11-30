@@ -48,6 +48,8 @@ extension UserDefaults {
         case previewPaneWidth = "previewPaneWidth" // Stored width (CGFloat)
         // Icon appearance
         case useGrayscaleIcons = "useGrayscaleIcons"
+        // Window traffic light appearance (grayscale when true)
+        case useGrayscaleWindowControls = "useGrayscaleWindowControls"
         // Granted Directory Permissions (user-approved folder access list)
         case grantedDirectoriesPaths = "grantedDirectoriesPaths" // [String] of absolute paths
         case grantedDirectoryBookmarks = "grantedDirectoryBookmarks" // [Data] security-scoped bookmarks
@@ -133,6 +135,8 @@ class PendingSettings {
     
     func setValue(_ value: Any?, forKey key: String) {
         pendingChanges[key] = value
+        // Notify listeners that pending settings have changed so UI (Apply button) can enable
+        NotificationCenter.default.post(name: .pendingSettingsDidChange, object: nil)
     }
     
     func getValue(forKey key: String) -> Any? {
@@ -170,6 +174,9 @@ class PendingSettings {
         }
         if changedKeys.contains(UserDefaults.Keys.accentColor.rawValue) {
             NotificationCenter.default.post(name: .accentColorDidChangeNotification, object: nil)
+        }
+        if changedKeys.contains(UserDefaults.Keys.useGrayscaleWindowControls.rawValue) {
+            NotificationCenter.default.post(name: .didChangeWindowControlAppearance, object: nil)
         }
         if changedKeys.contains(UserDefaults.Keys.globalFolderColor.rawValue) {
             NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
@@ -1079,6 +1086,7 @@ class AppearanceSettingsViewController: NSViewController {
         ])
 
         addFolderAppearanceSettings()
+        addWindowAppearanceSettings()
         // Custom accent color settings removed for consistency with macOS.
         // addAccentColorSettings() // intentionally disabled
     }
@@ -1107,6 +1115,35 @@ class AppearanceSettingsViewController: NSViewController {
         descriptionLabel.preferredMaxLayoutWidth = 450
         stackView.addArrangedSubview(descriptionLabel)
     }
+
+    private func addWindowAppearanceSettings() {
+        // Grayscale icons option
+        let spacer2 = NSView()
+        spacer2.translatesAutoresizingMaskIntoConstraints = false
+        spacer2.heightAnchor.constraint(equalToConstant: 12).isActive = true
+        stackView.addArrangedSubview(spacer2)
+
+        let grayscaleCheckbox = AccentCheckbox(title: "Use grayscale icons", target: self, action: #selector(grayscaleCheckboxChanged(_:)))
+        grayscaleCheckbox.translatesAutoresizingMaskIntoConstraints = false
+        let useGray = UserDefaults.standard.object(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue) as? Bool ?? false
+        grayscaleCheckbox.state = useGray ? .on : .off
+        // Ensure default exists
+        if UserDefaults.standard.object(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue) == nil {
+            UserDefaults.standard.set(false, forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+        }
+        stackView.addArrangedSubview(grayscaleCheckbox)
+
+        // Window traffic lights appearance option
+        let windowControlsCheckbox = AccentCheckbox(title: "Use grayscale window controls (traffic lights)", target: self, action: #selector(grayscaleWindowControlsChanged(_:)))
+        windowControlsCheckbox.translatesAutoresizingMaskIntoConstraints = false
+        let useGrayWindowControls = UserDefaults.standard.object(forKey: UserDefaults.Keys.useGrayscaleWindowControls.rawValue) as? Bool ?? false
+        windowControlsCheckbox.state = useGrayWindowControls ? NSControl.StateValue.on : NSControl.StateValue.off
+        if UserDefaults.standard.object(forKey: UserDefaults.Keys.useGrayscaleWindowControls.rawValue) == nil {
+            UserDefaults.standard.set(false, forKey: UserDefaults.Keys.useGrayscaleWindowControls.rawValue)
+        }
+        stackView.addArrangedSubview(windowControlsCheckbox)
+    }
+
 
     private func addAccentColorSettings() {
         // Add spacing
@@ -1144,22 +1181,11 @@ class AppearanceSettingsViewController: NSViewController {
 
         // Create accent color palette
         createColorPalette(forAccent: true)
-        
-        // Grayscale icons option
-        let spacer2 = NSView()
-        spacer2.translatesAutoresizingMaskIntoConstraints = false
-        spacer2.heightAnchor.constraint(equalToConstant: 12).isActive = true
-        stackView.addArrangedSubview(spacer2)
+    }
 
-        let grayscaleCheckbox = AccentCheckbox(title: "Use grayscale icons", target: self, action: #selector(grayscaleCheckboxChanged(_:)))
-        grayscaleCheckbox.translatesAutoresizingMaskIntoConstraints = false
-        let useGray = UserDefaults.standard.object(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue) as? Bool ?? false
-        grayscaleCheckbox.state = useGray ? .on : .off
-        // Ensure default exists
-        if UserDefaults.standard.object(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue) == nil {
-            UserDefaults.standard.set(false, forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
-        }
-        stackView.addArrangedSubview(grayscaleCheckbox)
+    @objc private func grayscaleWindowControlsChanged(_ sender: NSButton) {
+        PendingSettings.shared.setValue(sender.state == NSControl.StateValue.on, forKey: UserDefaults.Keys.useGrayscaleWindowControls.rawValue)
+        changeDelegate?.settingsDidChange()
     }
 
     @objc private func grayscaleCheckboxChanged(_ sender: NSButton) {

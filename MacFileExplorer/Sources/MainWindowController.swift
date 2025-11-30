@@ -49,6 +49,11 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
 
         super.init(window: window)
 
+        // Apply custom traffic light appearance per user setting
+        WindowTrafficLightManager.shared.applyToAllWindows()
+        NotificationCenter.default.addObserver(forName: Notification.Name("didChangeWindowControlAppearance"), object: nil, queue: .main) { _ in
+            WindowTrafficLightManager.shared.applyToAllWindows()
+        }
         // Setup Split View Controller
         let newSplitViewController = SplitViewController()
         newSplitViewController.delegate = self // Set delegate
