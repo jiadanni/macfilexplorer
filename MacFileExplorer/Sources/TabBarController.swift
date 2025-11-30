@@ -171,13 +171,13 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
             let trailingToClose = button.trailingAnchor.constraint(lessThanOrEqualTo: cb.leadingAnchor, constant: -4)
             let leadingToEdge = button.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 8)
             trailingToClose.priority = .defaultHigh
-            leadingToEdge.priority = .defaultHigh
+            leadingToEdge.priority = NSLayoutConstraint.Priority.defaultHigh
             edgeConstraints.append(contentsOf: [trailingToClose, leadingToEdge])
         } else {
             let leadingToEdge = button.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 8)
             let trailingToEdge = button.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -8)
-            leadingToEdge.priority = .defaultHigh
-            trailingToEdge.priority = .defaultHigh
+            leadingToEdge.priority = NSLayoutConstraint.Priority.defaultHigh
+            trailingToEdge.priority = NSLayoutConstraint.Priority.defaultHigh
             edgeConstraints.append(contentsOf: [leadingToEdge, trailingToEdge])
         }
 
