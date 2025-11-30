@@ -60,6 +60,7 @@
 		F2F1F3B120814DC8BD4B145A /* StorageOverviewWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABBBCC2BFE824B9CB573D557 /* StorageOverviewWidgetView.swift */; };
 		F9FFEF95DD2049FABE8B6569 /* StorageItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D68A94874EBC4DC39B2A3061 /* StorageItem.swift */; };
         7EEDC1A3B4C54D2F9A123456 /* FreeFormCollectionViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EEDC1A3B4C54D2F9A123457 /* FreeFormCollectionViewLayout.swift */; };
+        8A1B2C3D4E5F678901234567 /* TabButtonContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1B2C3D4E5F678901234568 /* TabButtonContainerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -119,6 +120,7 @@
 		D3664633C5874840B264CBF1 /* StorageAnalyzerWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageAnalyzerWindowController.swift; sourceTree = "<group>"; };
 		D68A94874EBC4DC39B2A3061 /* StorageItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageItem.swift; sourceTree = "<group>"; };
 		7EEDC1A3B4C54D2F9A123457 /* FreeFormCollectionViewLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFormCollectionViewLayout.swift; sourceTree = "<group>"; };
+		8A1B2C3D4E5F678901234568 /* TabButtonContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabButtonContainerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -161,6 +163,7 @@
 				C357D9E52ECA0EDF001BA891 /* ViewOptions.swift */,
 				C357D9E62ECA0EDF001BA891 /* ViewOptionsViewController.swift */,
 				C357D9DF2ECA0ECB001BA891 /* AboutWindowController.swift */,
+				8A1B2C3D4E5F678901234568 /* TabButtonContainerView.swift */,
 				AA0000020000000000000001 /* AppDelegate.swift */,
 				AA0000040000000000000001 /* MainWindowController.swift */,
 				AA0000060000000000000001 /* SplitViewController.swift */,
