@@ -330,6 +330,7 @@
 				C357D9E72ECA0EDF001BA891 /* NotificationNames.swift in Sources */,
 				C357D9E82ECA0EDF001BA891 /* ProgressViewController.swift in Sources */,
 				C357D9E92ECA0EDF001BA891 /* FileCopyMoveDialog.swift in Sources */,
+				7EEDC1A3B4C54D2F9A123456 /* FreeFormCollectionViewLayout.swift in Sources */,
 				C357D9EA2ECA0EDF001BA891 /* ViewOptionsViewController.swift in Sources */,
 				C357D9EB2ECA0EDF001BA891 /* ViewOptions.swift in Sources */,
 				C357D9EC2ECA0EDF001BA891 /* PreviewViewController.swift in Sources */,
