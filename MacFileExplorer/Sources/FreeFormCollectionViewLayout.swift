@@ -34,9 +34,9 @@ class FreeFormCollectionViewLayout: NSCollectionViewLayout {
     override func layoutAttributesForElements(in rect: NSRect) -> [NSCollectionViewLayoutAttributes] {
         guard let collectionView = collectionView else { return [] }
         // Ask flowLayout for attributes and then apply overrides for free-form positions
-        let attrs = flowLayout.layoutAttributesForElements(in: rect) ?? []
+        guard let attrs = flowLayout.layoutAttributesForElements(in: rect) else { return [] }
         for attr in attrs {
-            if let override = positionOverrides[attr.indexPath] {
+            if let idx = attr.indexPath, let override = positionOverrides[idx] {
                 attr.frame.origin = override
             }
         }
