@@ -21,10 +21,18 @@ class StorageScopeSelectionViewController: NSViewController {
     private var minimumSizeTextField: NSTextField!
     private var cancelButton: NSButton!
 
+    // Store scope buttons to maintain strong references
+    private var thisMacButton: NSButton!
+    private var homeFolderButton: NSButton!
+    private var downloadsButton: NSButton!
+    private var chooseFolderButton: NSButton!
+
     // MARK: - Lifecycle
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 600))
+        let containerView = NSView(frame: NSRect(x: 0, y: 0, width: 500, height: 600))
+        containerView.wantsLayer = false  // Disable layer-backing to allow proper event handling
+        view = containerView
     }
 
     override func viewDidLoad() {
@@ -32,12 +40,16 @@ class StorageScopeSelectionViewController: NSViewController {
         setupUI()
     }
 
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        // Ensure the view can respond to actions
+        view.window?.makeFirstResponder(view)
+    }
+
     // MARK: - UI Setup
 
     private func setupUI() {
-        view.wantsLayer = true
-        view.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
-
+        // Don't enable layer-backing on the main view to ensure button clicks work
         // Title
         titleLabel = NSTextField(labelWithString: "Storage Analyzer")
         titleLabel.font = NSFont.boldSystemFont(ofSize: 18)
@@ -54,19 +66,40 @@ class StorageScopeSelectionViewController: NSViewController {
         // Scan scope buttons
         buttonStack = NSStackView()
         buttonStack.orientation = .vertical
-        buttonStack.spacing = 12
+        buttonStack.spacing = 4  // Reduced spacing since labels are separate views
         buttonStack.alignment = .centerX
         buttonStack.translatesAutoresizingMaskIntoConstraints = false
 
-        let thisMacButton = createScopeButton(title: "This Mac", subtitle: "Scan entire system", action: #selector(scanThisMac(_:)))
-        let homeFolderButton = createScopeButton(title: "Home Folder", subtitle: "Scan your user directory", action: #selector(scanHomeFolder(_:)))
-        let downloadsButton = createScopeButton(title: "Downloads", subtitle: "Scan Downloads folder", action: #selector(scanDownloads(_:)))
-        let chooseButton = createScopeButton(title: "Choose Folder...", subtitle: "Select a custom location", action: #selector(chooseFolder(_:)))
+        // Create buttons without containers - add directly to stack
+        thisMacButton = createDirectButton(title: "This Mac", action: #selector(scanThisMac(_:)))
+        let thisMacLabel = createSubtitleLabel("Scan entire system")
+
+        homeFolderButton = createDirectButton(title: "Home Folder", action: #selector(scanHomeFolder(_:)))
+        let homeFolderLabel = createSubtitleLabel("Scan your user directory")
+
+        downloadsButton = createDirectButton(title: "Downloads", action: #selector(scanDownloads(_:)))
+        let downloadsLabel = createSubtitleLabel("Scan Downloads folder")
+
+        chooseFolderButton = createDirectButton(title: "Choose Folder...", action: #selector(chooseFolder(_:)))
+        let chooseFolderLabel = createSubtitleLabel("Select a custom location")
 
         buttonStack.addArrangedSubview(thisMacButton)
+        buttonStack.addArrangedSubview(thisMacLabel)
+        buttonStack.setCustomSpacing(12, after: thisMacLabel)
+
         buttonStack.addArrangedSubview(homeFolderButton)
+        buttonStack.addArrangedSubview(homeFolderLabel)
+        buttonStack.setCustomSpacing(12, after: homeFolderLabel)
+
         buttonStack.addArrangedSubview(downloadsButton)
-        buttonStack.addArrangedSubview(chooseButton)
+        buttonStack.addArrangedSubview(downloadsLabel)
+        buttonStack.setCustomSpacing(12, after: downloadsLabel)
+
+        buttonStack.addArrangedSubview(chooseFolderButton)
+        buttonStack.addArrangedSubview(chooseFolderLabel)
+
+        NSLog("StorageScopeSelection: All buttons added to stack, checking button states...")
+        NSLog("StorageScopeSelection: thisMacButton.isEnabled=\(thisMacButton.isEnabled)")
 
         // Options section
         setupOptionsSection()
@@ -96,37 +129,32 @@ class StorageScopeSelectionViewController: NSViewController {
         ])
     }
 
-    private func createScopeButton(title: String, subtitle: String, action: Selector) -> NSView {
-        let container = NSView()
-        container.translatesAutoresizingMaskIntoConstraints = false
-
+    private func createDirectButton(title: String, action: Selector) -> NSButton {
         let button = NSButton()
         button.title = title
         button.bezelStyle = .rounded
         button.target = self
         button.action = action
+        button.isEnabled = true
+        button.setButtonType(.momentaryPushIn)
         button.translatesAutoresizingMaskIntoConstraints = false
 
-        let subtitleLabel = NSTextField(labelWithString: subtitle)
-        subtitleLabel.font = NSFont.systemFont(ofSize: 11)
-        subtitleLabel.textColor = .secondaryLabelColor
-        subtitleLabel.alignment = .center
-        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-
-        container.addSubview(button)
-        container.addSubview(subtitleLabel)
-
         NSLayoutConstraint.activate([
-            button.topAnchor.constraint(equalTo: container.topAnchor),
-            button.centerXAnchor.constraint(equalTo: container.centerXAnchor),
             button.widthAnchor.constraint(greaterThanOrEqualToConstant: 200),
-
-            subtitleLabel.topAnchor.constraint(equalTo: button.bottomAnchor, constant: 4),
-            subtitleLabel.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            subtitleLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+            button.heightAnchor.constraint(equalToConstant: 32)
         ])
 
-        return container
+        NSLog("StorageScopeSelection: Created button '\(title)' with action: \(action)")
+        return button
+    }
+
+    private func createSubtitleLabel(_ text: String) -> NSTextField {
+        let label = NSTextField(labelWithString: text)
+        label.font = NSFont.systemFont(ofSize: 11)
+        label.textColor = .secondaryLabelColor
+        label.alignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
     }
 
     private func setupOptionsSection() {
@@ -180,6 +208,8 @@ class StorageScopeSelectionViewController: NSViewController {
         cancelButton.bezelStyle = .rounded
         cancelButton.target = self
         cancelButton.action = #selector(cancelAction(_:))
+        cancelButton.setButtonType(.momentaryPushIn)
+        cancelButton.isEnabled = true
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
 
         view.addSubview(cancelButton)
@@ -198,17 +228,23 @@ class StorageScopeSelectionViewController: NSViewController {
     }
 
     @objc private func scanThisMac(_ sender: Any) {
+        NSLog("StorageScopeSelection: scanThisMac action called")
         let url = URL(fileURLWithPath: "/")
         startScan(url: url)
     }
 
     @objc private func scanHomeFolder(_ sender: Any) {
+        NSLog("StorageScopeSelection: scanHomeFolder action called")
         let url = FileManager.default.homeDirectoryForCurrentUser
         startScan(url: url)
     }
 
     @objc private func scanDownloads(_ sender: Any) {
-        let url = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
+        NSLog("StorageScopeSelection: scanDownloads action called")
+        guard let url = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else {
+            NSLog("StorageScopeSelection: Failed to get downloads directory")
+            return
+        }
         startScan(url: url)
     }
 
@@ -219,13 +255,21 @@ class StorageScopeSelectionViewController: NSViewController {
         panel.allowsMultipleSelection = false
         panel.prompt = "Select Folder"
 
-        panel.begin { [weak self] response in
+        guard let window = view.window else {
+            debugLog("Warning: Cannot show folder chooser - view has no window")
+            return
+        }
+
+        panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let url = panel.url else { return }
             self?.startScan(url: url)
         }
     }
 
     private func startScan(url: URL) {
+        NSLog("StorageScopeSelection: startScan called for \(url.path)")
+        NSLog("StorageScopeSelection: completionHandler is \(completionHandler == nil ? "nil" : "set")")
+
         // Build options
         var options = StorageAnalyzerEngine.ScanOptions()
         options.includeHiddenFiles = includeHiddenCheckbox.state == .on
@@ -239,6 +283,8 @@ class StorageScopeSelectionViewController: NSViewController {
         UserDefaults.standard.set(url.path, forKey: "StorageAnalyzerLastScanPath")
 
         // Call completion handler - this will trigger the sheet dismissal in the parent
+        NSLog("StorageScopeSelection: About to call completionHandler")
         completionHandler?(url, options)
+        NSLog("StorageScopeSelection: completionHandler called")
     }
 }

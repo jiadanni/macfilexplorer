@@ -25,13 +25,13 @@ struct StartDesignSystem {
         static let widgetBorder = NSColor.separatorColor
 
         /// Success/granted permission color
-        static let success = NSColor(red: 0.2, green: 0.8, blue: 0.4, alpha: 1.0)
+        static let success = NSColor.systemGreen
 
         /// Warning/partial permission color
-        static let warning = NSColor(red: 1.0, green: 0.7, blue: 0.0, alpha: 1.0)
+        static let warning = NSColor.systemOrange
 
         /// Error/denied permission color
-        static let error = NSColor(red: 1.0, green: 0.3, blue: 0.3, alpha: 1.0)
+        static let error = NSColor.systemRed
 
         /// Inactive/placeholder color
         static let inactive = NSColor.secondaryLabelColor

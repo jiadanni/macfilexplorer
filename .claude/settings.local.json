@@ -6,7 +6,11 @@
       "Bash(open:*)",
       "Bash(ruby -e:*)",
       "Bash(cat:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(log show:*)",
+      "Bash(killall:*)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []

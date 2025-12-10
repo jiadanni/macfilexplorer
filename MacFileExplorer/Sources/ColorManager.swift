@@ -5,39 +5,82 @@ class ColorManager {
 
     private let userDefaults = UserDefaults.standard
     private let colorKey = "GlobalFolderColors"
+    private let globalColorKey = UserDefaults.Keys.globalFolderColor.rawValue
 
-    private init() {
-        // Disabled: no-op
-    }
+    private init() {}
 
-    // MARK: - Public Methods (no-op/stubbed)
+    // MARK: - Public Methods
 
     func setColor(_ color: NSColor, forFolderName name: String) {
-        // No-op: custom folder coloring disabled
+        var stored = loadColorDictionary()
+        stored[name] = color.toHex()
+        persistColorDictionary(stored)
+        NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
     }
 
     func getColor(forFolderName name: String) -> NSColor? {
-        return nil
+        guard let hex = loadColorDictionary()[name] else { return nil }
+        return NSColor(hex: hex)
     }
 
     func getColor(for url: URL) -> NSColor? {
-        return nil
+        if let nameColor = getColor(forFolderName: url.lastPathComponent) {
+            return nameColor
+        }
+        return getGlobalFolderColor()
     }
 
     func getGlobalFolderColor() -> NSColor? {
+        if let colorData = userDefaults.data(forKey: globalColorKey),
+           let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: colorData) {
+            return color
+        }
+
+        if let hex = userDefaults.string(forKey: globalColorKey) {
+            return NSColor(hex: hex)
+        }
+
         return nil
     }
 
+    func setGlobalFolderColor(_ color: NSColor?) {
+        if let color {
+            if let data = try? NSKeyedArchiver.archivedData(withRootObject: color, requiringSecureCoding: false) {
+                userDefaults.set(data, forKey: globalColorKey)
+            } else {
+                userDefaults.set(color.toHex(), forKey: globalColorKey)
+            }
+        } else {
+            userDefaults.removeObject(forKey: globalColorKey)
+        }
+        NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+    }
+
     func removeColor(forFolderName name: String) {
-        // No-op
+        var stored = loadColorDictionary()
+        stored.removeValue(forKey: name)
+        persistColorDictionary(stored)
+        NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
     }
 
     func clearAllColors() {
-        // No-op
+        userDefaults.removeObject(forKey: colorKey)
+        userDefaults.removeObject(forKey: globalColorKey)
+        NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
     }
 
     func getAllColoredFolderNames() -> [String] {
-        return []
+        return Array(loadColorDictionary().keys)
+    }
+
+    // MARK: - Private Helpers
+
+    private func loadColorDictionary() -> [String: String] {
+        return userDefaults.dictionary(forKey: colorKey) as? [String: String] ?? [:]
+    }
+
+    private func persistColorDictionary(_ dictionary: [String: String]) {
+        userDefaults.set(dictionary, forKey: colorKey)
     }
 }
 
@@ -75,6 +118,8 @@ extension NSColor {
 }
 
 // MARK: - NSImage Grayscale Helper
+// Grayscale helper now lives in NSImage+Grayscale.swift
+
 extension NSImage {
     /// Returns a grayscale copy of the image. If conversion fails, returns original.
     func grayscale() -> NSImage {
@@ -84,9 +129,9 @@ extension NSImage {
         }
 
         let ciImage = CIImage(bitmapImageRep: bitmap)
-        guard let filter = CIFilter(name: "CIPhotoEffectMono") else { return self }
-        filter.setValue(ciImage, forKey: kCIInputImageKey)
-        guard let output = filter.outputImage else { return self }
+        let filter = CIFilter(name: "CIPhotoEffectMono")
+        filter?.setValue(ciImage, forKey: kCIInputImageKey)
+        guard let output = filter?.outputImage else { return self }
 
         let rep = NSCIImageRep(ciImage: output)
         let img = NSImage(size: rep.size)

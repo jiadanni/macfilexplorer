@@ -124,20 +124,20 @@ class PermissionsManager {
     }
 
     func addGrantedDirectory(_ url: URL) {
-        print("[PermissionsManager] Adding granted directory: \(url.path)")
-        print("[PermissionsManager] Is sandboxed: \(isSandboxed())")
+        debugLog("[PermissionsManager] Adding granted directory: \(url.path)")
+        debugLog("[PermissionsManager] Is sandboxed: \(isSandboxed())")
         
         // In non-sandboxed builds we only store path strings.
         guard isSandboxed() else {
             var existing = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String] ?? []
-            print("[PermissionsManager] Existing paths: \(existing)")
+            debugLog("[PermissionsManager] Existing paths: \(existing)")
             if !existing.contains(url.path) {
                 existing.append(url.path)
                 UserDefaults.standard.set(existing, forKey: grantedDirectoriesKey)
-                print("[PermissionsManager] Added path: \(url.path)")
-                print("[PermissionsManager] Updated paths: \(existing)")
+                debugLog("[PermissionsManager] Added path: \(url.path)")
+                debugLog("[PermissionsManager] Updated paths: \(existing)")
             } else {
-                print("[PermissionsManager] Path already exists: \(url.path)")
+                debugLog("[PermissionsManager] Path already exists: \(url.path)")
             }
             return
         }
@@ -147,6 +147,12 @@ class PermissionsManager {
             if !existingDatas.contains(where: { resolveBookmarkData($0).path == url.path }) {
                 existingDatas.append(data)
                 UserDefaults.standard.set(existingDatas, forKey: grantedDirectoryBookmarksKey)
+            }
+            // Immediately begin accessing so the user isn't prompted again in this session.
+            var stale = false
+            if let resolvedURL = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &stale),
+               resolvedURL.startAccessingSecurityScopedResource() {
+                activeSecurityScopedURLs.insert(resolvedURL)
             }
         } catch {
             NSLog("[PermissionsManager] Bookmark creation failed in sandbox for \(url.path): \(error)")
@@ -190,22 +196,22 @@ class PermissionsManager {
     }
 
     func resolvedGrantedDirectoryEntries() -> [ResolvedGrantedDirectoryEntry] {
-        print("[PermissionsManager] resolvedGrantedDirectoryEntries called")
-        print("[PermissionsManager] Is sandboxed: \(isSandboxed())")
+        debugLog("[PermissionsManager] resolvedGrantedDirectoryEntries called")
+        debugLog("[PermissionsManager] Is sandboxed: \(isSandboxed())")
         
         if isSandboxed() {
             if let datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data] {
-                print("[PermissionsManager] Found \(datas.count) bookmarks")
+                debugLog("[PermissionsManager] Found \(datas.count) bookmarks")
                 return datas.map { resolveBookmarkData($0) }
             }
         }
         // Fallback to paths
         let urls = grantedDirectories()
-        print("[PermissionsManager] Found \(urls.count) granted directories (from paths)")
+        debugLog("[PermissionsManager] Found \(urls.count) granted directories (from paths)")
         let entries = urls.map { ResolvedGrantedDirectoryEntry(url: $0, path: $0.path, isStale: false, isValid: FileManager.default.fileExists(atPath: $0.path)) }
-        print("[PermissionsManager] Returning \(entries.count) entries")
+        debugLog("[PermissionsManager] Returning \(entries.count) entries")
         for entry in entries {
-            print("[PermissionsManager]   - \(entry.path) (valid: \(entry.isValid))")
+            debugLog("[PermissionsManager]   - \(entry.path) (valid: \(entry.isValid))")
         }
         return entries
     }
@@ -227,6 +233,23 @@ class PermissionsManager {
             url.stopAccessingSecurityScopedResource()
         }
         activeSecurityScopedURLs.removeAll()
+    }
+
+    /// Ensure an accessible security-scoped URL for the given path if it lies under a granted directory.
+    @discardableResult
+    func ensureAccess(for url: URL) -> Bool {
+        guard isSandboxed() else { return true }
+        let path = url.path
+        for entry in resolvedGrantedDirectoryEntries() {
+            guard let grantedURL = entry.url, entry.isValid else { continue }
+            if path == grantedURL.path || path.hasPrefix(grantedURL.path + "/") {
+                if !activeSecurityScopedURLs.contains(grantedURL) && grantedURL.startAccessingSecurityScopedResource() {
+                    activeSecurityScopedURLs.insert(grantedURL)
+                }
+                return true
+            }
+        }
+        return false
     }
 
     // MARK: - Refresh / Replace

@@ -6,7 +6,8 @@ enum SplitOrientation {
 }
 
 protocol FileBrowserDelegate: AnyObject {
-    func directoryDidChange(to path: String)
+    func directoryDidChange(_ fileBrowser: FileBrowserViewController, to path: String)
+    func fileBrowserDidBecomeActive(_ fileBrowser: FileBrowserViewController)
     func openInNewTab(url: URL)
     func fileBrowserDidRequestSplit(_ fileBrowser: FileBrowserViewController, orientation: SplitOrientation)
     func fileBrowser(_ fileBrowser: FileBrowserViewController, didSelectFile file: FileItem?)
@@ -14,6 +15,7 @@ protocol FileBrowserDelegate: AnyObject {
     func fileBrowser(_ fileBrowser: FileBrowserViewController, didUpdateSelection selectedCount: Int, totalSize: Int64)
     func fileBrowser(_ fileBrowser: FileBrowserViewController, didUpdateDiskSpace diskSpace: String?)
     func fileBrowserDidRequestAddToFavorites(_ fileBrowser: FileBrowserViewController, item: FileItem)
+    func toolbarDidRequestOpenInTerminal(from fileBrowser: FileBrowserViewController)
 }
 
 protocol SplitPaneViewControllerDelegate: AnyObject {
@@ -22,6 +24,7 @@ protocol SplitPaneViewControllerDelegate: AnyObject {
     func splitPane(_ splitPane: SplitPaneViewController, didUpdateSelection selectedCount: Int, totalSize: Int64)
     func splitPane(_ splitPane: SplitPaneViewController, didUpdateDiskSpace diskSpace: String?)
     func splitPaneDidRequestAddToFavorites(item: FileItem)
+    func splitPaneDidRequestOpenTerminal(at path: String)
 }
 
 class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
@@ -86,16 +89,10 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
         }
 
         // Update active pane
-        activePaneIndex = panes.count - 1
+        setActivePane(index: panes.count - 1)
 
         // Update close button visibility for all panes
         updateClosePaneButtonVisibility()
-
-        // Set zoom controls visibility for newly active pane and others
-        for (index, pane) in panes.enumerated() {
-            let isActivePane = (index == activePaneIndex)
-            pane.setZoomControlsVisible(isActivePane)
-        }
     }
 
     func removeActivePane() {
@@ -112,6 +109,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
         if activePaneIndex >= panes.count {
             activePaneIndex = panes.count - 1
         }
+        updateActivePaneUI()
 
         // Notify delegate of new active path
         if activePaneIndex < panes.count {
@@ -177,7 +175,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
     }
 
     func navigateToURL(_ url: URL) {
-        print("SplitPaneViewController: navigateToURL - Received URL: \(url.path)")
+        debugLog("SplitPaneViewController: navigateToURL - Received URL: \(url.path)")
         guard activePaneIndex < panes.count else { return }
         panes[activePaneIndex].navigateToURL(url)
     }
@@ -228,24 +226,37 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
             pane.updateSplitButtonsState(canAddMorePanes())
         }
     }
-
-    // MARK: - FileBrowserDelegate
-
-    func directoryDidChange(to path: String) {
-        // Find which pane changed
-        for (index, pane) in panes.enumerated() {
-            if pane.currentPath == path {
-                activePaneIndex = index
-                break
-            }
+    
+    private func setActivePane(index: Int) {
+        guard index >= 0, index < panes.count else { return }
+        activePaneIndex = index
+        updateActivePaneUI()
+    }
+    
+    private func setActivePane(for fileBrowser: FileBrowserViewController) {
+        if let index = panes.firstIndex(where: { $0 === fileBrowser }) {
+            setActivePane(index: index)
         }
-
-        // Update zoom controls visibility for all panes
+    }
+    
+    private func updateActivePaneUI() {
         for (index, pane) in panes.enumerated() {
             let isActivePane = (index == activePaneIndex)
             pane.setZoomControlsVisible(isActivePane)
         }
+    }
 
+    // MARK: - FileBrowserDelegate
+
+    func directoryDidChange(_ fileBrowser: FileBrowserViewController, to path: String) {
+        setActivePane(for: fileBrowser)
+        delegate?.splitPaneDirectoryDidChange(to: path)
+    }
+    
+    func fileBrowserDidBecomeActive(_ fileBrowser: FileBrowserViewController) {
+        setActivePane(for: fileBrowser)
+        guard activePaneIndex < panes.count else { return }
+        let path = panes[activePaneIndex].currentPath
         delegate?.splitPaneDirectoryDidChange(to: path)
     }
 
@@ -313,6 +324,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
 
             // Notify delegate of new active path
             if activePaneIndex < panes.count {
+                updateActivePaneUI()
                 delegate?.splitPaneDirectoryDidChange(to: panes[activePaneIndex].currentPath)
             } else {
                 // If all panes are closed (should be prevented by guard), report empty path
@@ -335,6 +347,13 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
 
     func fileBrowserDidRequestAddToFavorites(_ fileBrowser: FileBrowserViewController, item: FileItem) {
         delegate?.splitPaneDidRequestAddToFavorites(item: item)
+    }
+
+    func toolbarDidRequestOpenInTerminal(from fileBrowser: FileBrowserViewController) {
+        setActivePane(for: fileBrowser)
+        guard activePaneIndex < panes.count else { return }
+        let path = panes[activePaneIndex].currentPath
+        delegate?.splitPaneDidRequestOpenTerminal(at: path)
     }
 
     // MARK: - Additional Public Methods

@@ -164,25 +164,31 @@ class StorageAnalyzerTabViewController: NSViewController, SplitPaneViewControlle
 
     private func showScopeSelectionDialog() {
         guard let window = view.window else {
-            print("Warning: Cannot show scope selection - view has no window")
+            debugLog("Warning: Cannot show scope selection - view has no window")
             return
         }
         
         let scopeVC = StorageScopeSelectionViewController()
         scopeVC.completionHandler = { [weak self] url, options in
-            // Dismiss the scope selection sheet first
-            if let sheet = self?.scopeSheet {
-                self?.view.window?.endSheet(sheet)
-                self?.scopeSheet = nil
+            NSLog("StorageAnalyzerTab: completionHandler called with url: \(url.path)")
+            // Dismiss the scope selection panel first on the main queue
+            DispatchQueue.main.async {
+                NSLog("StorageAnalyzerTab: In async block, about to dismiss panel")
+                if let sheet = self?.scopeSheet {
+                    sheet.close()
+                    self?.scopeSheet = nil
+                    NSLog("StorageAnalyzerTab: Panel dismissed")
+                }
+                // Then start the scan
+                NSLog("StorageAnalyzerTab: About to start scan")
+                self?.startScan(url: url, options: options)
             }
-            // Then start the scan
-            self?.startScan(url: url, options: options)
         }
 
         scopeVC.cancelHandler = { [weak self] in
-            // User cancelled - dismiss sheet and close this tab
+            // User cancelled - dismiss panel and close this tab
             if let sheet = self?.scopeSheet {
-                self?.view.window?.endSheet(sheet)
+                sheet.close()
                 self?.scopeSheet = nil
             }
             // Request tab close via parent
@@ -191,12 +197,25 @@ class StorageAnalyzerTabViewController: NSViewController, SplitPaneViewControlle
             }
         }
 
-        let sheet = NSWindow(contentViewController: scopeVC)
-        sheet.styleMask = [.titled, .closable]
+        // Create a floating panel instead of modal sheet
+        let sheet = NSPanel(contentViewController: scopeVC)
+        sheet.styleMask = [.titled, .closable, .resizable]
         sheet.title = "Select Scan Scope"
+        sheet.isReleasedWhenClosed = false
+        sheet.level = .floating
+        sheet.hidesOnDeactivate = false
         sheet.delegate = self
         scopeSheet = sheet
-        window.beginSheet(sheet)
+
+        // Position relative to parent window
+        let parentFrame = window.frame
+        let sheetSize = NSSize(width: 500, height: 600)
+        sheet.setContentSize(sheetSize)
+        let x = parentFrame.midX - sheetSize.width / 2
+        let y = parentFrame.midY - sheetSize.height / 2
+        sheet.setFrameOrigin(NSPoint(x: x, y: y))
+
+        sheet.makeKeyAndOrderFront(nil)
     }
 
     // MARK: - Scanning
@@ -231,18 +250,32 @@ class StorageAnalyzerTabViewController: NSViewController, SplitPaneViewControlle
 
         self.progressViewController = progressVC
 
-        let sheet = NSWindow(contentViewController: progressVC)
-        sheet.styleMask = [.titled, .closable]
+        // Create a floating panel instead of modal sheet
+        let sheet = NSPanel(contentViewController: progressVC)
+        sheet.styleMask = [.titled, .closable, .utilityWindow, .nonactivatingPanel]
         sheet.title = "Scanning..."
+        sheet.level = .floating
+        sheet.isFloatingPanel = true
+        sheet.hidesOnDeactivate = false
 
         progressSheet = sheet
 
-        view.window?.beginSheet(sheet)
+        // Show as floating window instead of modal sheet
+        if let parentWindow = view.window {
+            // Position relative to parent window
+            let parentFrame = parentWindow.frame
+            let sheetSize = sheet.frame.size
+            let x = parentFrame.midX - sheetSize.width / 2
+            let y = parentFrame.midY - sheetSize.height / 2
+            sheet.setFrameOrigin(NSPoint(x: x, y: y))
+        }
+
+        sheet.makeKeyAndOrderFront(nil)
     }
 
     private func hideProgressSheet() {
         guard let sheet = progressSheet else { return }
-        view.window?.endSheet(sheet)
+        sheet.close()
         progressSheet = nil
         progressViewController = nil
     }
@@ -301,6 +334,10 @@ class StorageAnalyzerTabViewController: NSViewController, SplitPaneViewControlle
     }
 
     func splitPaneDidRequestAddToFavorites(item: FileItem) {
+        // Not applicable
+    }
+    
+    func splitPaneDidRequestOpenTerminal(at path: String) {
         // Not applicable
     }
 }
@@ -433,17 +470,18 @@ extension StorageAnalyzerTabViewController: StorageListViewDelegate {
 
 // MARK: - NSWindowDelegate
 extension StorageAnalyzerTabViewController: NSWindowDelegate {
-    func windowShouldClose(_ sender: NSWindow) -> Bool {
-        // If this is the scope sheet being closed
-        if sender == scopeSheet {
-            view.window?.endSheet(sender)
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+
+        // If this is the scope panel being closed
+        if window == scopeSheet {
             scopeSheet = nil
-            // Close this tab
-            if let tabController = parent?.parent as? TabBarController {
-                tabController.closeCurrentTab()
+            // Close this tab if scan hasn't started yet
+            if rootURL == nil {
+                if let tabController = parent?.parent as? TabBarController {
+                    tabController.closeCurrentTab()
+                }
             }
-            return false // We handle the closing ourselves
         }
-        return true
     }
 }

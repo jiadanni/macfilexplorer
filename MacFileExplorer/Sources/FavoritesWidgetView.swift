@@ -31,10 +31,48 @@ class FavoritesWidgetView: StartWidgetView {
     }
 
     private func setupDefaultFolders() {
-        // Default configuration: just root folder
-        defaultFolders = [
-            ("/", StartDesignSystem.Icons.folder, URL(fileURLWithPath: "/"))
-        ]
+        // Load saved favorite folders from UserDefaults
+        if let savedPaths = UserDefaults.standard.array(forKey: "FavoriteWidgetFolders") as? [String] {
+            defaultFolders = savedPaths.compactMap { path in
+                let url = URL(fileURLWithPath: path)
+                let name = url.lastPathComponent.isEmpty ? "/" : url.lastPathComponent
+                return (name, StartDesignSystem.Icons.folder, url)
+            }
+        }
+
+        // If no saved folders, use root as default
+        if defaultFolders.isEmpty {
+            defaultFolders = [
+                ("/", StartDesignSystem.Icons.folder, URL(fileURLWithPath: "/"))
+            ]
+        }
+    }
+
+    func addFolder(url: URL) {
+        NSLog("FavoritesWidget: addFolder called with url: \(url.path)")
+        // Add to the folders array
+        let name = url.lastPathComponent.isEmpty ? "/" : url.lastPathComponent
+        let newFolder = (name, StartDesignSystem.Icons.folder, url as URL?)
+        defaultFolders.append(newFolder)
+        NSLog("FavoritesWidget: defaultFolders count after append: \(defaultFolders.count)")
+
+        // Save to UserDefaults
+        let paths = defaultFolders.compactMap { $0.url?.path }
+        UserDefaults.standard.set(paths, forKey: "FavoriteWidgetFolders")
+        NSLog("FavoritesWidget: Saved paths to UserDefaults: \(paths)")
+
+        // Rebuild the widget UI
+        NSLog("FavoritesWidget: About to rebuild content")
+        rebuildContent()
+        NSLog("FavoritesWidget: Rebuild complete")
+    }
+
+    private func rebuildContent() {
+        // Clear existing content
+        contentView.subviews.forEach { $0.removeFromSuperview() }
+
+        // Rebuild
+        setupContent()
     }
 
     override func setupContent() {
@@ -67,17 +105,16 @@ class FavoritesWidgetView: StartWidgetView {
 
     private func createFolderCard(name: String, icon: String, url: URL?) -> NSView {
         let card = NSView()
-        card.wantsLayer = true
-        card.layer?.cornerRadius = 8
-        card.layer?.backgroundColor = NSColor.controlColor.cgColor
+        // Layer-backing disabled to allow button clicks to work properly
+        card.wantsLayer = false
 
         // Icon
         let iconView = NSImageView()
         if let sysImage = NSImage(systemSymbolName: icon, accessibilityDescription: name) {
             let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
             iconView.image = useGrayscale ? sysImage.grayscale() : sysImage
+            iconView.contentTintColor = useGrayscale ? NSColor.secondaryLabelColor : StartDesignSystem.Colors.accent
         }
-        iconView.contentTintColor = StartDesignSystem.Colors.accent
         iconView.translatesAutoresizingMaskIntoConstraints = false
 
         // Label
@@ -90,17 +127,21 @@ class FavoritesWidgetView: StartWidgetView {
         button.title = ""
         button.bezelStyle = .regularSquare
         button.isBordered = false
+        button.setButtonType(.momentaryPushIn)
         button.target = self
         button.action = #selector(folderCardTapped(_:))
         button.tag = defaultFolders.firstIndex(where: { $0.name == name }) ?? 0
         button.translatesAutoresizingMaskIntoConstraints = false
+        button.setAccessibilityLabel(name)
+        button.setAccessibilityRole(.button)
 
         card.addSubview(iconView)
         card.addSubview(label)
         card.addSubview(button)
 
-        // Set hugging priority to allow resizing
+        // Keep the cards flexible so the window can resize horizontally
         card.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        card.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         NSLayoutConstraint.activate([
             iconView.topAnchor.constraint(equalTo: card.topAnchor, constant: StartDesignSystem.Spacing.md),
@@ -118,7 +159,7 @@ class FavoritesWidgetView: StartWidgetView {
             button.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             button.bottomAnchor.constraint(equalTo: card.bottomAnchor),
 
-            // Only constrain height, width is flexible
+            // Fixed height only; width must flex with window resizing
             card.heightAnchor.constraint(equalToConstant: 100)
         ])
 
@@ -136,11 +177,8 @@ class FavoritesWidgetView: StartWidgetView {
 
     private func createAddFavoriteCard() -> NSView {
         let card = NSView()
-        card.wantsLayer = true
-        card.layer?.cornerRadius = 8
-        card.layer?.backgroundColor = NSColor.controlColor.cgColor
-        card.layer?.borderWidth = 2
-        card.layer?.borderColor = StartDesignSystem.Colors.accent.withAlphaComponent(0.3).cgColor
+        // Layer-backing disabled to allow button clicks to work properly
+        card.wantsLayer = false
 
         // Plus icon
         let iconView = NSImageView()
@@ -152,7 +190,7 @@ class FavoritesWidgetView: StartWidgetView {
         iconView.translatesAutoresizingMaskIntoConstraints = false
 
         // Label
-        let label = StartDesignSystem.createLabel(text: "Add to Folder", style: .body)
+        let label = StartDesignSystem.createLabel(text: L10n.text("Add to Folder"), style: .body)
         label.alignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
 
@@ -161,16 +199,20 @@ class FavoritesWidgetView: StartWidgetView {
         button.title = ""
         button.bezelStyle = .regularSquare
         button.isBordered = false
+        button.setButtonType(.momentaryPushIn)
         button.target = self
         button.action = #selector(addFavoriteTapped)
         button.translatesAutoresizingMaskIntoConstraints = false
+        button.setAccessibilityLabel(L10n.text("Add favorite folder"))
+        button.setAccessibilityRole(.button)
 
         card.addSubview(iconView)
         card.addSubview(label)
         card.addSubview(button)
 
-        // Set hugging priority to allow resizing
+        // Keep the cards flexible so the window can resize horizontally
         card.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        card.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         NSLayoutConstraint.activate([
             iconView.topAnchor.constraint(equalTo: card.topAnchor, constant: StartDesignSystem.Spacing.md),
@@ -188,7 +230,7 @@ class FavoritesWidgetView: StartWidgetView {
             button.trailingAnchor.constraint(equalTo: card.trailingAnchor),
             button.bottomAnchor.constraint(equalTo: card.bottomAnchor),
 
-            // Only constrain height, width is flexible
+            // Fixed height only; width must flex with window resizing
             card.heightAnchor.constraint(equalToConstant: 100)
         ])
 
@@ -215,6 +257,8 @@ class FavoritesWidgetView: StartWidgetView {
     }
 
     @objc private func addFavoriteTapped() {
+        NSLog("FavoritesWidget: addFavoriteTapped called")
+        NSLog("FavoritesWidget: delegate is \(delegate == nil ? "nil" : "set")")
         delegate?.widgetDidRequestAction(.addFavorite, widget: self)
     }
 }

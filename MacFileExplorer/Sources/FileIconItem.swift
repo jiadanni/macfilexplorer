@@ -27,6 +27,10 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
     var isListMode: Bool = false // Set to true for Windows List view
     var zoomLevel: Double = 1.0 {
         didSet {
+            // Ensure UI is set up before updating constraints
+            if myImageView == nil {
+                setupUI()
+            }
             updateLayoutConstraints()
             updateFontSize()
         }
@@ -34,6 +38,10 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
     var showCheckbox: Bool = false {
         didSet {
             if showCheckbox != oldValue {
+                // Ensure UI is set up before updating constraints
+                if myImageView == nil {
+                    setupUI()
+                }
                 updateLayoutConstraints()
             }
         }
@@ -122,6 +130,10 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
         myCheckbox?.translatesAutoresizingMaskIntoConstraints = false
         myCheckbox?.isHidden = !showCheckbox
         view.addSubview(myCheckbox!)
+
+        // Accessibility
+        view.setAccessibilityElement(true)
+        view.setAccessibilityRole(.button)
 
         updateLayoutConstraints()
         updateFontSize()
@@ -236,6 +248,12 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
 
     private func updateView() {
         guard let fileItem = fileItem else { return }
+
+        // Ensure UI is set up before updating (in case this is called before viewDidLoad)
+        if myImageView == nil {
+            setupUI()
+        }
+
         myImageView?.image = fileItem.icon
         myTextField?.stringValue = fileItem.displayName
 
@@ -245,6 +263,8 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
         } else {
             myImageView?.contentTintColor = nil // Reset tint color
         }
+
+        view.setAccessibilityLabel(fileItem.displayName)
 
         // Apply dimmed appearance for cut files
         if isFileCut(fileItem.url) {

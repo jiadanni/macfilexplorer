@@ -29,8 +29,6 @@ class PreviewPaneViewController: NSViewController {
     // Quick action buttons
     private var quickActionsView: NSView!
     private var rotateButton: NSButton!
-    private var markupButton: NSButton!
-    private var trimButton: NSButton!
 
     // Storage analyzer
     private var storageAnalyzerView: NSView!
@@ -172,12 +170,8 @@ class PreviewPaneViewController: NSViewController {
         quickActionsView.addSubview(stackView)
 
         rotateButton = createActionButton(title: "Rotate", action: #selector(rotateButtonClicked))
-        markupButton = createActionButton(title: "Markup", action: #selector(markupButtonClicked))
-        trimButton = createActionButton(title: "Trim", action: #selector(trimButtonClicked))
 
         stackView.addArrangedSubview(rotateButton)
-        stackView.addArrangedSubview(markupButton)
-        stackView.addArrangedSubview(trimButton)
 
         NSLayoutConstraint.activate([
             stackView.leadingAnchor.constraint(equalTo: quickActionsView.leadingAnchor, constant: 8),
@@ -379,8 +373,6 @@ class PreviewPaneViewController: NSViewController {
         // Show quick actions for images
         quickActionsView.isHidden = false
         rotateButton.isEnabled = true
-        markupButton.isEnabled = true
-        trimButton.isEnabled = false
     }
 
     private func showPDFPreview(for fileItem: FileItem) {
@@ -409,11 +401,7 @@ class PreviewPaneViewController: NSViewController {
         // Show PDF metadata
         showPDFMetadata(document: document, url: fileItem.url)
 
-        // Show markup action for PDFs
-        quickActionsView.isHidden = false
-        rotateButton.isEnabled = false
-        markupButton.isEnabled = true
-        trimButton.isEnabled = false
+        quickActionsView.isHidden = true
     }
 
     private func showVideoPreview(for fileItem: FileItem) {
@@ -442,11 +430,7 @@ class PreviewPaneViewController: NSViewController {
         // Show video metadata
         showVideoMetadata(url: fileItem.url)
 
-        // Show trim action for videos
-        quickActionsView.isHidden = false
-        rotateButton.isEnabled = false
-        markupButton.isEnabled = false
-        trimButton.isEnabled = true
+        quickActionsView.isHidden = true
     }
 
     private func showTextPreview(for fileItem: FileItem) {
@@ -1036,25 +1020,6 @@ class PreviewPaneViewController: NSViewController {
            let imageData = bitmapImage.representation(using: .jpeg, properties: [:]) {
             try? imageData.write(to: fileURL)
         }
-    }
-
-    @objc private func markupButtonClicked() {
-        guard let fileURL = currentFileItem?.url else { return }
-
-        // Open file in default app for markup
-        NSWorkspace.shared.open(fileURL)
-    }
-
-    @objc private func trimButtonClicked() {
-        guard currentFileItem?.url != nil else { return }
-
-        // Open video trimming UI (this would require more implementation)
-        let alert = NSAlert()
-        alert.messageText = "Video Trimming"
-        alert.informativeText = "Video trimming feature coming soon!"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
     }
 
     @objc private func playPauseAudio() {

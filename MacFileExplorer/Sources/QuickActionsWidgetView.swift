@@ -12,7 +12,7 @@ class QuickActionsWidgetView: StartWidgetView {
     private var actionsStack: NSStackView!
 
     init() {
-        super.init(title: "Quick Actions", icon: StartDesignSystem.Icons.settings, dismissible: false)
+        super.init(title: L10n.text("Quick Actions"), icon: StartDesignSystem.Icons.settings, dismissible: false)
         setupContent()
     }
 
@@ -32,10 +32,10 @@ class QuickActionsWidgetView: StartWidgetView {
 
         // Action buttons
         let actions: [(title: String, icon: String, action: Selector)] = [
-            ("New Folder", StartDesignSystem.Icons.newFolder, #selector(newFolderTapped)),
-            ("Open Terminal", StartDesignSystem.Icons.terminal, #selector(openTerminalTapped)),
-            ("Storage Analyzer", StartDesignSystem.Icons.storage, #selector(storageAnalyzerTapped)),
-            ("Eject All Drives", StartDesignSystem.Icons.eject, #selector(ejectAllTapped))
+            (L10n.text("New Folder"), StartDesignSystem.Icons.newFolder, #selector(newFolderTapped)),
+            (L10n.text("Open Terminal"), StartDesignSystem.Icons.terminal, #selector(openTerminalTapped)),
+            (L10n.text("Storage Analyzer"), StartDesignSystem.Icons.storage, #selector(storageAnalyzerTapped)),
+            (L10n.text("Eject All Drives"), StartDesignSystem.Icons.eject, #selector(ejectAllTapped))
         ]
 
         for actionInfo in actions {
@@ -62,6 +62,8 @@ class QuickActionsWidgetView: StartWidgetView {
         button.target = self
         button.action = action
         button.translatesAutoresizingMaskIntoConstraints = false
+        button.setAccessibilityLabel(title)
+        button.setAccessibilityRole(.button)
 
         container.addSubview(button)
 

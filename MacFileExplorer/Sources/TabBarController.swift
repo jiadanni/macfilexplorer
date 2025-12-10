@@ -16,17 +16,30 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     private var tabButtonsStackView: NSStackView!
     private var tabButtons: [NSButton] = []
     private var tabCloseButtons: [NSButton] = []
+    private var accentColorObserver: NSObjectProtocol?
+    private var zoomObserver: NSObjectProtocol?
+    
+    private func owningSplitViewController() -> SplitViewController? {
+        var controller: NSViewController? = parent
+        while let current = controller {
+            if let splitVC = current as? SplitViewController {
+                return splitVC
+            }
+            controller = current.parent
+        }
+        return nil
+    }
 
     override func loadView() {
         view = NSView()
         setupUI()
         
         // Listen for accent color changes
-        NotificationCenter.default.addObserver(forName: .accentColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+        accentColorObserver = NotificationCenter.default.addObserver(forName: .accentColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.updateTabButtons()
         }
         
-        NotificationCenter.default.addObserver(forName: .zoomDidChangeNotification, object: nil, queue: .main) { [weak self] notification in
+        zoomObserver = NotificationCenter.default.addObserver(forName: .zoomDidChangeNotification, object: nil, queue: .main) { [weak self] notification in
             if let zoomValue = notification.object as? Double {
                 self?.updateZoomLevel(to: zoomValue)
             }
@@ -34,7 +47,12 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     }
     
     deinit {
-        NotificationCenter.default.removeObserver(self, name: .accentColorDidChangeNotification, object: nil)
+        if let accentColorObserver {
+            NotificationCenter.default.removeObserver(accentColorObserver)
+        }
+        if let zoomObserver {
+            NotificationCenter.default.removeObserver(zoomObserver)
+        }
     }
 
     private func setupUI() {
@@ -105,6 +123,8 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         button.bezelStyle = .shadowlessSquare
         button.isBordered = false
         button.setButtonType(.momentaryChange)
+        button.setAccessibilityRole(.button)
+        button.setAccessibilityLabel("\(title) tab")
         button.target = self
         button.action = #selector(tabButtonClicked(_:))
         button.tag = index
@@ -138,6 +158,8 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
             cb.isBordered = false
             cb.setButtonType(.momentaryChange)
             cb.imageScaling = .scaleProportionallyDown
+            cb.setAccessibilityRole(.button)
+            cb.setAccessibilityLabel("Close \(title) tab")
             cb.contentTintColor = isSelected ? NSColor.secondaryLabelColor : NSColor.tertiaryLabelColor
             cb.translatesAutoresizingMaskIntoConstraints = false
             cb.target = self
@@ -242,7 +264,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         updateTabButtons()
 
         // Update terminal to the new tab's directory
-        if let splitVC = parent as? SplitViewController {
+        if let splitVC = owningSplitViewController() {
             splitVC.updateTerminalDirectory()
         }
         postTabChangeNotification()
@@ -424,7 +446,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     }
 
     func navigateToLocation(_ url: URL) {
-        print("TabBarController: navigateToLocation - Received URL: \(url.path)")
+        debugLog("TabBarController: navigateToLocation - Received URL: \(url.path)")
         guard currentTabIndex < tabs.count else { return }
         if let splitPane = tabs[currentTabIndex] as? SplitPaneViewController {
             splitPane.navigateToURL(url)
@@ -491,7 +513,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     }
 
     public func openInNewTab(url: URL) {
-        print("TabBarController: openInNewTab - Received URL: \(url.path)")
+        debugLog("TabBarController: openInNewTab - Received URL: \(url.path)")
         // Create a new tab with a SplitPaneViewController
         let splitPane = SplitPaneViewController()
         splitPane.delegate = self
@@ -553,13 +575,16 @@ extension TabBarController {
         view.window?.title = path
 
         // Notify parent to update terminal
-        if let splitVC = parent as? SplitViewController {
+        if let splitVC = owningSplitViewController() {
             splitVC.updateTerminalDirectory()
+            // Also update the sidebar folder explorer to follow the active directory (respects user setting).
+            let url = URL(fileURLWithPath: path)
+            splitVC.updateSidebarSelection(url: url)
         }
     }
 
     func splitPaneOpenInNewTab(url: URL) {
-        print("TabBarController: splitPaneOpenInNewTab - Received URL: \(url.path)")
+        debugLog("TabBarController: splitPaneOpenInNewTab - Received URL: \(url.path)")
         // Delegate to parent TabBarController to handle opening in new tab
         openInNewTab(url: url)
     }
@@ -574,8 +599,14 @@ extension TabBarController {
 
     func splitPaneDidRequestAddToFavorites(item: FileItem) {
         // Forward to sidebar or handle adding to favorites
-        if let splitVC = parent as? SplitViewController {
+        if let splitVC = owningSplitViewController() {
             splitVC.updateSidebarSelection(url: item.url)
+        }
+    }
+    
+    func splitPaneDidRequestOpenTerminal(at path: String) {
+        if let splitVC = owningSplitViewController() {
+            splitVC.showTerminal(at: path)
         }
     }
 

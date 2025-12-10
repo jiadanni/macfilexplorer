@@ -31,7 +31,7 @@ class FileCopyMoveDialog: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = operationType == .copy ? "Copying Files" : "Moving Files"
+        window.title = operationType == .copy ? L10n.text("Copying Files") : L10n.text("Moving Files")
         window.center()
 
         super.init(window: window)
@@ -49,7 +49,7 @@ class FileCopyMoveDialog: NSWindowController {
     }
 
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        super.init(coder: coder)
     }
 
     private func setupUI() {
@@ -64,12 +64,12 @@ class FileCopyMoveDialog: NSWindowController {
         contentView.addSubview(stackView)
 
         // Title label
-        titleLabel = NSTextField(labelWithString: "Preparing files...")
+        titleLabel = NSTextField(labelWithString: L10n.text("Preparing files..."))
         titleLabel.font = NSFont.boldSystemFont(ofSize: 14)
         stackView.addArrangedSubview(titleLabel)
 
         // Status label
-        statusLabel = NSTextField(labelWithString: "Calculating size...")
+        statusLabel = NSTextField(labelWithString: L10n.text("Calculating size..."))
         statusLabel.font = NSFont.systemFont(ofSize: 11)
         statusLabel.textColor = .secondaryLabelColor
         stackView.addArrangedSubview(statusLabel)
@@ -82,6 +82,7 @@ class FileCopyMoveDialog: NSWindowController {
         progressIndicator.minValue = 0
         progressIndicator.maxValue = 100
         progressIndicator.doubleValue = 0
+        progressIndicator.setAccessibilityLabel(L10n.text("Operation progress"))
         stackView.addArrangedSubview(progressIndicator)
 
         // Speed label
@@ -91,7 +92,7 @@ class FileCopyMoveDialog: NSWindowController {
         stackView.addArrangedSubview(speedLabel)
 
         // File queue section
-        let queueLabel = NSTextField(labelWithString: "File Queue:")
+        let queueLabel = NSTextField(labelWithString: L10n.text("File Queue:"))
         queueLabel.font = NSFont.boldSystemFont(ofSize: 12)
         stackView.addArrangedSubview(queueLabel)
 
@@ -106,6 +107,7 @@ class FileCopyMoveDialog: NSWindowController {
         fileQueueTextView = NSTextView()
         fileQueueTextView.isEditable = false
         fileQueueTextView.font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+        fileQueueTextView.setAccessibilityLabel(L10n.text("Queued files"))
         scrollView.documentView = fileQueueTextView
 
         // Buttons
@@ -114,12 +116,14 @@ class FileCopyMoveDialog: NSWindowController {
         buttonStack.spacing = 10
         stackView.addArrangedSubview(buttonStack)
 
-        pauseButton = NSButton(title: "Pause", target: self, action: #selector(pauseButtonClicked(_:)))
+        pauseButton = NSButton(title: L10n.text("Pause"), target: self, action: #selector(pauseButtonClicked(_:)))
         pauseButton.bezelStyle = .rounded
+        pauseButton.setAccessibilityLabel(L10n.text("Pause"))
         buttonStack.addArrangedSubview(pauseButton)
 
-        cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancelButtonClicked(_:)))
+        cancelButton = NSButton(title: L10n.text("Cancel"), target: self, action: #selector(cancelButtonClicked(_:)))
         cancelButton.bezelStyle = .rounded
+        cancelButton.setAccessibilityLabel(L10n.text("Cancel"))
         buttonStack.addArrangedSubview(cancelButton)
 
         // Constraints
@@ -144,21 +148,23 @@ class FileCopyMoveDialog: NSWindowController {
         isPaused.toggle()
 
         if isPaused {
-            pauseButton.title = "Resume"
+            pauseButton.title = L10n.text("Resume")
+            pauseButton.setAccessibilityLabel(L10n.text("Resume"))
             operation?.pause()
         } else {
-            pauseButton.title = "Pause"
+            pauseButton.title = L10n.text("Pause")
+            pauseButton.setAccessibilityLabel(L10n.text("Pause"))
             operation?.resume()
         }
     }
 
     @objc private func cancelButtonClicked(_ sender: NSButton) {
         let alert = NSAlert()
-        alert.messageText = "Cancel Operation"
-        alert.informativeText = "Are you sure you want to cancel this operation?"
+        alert.messageText = L10n.text("Cancel Operation")
+        alert.informativeText = L10n.text("Are you sure you want to cancel this operation?")
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "Cancel Operation")
-        alert.addButton(withTitle: "Continue")
+        alert.addButton(withTitle: L10n.text("Cancel Operation Button"))
+        alert.addButton(withTitle: L10n.text("Continue"))
 
         if alert.runModal() == .alertFirstButtonReturn {
             isCancelled = true
@@ -210,8 +216,8 @@ extension FileCopyMoveDialog: FileOperationDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
 
-            self.titleLabel.stringValue = "Complete!"
-            self.statusLabel.stringValue = "All files processed successfully"
+            self.titleLabel.stringValue = L10n.text("Complete!")
+            self.statusLabel.stringValue = L10n.text("All files processed successfully")
             self.progressIndicator.doubleValue = 100
             self.pauseButton.isEnabled = false
 
@@ -231,7 +237,7 @@ extension FileCopyMoveDialog: FileOperationDelegate {
             guard let self else { return }
 
             let alert = NSAlert()
-            alert.messageText = "Operation Failed"
+            alert.messageText = L10n.text("Operation Failed")
             alert.informativeText = error
             alert.alertStyle = .critical
             alert.addButton(withTitle: "OK")
@@ -271,9 +277,19 @@ class FileOperation {
     private let destination: URL
     private weak var delegate: FileOperationDelegate?
 
-    private var isPaused = false
-    private var isCancelled = false
+    private let stateQueue = DispatchQueue(label: "com.macfileexplorer.fileoperation.state", attributes: .concurrent)
+    private let pauseCondition = NSCondition()
+    private var _isPaused = false
+    private var _isCancelled = false
     private var operationQueue: DispatchQueue
+
+    private var isPaused: Bool {
+        stateQueue.sync { _isPaused }
+    }
+
+    private var isCancelled: Bool {
+        stateQueue.sync { _isCancelled }
+    }
 
     init(type: FileCopyMoveDialog.OperationType, sourceFiles: [URL], destination: URL, delegate: FileOperationDelegate?) {
         self.type = type
@@ -290,15 +306,17 @@ class FileOperation {
     }
 
     func pause() {
-        isPaused = true
+        setPaused(true)
     }
 
     func resume() {
-        isPaused = false
+        setPaused(false)
+        wakeWaitingThreads()
     }
 
     func cancel() {
-        isCancelled = true
+        setCancelled(true)
+        wakeWaitingThreads()
     }
 
     private func performOperation() {
@@ -316,13 +334,15 @@ class FileOperation {
                     filesToProcess.append(fileURL)
 
                     // Get file size
+                    waitIfPaused()
+                    if isCancelled { return }
                     do {
                         let resourceValues = try fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
                         if let isDirectory = resourceValues.isDirectory, !isDirectory {
                             totalSize += Int64(resourceValues.fileSize ?? 0)
                         }
                     } catch {
-                        print("Error getting file size: \(error)")
+                        debugLog("Error getting file size: \(error)")
                     }
                 }
             }
@@ -337,10 +357,8 @@ class FileOperation {
         for sourceURL in sourceFiles {
             if isCancelled { return }
 
-            while isPaused {
-                Thread.sleep(forTimeInterval: 0.1)
-                if isCancelled { return }
-            }
+            waitIfPaused()
+            if isCancelled { return }
 
             let fileName = sourceURL.lastPathComponent
             let destinationURL = destination.appendingPathComponent(fileName)
@@ -400,5 +418,31 @@ class FileOperation {
         }
 
         return newURL
+    }
+
+    private func setPaused(_ value: Bool) {
+        stateQueue.sync(flags: .barrier) {
+            _isPaused = value
+        }
+    }
+
+    private func setCancelled(_ value: Bool) {
+        stateQueue.sync(flags: .barrier) {
+            _isCancelled = value
+        }
+    }
+
+    private func waitIfPaused() {
+        pauseCondition.lock()
+        while isPaused && !isCancelled {
+            pauseCondition.wait()
+        }
+        pauseCondition.unlock()
+    }
+
+    private func wakeWaitingThreads() {
+        pauseCondition.lock()
+        pauseCondition.broadcast()
+        pauseCondition.unlock()
     }
 }

@@ -207,19 +207,19 @@ class StartViewController: NSViewController {
     }
 
     private func handleAddFavorite() {
+        NSLog("StartViewController: handleAddFavorite called")
+        NSLog("StartViewController: favoritesWidget is \(favoritesWidget == nil ? "nil" : "set")")
         ContextualPermissionManager.shared.requestCustomFolder { [weak self] url in
+            NSLog("StartViewController: requestCustomFolder completion handler called")
             if let url = url {
-                // Add to sidebar favorites
-                var favorites = UserDefaults.standard.array(forKey: "SidebarFavorites") as? [String] ?? []
-                if !favorites.contains(url.path) {
-                    favorites.append(url.path)
-                    UserDefaults.standard.set(favorites, forKey: "SidebarFavorites")
-                }
+                NSLog("StartViewController: Got URL: \(url.path)")
+                NSLog("StartViewController: favoritesWidget in completion is \(self?.favoritesWidget == nil ? "nil" : "set")")
+                // Add to the Favorites widget on the Start page
+                self?.favoritesWidget?.addFolder(url: url)
 
                 self?.gettingStartedWidget?.markTaskCompleted(id: "pinFolder")
-
-                // TODO: Notify sidebar to refresh
-                NotificationCenter.default.post(name: .sidebarNeedsRefresh, object: nil)
+            } else {
+                NSLog("StartViewController: URL is nil - user cancelled")
             }
         }
     }
@@ -237,18 +237,18 @@ class StartViewController: NSViewController {
     private func handleNewFolder() {
         // Show folder creation dialog
         let alert = NSAlert()
-        alert.messageText = "Create New Folder"
-        alert.informativeText = "Choose a location to create a new folder"
+        alert.messageText = L10n.text("Create New Folder")
+        alert.informativeText = L10n.text("Choose a location to create a new folder")
         alert.alertStyle = .informational
-        alert.addButton(withTitle: "Choose Location")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: L10n.text("Choose Location"))
+        alert.addButton(withTitle: L10n.text("Cancel"))
 
         if alert.runModal() == .alertFirstButtonReturn {
             let panel = NSOpenPanel()
             panel.canChooseFiles = false
             panel.canChooseDirectories = true
             panel.allowsMultipleSelection = false
-            panel.prompt = "Choose Location"
+            panel.prompt = L10n.text("Choose Location")
 
             panel.begin { _ in
                 // Would create folder here - needs integration with file browser
@@ -278,9 +278,9 @@ class StartViewController: NSViewController {
 
         if ejected > 0 {
             let alert = NSAlert()
-            alert.messageText = "Ejected \(ejected) volume(s)"
+            alert.messageText = String(format: L10n.text("Ejected %@ volume(s)"), "\(ejected)")
             alert.alertStyle = .informational
-            alert.addButton(withTitle: "OK")
+            alert.addButton(withTitle: L10n.text("OK"))
             alert.runModal()
         }
     }

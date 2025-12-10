@@ -166,7 +166,7 @@ class SidebarViewController: NSViewController {
         let favoritesContainer = NSView()
         setupFavoritesSection()
         guard let favoritesScrollView = favoritesTableView.enclosingScrollView else {
-            print("Error: favoritesTableView has no enclosing scroll view")
+            debugLog("Error: favoritesTableView has no enclosing scroll view")
             return
         }
         let favoritesStack = NSStackView(views: [favoritesHeaderView, favoritesScrollView])
@@ -186,7 +186,7 @@ class SidebarViewController: NSViewController {
         let locationsContainer = NSView()
         setupLocationsSection()
         guard let drivesScrollView = drivesTableView.enclosingScrollView else {
-            print("Error: drivesTableView has no enclosing scroll view")
+            debugLog("Error: drivesTableView has no enclosing scroll view")
             return
         }
         let locationsStack = NSStackView(views: [drivesHeaderView, drivesScrollView])
@@ -206,7 +206,7 @@ class SidebarViewController: NSViewController {
         let folderExplorerContainer = NSView()
         setupFolderExplorerSection()
         guard let folderScrollView = folderExplorerOutlineView.enclosingScrollView else {
-            print("Error: folderExplorerOutlineView has no enclosing scroll view")
+            debugLog("Error: folderExplorerOutlineView has no enclosing scroll view")
             return
         }
         let folderExplorerStack = NSStackView(views: [folderExplorerHeaderView, folderScrollView])
@@ -236,9 +236,9 @@ class SidebarViewController: NSViewController {
 
         // Set equal heights for all three sections after initial layout
         if let mainSplitView = view.subviews.first as? NSSplitView,
-           mainSplitView.arrangedSubviews.count == 2,
+           mainSplitView.arrangedSubviews.indices.contains(1),
            let bottomSplitView = mainSplitView.arrangedSubviews[1] as? NSSplitView,
-           bottomSplitView.arrangedSubviews.count == 2 {
+           bottomSplitView.arrangedSubviews.indices.contains(1) {
 
             let totalHeight = mainSplitView.bounds.height
             let mainDividerThickness = mainSplitView.dividerThickness
@@ -292,9 +292,10 @@ class SidebarViewController: NSViewController {
         favoritesScrollView.borderType = .noBorder
         favoritesScrollView.documentView = favoritesTableView
 
-        // Set minimum height for favorites section
+        // Allow the width to flex with the split view; only enforce a sensible minimum height
         favoritesScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
-        favoritesScrollView.widthAnchor.constraint(equalToConstant: 200).isActive = true // Match sidebar width
+        favoritesScrollView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        favoritesScrollView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     }
 
     private func setupLocationsSection() { // Renamed from setupDrivesSection
@@ -330,9 +331,10 @@ class SidebarViewController: NSViewController {
         drivesScrollView.borderType = .noBorder
         drivesScrollView.documentView = drivesTableView
 
-        // Set minimum height for drives section
+        // Allow the width to flex with the split view; only enforce a sensible minimum height
         drivesScrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
-        drivesScrollView.widthAnchor.constraint(equalToConstant: 200).isActive = true // Match sidebar width
+        drivesScrollView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        drivesScrollView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     }
 
     private func setupFolderExplorerSection() {
@@ -437,7 +439,7 @@ class SidebarViewController: NSViewController {
 
                     driveItems.append(SidebarItem(name: volumeName, url: volumeURL, icon: icon))
                 } catch {
-                    print("Error reading volume info: \(error)")
+                    debugLog("Error reading volume info: \(error)")
                 }
             }
         }
@@ -829,7 +831,7 @@ extension SidebarViewController: NSMenuDelegate {
                 }
             } catch {
                 // If we can't determine if it's ejectable, don't show the eject option
-                print("Error checking if volume is ejectable: \(error)")
+                debugLog("Error checking if volume is ejectable: \(error)")
             }
         }
     }
@@ -906,7 +908,7 @@ extension SidebarViewController: NSTableViewDataSource {
                 do {
                     try fileManager.moveItem(at: sourceURL, to: targetURL)
                 } catch {
-                    print("Failed to move \(sourceURL) to \(targetURL): \(error)")
+                    debugLog("Failed to move \(sourceURL) to \(targetURL): \(error)")
                     allSucceeded = false
                 }
             }
@@ -921,7 +923,7 @@ extension SidebarViewController: NSTableViewDataSource {
                 return false
             }
             
-            let draggedRow = rowIndexes.first!
+            guard let draggedRow = rowIndexes.first else { return false }
             
             // Perform the reordering
             let item = favoriteItems[draggedRow]
@@ -1082,10 +1084,12 @@ extension SidebarViewController: NSOutlineViewDataSource {
         if item == nil { // Root item
             return folderExplorerRootItem?.children?[index] as Any
         }
-        guard let fileItem = item as? FileItem else {
-            fatalError("Invalid item for outline view")
+        guard let fileItem = item as? FileItem,
+              let children = fileItem.children,
+              index < children.count else {
+            return item as Any
         }
-        return fileItem.children?[index] as Any
+        return children[index]
     }
 
     func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
@@ -1125,7 +1129,7 @@ extension SidebarViewController: NSOutlineViewDataSource {
             do {
                 try fileManager.moveItem(at: sourceURL, to: targetURL)
             } catch {
-                print("Failed to move \\(sourceURL) to \\(targetURL): \\(error)")
+                debugLog("Failed to move \\(sourceURL) to \\(targetURL): \\(error)")
                 allSucceeded = false
             }
         }
@@ -1196,16 +1200,16 @@ extension SidebarViewController: NSOutlineViewDelegate {
         guard selectedRow >= 0 else { return }
 
         if let fileItem = outlineView.item(atRow: selectedRow) as? FileItem {
-            print("SidebarViewController: outlineViewSelectionDidChange - Selected URL: \(fileItem.url.path)")
+            debugLog("SidebarViewController: outlineViewSelectionDidChange - Selected URL: \(fileItem.url.path)")
             delegate?.sidebarDidSelectLocation(fileItem.url)
         }
     }
 
     func outlineViewItemWillExpand(_ notification: Notification) {
         guard let expandedItem = notification.userInfo?["NSObject"] as? FileItem else { return }
-        print("SidebarViewController: outlineViewItemWillExpand - Expanding URL: \(expandedItem.url.path)")
-        print("SidebarViewController: Children before loadChildren: \(expandedItem.children?.count ?? 0)")
+        debugLog("SidebarViewController: outlineViewItemWillExpand - Expanding URL: \(expandedItem.url.path)")
+        debugLog("SidebarViewController: Children before loadChildren: \(expandedItem.children?.count ?? 0)")
         expandedItem.loadChildren(showsHiddenFiles: false) // Load children when item is about to expand
-        print("SidebarViewController: Children after loadChildren: \(expandedItem.children?.count ?? 0)")
+        debugLog("SidebarViewController: Children after loadChildren: \(expandedItem.children?.count ?? 0)")
     }
 }

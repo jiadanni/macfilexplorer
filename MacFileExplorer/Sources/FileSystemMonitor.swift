@@ -18,7 +18,7 @@ class FileSystemMonitor {
         // Open the directory
         fileDescriptor = open(url.path, O_EVTONLY)
         guard fileDescriptor >= 0 else {
-            print("Failed to open directory for monitoring: \(url.path)")
+            debugLog("Failed to open directory for monitoring: \(url.path)")
             return
         }
 

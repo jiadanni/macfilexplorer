@@ -312,6 +312,21 @@ class SettingsViewController: NSSplitViewController, SettingsSidebarDelegate {
         addSplitViewItem(newContentItem)
 
         currentContentViewController = newContentVC
+
+        // Always start scrolled to the top when switching sections
+        scrollContentToTop(from: newContentVC.view)
+    }
+
+    private func scrollContentToTop(from root: NSView) {
+        if let scrollView = root as? NSScrollView {
+            scrollView.contentView.scroll(to: NSPoint(x: 0, y: 0))
+            scrollView.reflectScrolledClipView(scrollView.contentView)
+            return
+        }
+
+        for subview in root.subviews {
+            scrollContentToTop(from: subview)
+        }
     }
     
     // MARK: - Settings Application
@@ -725,7 +740,7 @@ class GeneralSettingsViewController: NSViewController {
             // Notify delegate that settings changed
             changeDelegate?.settingsDidChange()
         } catch {
-            print("Failed to archive color: \(error)")
+            debugLog("Failed to archive color: \(error)")
         }
     }
 
@@ -884,7 +899,7 @@ class GeneralSettingsViewController: NSViewController {
             // Notify delegate that settings changed
             changeDelegate?.settingsDidChange()
         } catch {
-            print("Failed to archive accent color: \(error)")
+            debugLog("Failed to archive accent color: \(error)")
         }
     }
 
@@ -1337,7 +1352,7 @@ class AppearanceSettingsViewController: NSViewController {
             // Notify delegate that settings changed
             changeDelegate?.settingsDidChange()
         } catch {
-            print("Failed to save folder color: \(error)")
+            debugLog("Failed to save folder color: \(error)")
         }
     }
 
@@ -1377,7 +1392,7 @@ class AppearanceSettingsViewController: NSViewController {
             // Notify delegate that settings changed
             changeDelegate?.settingsDidChange()
         } catch {
-            print("Failed to save accent color: \(error)")
+            debugLog("Failed to save accent color: \(error)")
         }
     }
 }

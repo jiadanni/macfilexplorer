@@ -16,6 +16,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     private var terminalSplitItem: NSSplitViewItem?
     var isTerminalVisible = false
     private var hasInitializedTabs = false
+    private let minimumContentWidth: CGFloat = 320 // keep room for file panes
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -35,9 +36,17 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         let sidebarItem = NSSplitViewItem(viewController: sidebarViewController!)
         // Determine fixed width (load saved or default)
         let savedWidth = UserDefaults.standard.double(forKey: "sidebarFixedWidth")
-        let fixedWidth: CGFloat = savedWidth > 120 ? CGFloat(savedWidth) : 220
-        sidebarItem.minimumThickness = fixedWidth
-        sidebarItem.maximumThickness = fixedWidth
+        // Clamp to a compact range so the sidebar never forces a wide window
+        let clampedWidth: CGFloat
+        if savedWidth > 0 {
+            clampedWidth = CGFloat(min(max(savedWidth, 160), 240))
+        } else {
+            clampedWidth = 200
+        }
+        let initialWidth: CGFloat = clampedWidth
+        sidebarItem.minimumThickness = 140 // allow narrowing
+        sidebarItem.maximumThickness = 260 // cap width to avoid locking the window but leave room for content
+        sidebarItem.holdingPriority = .defaultLow // prefer shrinking the sidebar first
         sidebarItem.canCollapse = false
         addSplitViewItem(sidebarItem)
 
@@ -73,7 +82,8 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         // Apply initial divider position to honor fixed width
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            self.splitView.setPosition(fixedWidth, ofDividerAt: 0)
+            let safeWidth = self.adjustedSidebarWidth(proposed: initialWidth)
+            self.splitView.setPosition(safeWidth, ofDividerAt: 0)
         }
     }
 
@@ -100,9 +110,9 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
             // Restore terminal visibility state
             let wasVisible = UserDefaults.standard.bool(forKey: "terminalIsVisible")
             if wasVisible {
-                // Defer toggle to ensure view is fully loaded
+                // Restore state without animation to avoid crashes during initial setup
                 DispatchQueue.main.async { [weak self] in
-                    self?.toggleTerminal()
+                    self?.setTerminalVisibility(true, animated: false)
                 }
             }
         }
@@ -123,30 +133,53 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     }
 
     func toggleTerminal() {
+        debugLog("SplitViewController: toggleTerminal called - currentState=\(isTerminalVisible)")
+        setTerminalVisibility(!isTerminalVisible, animated: true)
+    }
+
+    func showTerminal(at path: String? = nil) {
+        setTerminalVisibility(true, path: path, animated: true)
+    }
+
+    private func setTerminalVisibility(_ visible: Bool, path: String? = nil, animated: Bool = true) {
         guard let terminalSplitItem = terminalSplitItem else { return }
 
-        print("SplitViewController: toggleTerminal called - currentState=\(isTerminalVisible)")
-        isTerminalVisible.toggle()
-        print("SplitViewController: newState=\(isTerminalVisible)")
-        terminalSplitItem.animator().isCollapsed = !isTerminalVisible
+        // Only act if state changes
+        guard isTerminalVisible != visible else {
+            if visible {
+                terminalViewController?.focusInput()
+            }
+            return
+        }
 
-        if isTerminalVisible {
-            // Update terminal to current directory when opening
-            if let currentPath = tabBarController?.getCurrentPath() {
-                print("  Opening terminal - setting directory to \(currentPath)")
-                terminalViewController?.changeDirectory(to: currentPath)
+        isTerminalVisible = visible
+        if animated {
+            terminalSplitItem.animator().isCollapsed = !visible
+        } else {
+            terminalSplitItem.isCollapsed = !visible
+        }
+
+        if visible {
+            let targetPath = path ?? tabBarController?.getCurrentPath()
+            if let targetPath {
+                debugLog("  Opening terminal - setting directory to \(targetPath)")
+                terminalViewController?.changeDirectory(to: targetPath)
             }
 
-            // Focus the input field
-            terminalViewController?.focusInput()
+            // Defer focus when not animated to ensure view is fully laid out
+            if animated {
+                terminalViewController?.focusInput()
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                    self?.terminalViewController?.focusInput()
+                }
+            }
         } else {
-            // Return focus to file browser when closing terminal
-            print("  Closing terminal - restoring focus to tabBarController.view")
+            debugLog("  Closing terminal - restoring focus to tabBarController.view")
             view.window?.makeFirstResponder(tabBarController?.view)
         }
 
-        // Remember state for next launch
-        UserDefaults.standard.set(isTerminalVisible, forKey: "terminalIsVisible")
+        UserDefaults.standard.set(visible, forKey: "terminalIsVisible")
     }
 
     func cutSelection() {
@@ -189,6 +222,29 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         tabBarController?.splitHorizontally()
     }
 
+    override func splitViewDidResizeSubviews(_ notification: Notification) {
+        super.splitViewDidResizeSubviews(notification)
+        // Persist sidebar width only when the main split view (sidebar + content) resizes.
+        guard notification.object as? NSSplitView === splitView else { return }
+        guard splitViewItems.count > 0 else { return }
+        let sidebarWidth = adjustedSidebarWidth(proposed: splitViewItems[0].viewController.view.frame.width)
+        // Apply correction immediately if needed to keep content visible
+        splitView.setPosition(sidebarWidth, ofDividerAt: 0)
+        if sidebarWidth > 120 {
+            let clampedWidth = max(140.0, min(sidebarWidth, 240.0))
+            UserDefaults.standard.set(clampedWidth, forKey: "sidebarFixedWidth")
+        }
+    }
+
+    private func adjustedSidebarWidth(proposed: CGFloat) -> CGFloat {
+        // Ensure the content side retains a minimum width
+        let totalWidth = splitView.frame.width
+        let maxAllowed = max(140.0, min(260.0, totalWidth - minimumContentWidth))
+        let minAllowed: CGFloat = 140.0
+        let clamped = min(max(proposed, minAllowed), maxAllowed.isFinite ? maxAllowed : proposed)
+        return clamped
+    }
+
     func updateTerminalDirectory() {
         // Always update terminal directory, regardless of visibility
         // This ensures it shows the correct directory when toggled open
@@ -226,7 +282,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     // MARK: - SidebarDelegate
 
     func sidebarDidSelectLocation(_ url: URL) {
-        print("SplitViewController: sidebarDidSelectLocation - Received URL: \(url.path)")
+        debugLog("SplitViewController: sidebarDidSelectLocation - Received URL: \(url.path)")
         
         // Check if we're currently on the Start page
         // If so, open in new tab. Otherwise, navigate in current tab.
@@ -236,11 +292,11 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         
         if tabBarController.isCurrentTabStartPage() {
             // On Start page - open in new tab
-            print("  → Opening in new tab (currently on Start page)")
+            debugLog("  → Opening in new tab (currently on Start page)")
             tabBarController.openInNewTab(url: url)
         } else {
             // On a regular tab - navigate in current tab
-            print("  → Navigating in current tab")
+            debugLog("  → Navigating in current tab")
             tabBarController.navigateToLocation(url)
         }
         
@@ -263,18 +319,4 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         toggleTerminal()
     }
 
-    // Maintain fixed sidebar width and persist user adjustments
-    override func splitViewDidResizeSubviews(_ notification: Notification) {
-        guard let sidebarView = sidebarViewController?.view, let sidebarItem = splitViewItems.first else { return }
-        let width = sidebarView.bounds.width
-        if width > 120 { // persist reasonable width
-            UserDefaults.standard.set(Double(width), forKey: "sidebarFixedWidth")
-        }
-        // Only update constraints if they differ; avoid calling setPosition here to prevent recursive notifications
-        let epsilon: CGFloat = 0.5
-        if abs(sidebarItem.minimumThickness - width) > epsilon || abs(sidebarItem.maximumThickness - width) > epsilon {
-            sidebarItem.minimumThickness = width
-            sidebarItem.maximumThickness = width
-        }
-    }
 }

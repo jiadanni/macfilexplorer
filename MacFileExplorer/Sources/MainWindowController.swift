@@ -71,13 +71,12 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
         // This ensures the calculated frame (half screen width) is applied
         window.setFrame(contentRect, display: false)
 
-        // Disable autosave for now to prevent any saved frame interference
-        // TODO: Re-enable after confirming resize works
-        // window.setFrameAutosaveName("MainWindow")
+        // Persist window position/size between launches
+        window.setFrameAutosaveName("MainWindow")
     }
 
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        return nil
     }
 
     override func windowDidLoad() {
@@ -189,5 +188,9 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
 
     func splitPaneDidRequestAddToFavorites(item: FileItem) {
         splitViewController?.sidebarViewController?.addFavorite(item: item)
+    }
+    
+    func splitPaneDidRequestOpenTerminal(at path: String) {
+        splitViewController?.showTerminal(at: path)
     }
 }

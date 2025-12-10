@@ -411,16 +411,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showConnectToServerDialog() {
         let alert = NSAlert()
-        alert.messageText = "Connect to Server"
-        alert.informativeText = "Enter the server address (e.g., smb://server.local or afp://server.com)"
+        alert.messageText = L10n.text("Connect to Server")
+        alert.informativeText = L10n.text("Enter the server address (e.g., smb://server.local or afp://server.com)")
         alert.alertStyle = .informational
 
         let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 300, height: 24))
-        input.placeholderString = "smb://server.local/share"
+        input.placeholderString = L10n.text("smb://server.local/share")
         alert.accessoryView = input
 
-        alert.addButton(withTitle: "Connect")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: L10n.text("Connect"))
+        alert.addButton(withTitle: L10n.text("Cancel"))
 
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
@@ -433,7 +433,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func connectToNetworkLocation(_ path: String) {
         guard let url = URL(string: path) else {
-            showError("Invalid server address. Please use format: smb://server/share or afp://server/share")
+            showError(L10n.text("Invalid server address. Please use format: smb://server/share or afp://server/share"))
             return
         }
 
@@ -443,10 +443,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showError(_ message: String) {
         let alert = NSAlert()
-        alert.messageText = "Error"
+        alert.messageText = L10n.text("Error")
         alert.informativeText = message
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: L10n.text("OK"))
         alert.runModal()
     }
 

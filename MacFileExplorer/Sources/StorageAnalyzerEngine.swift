@@ -23,8 +23,18 @@ class StorageAnalyzerEngine {
     weak var delegate: StorageAnalyzerDelegate?
 
     private let scanQueue = DispatchQueue(label: "com.macfileexplorer.storageanalyzer", qos: .userInitiated)
-    private var isCancelled = false
-    private var isPaused = false
+    private let stateQueue = DispatchQueue(label: "com.macfileexplorer.storageanalyzer.state", attributes: .concurrent)
+    private let pauseCondition = NSCondition()
+    private var _isCancelled = false
+    private var _isPaused = false
+
+    private var isCancelled: Bool {
+        stateQueue.sync { _isCancelled }
+    }
+
+    private var isPaused: Bool {
+        stateQueue.sync { _isPaused }
+    }
 
     /// Root URL being scanned
     private(set) var rootURL: URL?
@@ -46,6 +56,7 @@ class StorageAnalyzerEngine {
 
     /// Cache for repeated scans
     private static var cache: [URL: (item: StorageItem, timestamp: Date)] = [:]
+    private static let cacheQueue = DispatchQueue(label: "com.macfileexplorer.storageanalyzer.cache", attributes: .concurrent)
     private static let cacheValidityDuration: TimeInterval = 300 // 5 minutes
 
     // MARK: - Public Methods
@@ -55,11 +66,11 @@ class StorageAnalyzerEngine {
         self.rootURL = url
         self.options = options
         self.delegate = delegate
-        self.isCancelled = false
-        self.isPaused = false
+        setCancelled(false)
+        setPaused(false)
 
         // Check cache first
-        if let cached = Self.cache[url], Date().timeIntervalSince(cached.timestamp) < Self.cacheValidityDuration {
+        if let cached = Self.cachedResult(for: url), Date().timeIntervalSince(cached.timestamp) < Self.cacheValidityDuration {
             DispatchQueue.main.async { [weak self] in
                 self?.delegate?.analyzerDidComplete(rootItem: cached.item, duration: 0)
             }
@@ -73,30 +84,74 @@ class StorageAnalyzerEngine {
 
     /// Cancels the current scan
     func cancel() {
-        isCancelled = true
+        setCancelled(true)
+        resumeIfNeeded()
     }
 
     /// Pauses the current scan
     func pause() {
-        isPaused = true
+        setPaused(true)
     }
 
     /// Resumes a paused scan
     func resume() {
-        isPaused = false
+        setPaused(false)
+        resumeIfNeeded()
     }
 
     /// Clears the cache
     static func clearCache() {
-        cache.removeAll()
+        cacheQueue.async(flags: .barrier) {
+            cache.removeAll()
+        }
     }
 
     /// Invalidates cache for a specific URL
     static func invalidateCache(for url: URL) {
-        cache.removeValue(forKey: url)
+        cacheQueue.async(flags: .barrier) {
+            cache.removeValue(forKey: url)
+        }
     }
 
     // MARK: - Private Methods
+
+    private static func cachedResult(for url: URL) -> (item: StorageItem, timestamp: Date)? {
+        cacheQueue.sync {
+            cache[url]
+        }
+    }
+
+    private static func storeCache(item: StorageItem, for url: URL) {
+        cacheQueue.async(flags: .barrier) {
+            cache[url] = (item, Date())
+        }
+    }
+
+    private func setCancelled(_ value: Bool) {
+        stateQueue.sync(flags: .barrier) {
+            _isCancelled = value
+        }
+    }
+
+    private func setPaused(_ value: Bool) {
+        stateQueue.sync(flags: .barrier) {
+            _isPaused = value
+        }
+    }
+
+    private func resumeIfNeeded() {
+        pauseCondition.lock()
+        pauseCondition.broadcast()
+        pauseCondition.unlock()
+    }
+
+    private func waitIfPaused() {
+        pauseCondition.lock()
+        while isPaused && !isCancelled {
+            pauseCondition.wait()
+        }
+        pauseCondition.unlock()
+    }
 
     private func performScan(url: URL) {
         let startTime = Date()
@@ -131,7 +186,7 @@ class StorageAnalyzerEngine {
             self.rootItem = root
 
             // Cache the result
-            Self.cache[url] = (root, Date())
+            Self.storeCache(item: root, for: url)
 
             let duration = Date().timeIntervalSince(startTime)
 
@@ -151,9 +206,8 @@ class StorageAnalyzerEngine {
         if isCancelled { return }
 
         // Handle pause
-        while isPaused && !isCancelled {
-            Thread.sleep(forTimeInterval: 0.1)
-        }
+        waitIfPaused()
+        if isCancelled { return }
 
         guard item.isDirectory else {
             // File - just count it
@@ -196,9 +250,8 @@ class StorageAnalyzerEngine {
             if isCancelled { return }
 
             // Handle pause
-            while isPaused && !isCancelled {
-                Thread.sleep(forTimeInterval: 0.1)
-            }
+            waitIfPaused()
+            if isCancelled { return }
 
             do {
                 let resourceValues = try fileURL.resourceValues(forKeys: Set(keys))
