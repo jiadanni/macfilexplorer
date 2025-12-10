@@ -24,12 +24,14 @@ class StatusBarViewController: NSViewController {
         view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
 
         // Left Status Label (for disk space info)
-        statusLabel = NSTextField(labelWithString: "Ready")
+        statusLabel = NSTextField(labelWithString: L10n.text("Ready"))
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
         statusLabel.font = NSFont.systemFont(ofSize: 11)
         statusLabel.textColor = .secondaryLabelColor
         statusLabel.lineBreakMode = .byTruncatingTail
         statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        statusLabel.setAccessibilityLabel(L10n.text("Status"))
+        statusLabel.setAccessibilityRole(.staticText)
         view.addSubview(statusLabel)
 
         // Center Label (for file selection info)
@@ -40,6 +42,8 @@ class StatusBarViewController: NSViewController {
         centerLabel.lineBreakMode = .byTruncatingTail
         centerLabel.alignment = .center
         centerLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        centerLabel.setAccessibilityLabel(L10n.text("Selection details"))
+        centerLabel.setAccessibilityRole(.staticText)
         view.addSubview(centerLabel)
 
         // Zoom Slider
@@ -50,14 +54,18 @@ class StatusBarViewController: NSViewController {
         zoomSlider.floatValue = 1.0 // Default zoom
         zoomSlider.target = self
         zoomSlider.action = #selector(zoomSliderChanged(_:))
+        zoomSlider.setAccessibilityRole(.slider)
+        zoomSlider.setAccessibilityLabel(L10n.text("Zoom level"))
         view.addSubview(zoomSlider)
 
         // Zoom Percentage Label
-        zoomPercentageLabel = NSTextField(labelWithString: "100%")
+        zoomPercentageLabel = NSTextField(labelWithString: String(format: L10n.text("%d%%"), 100))
         zoomPercentageLabel.translatesAutoresizingMaskIntoConstraints = false
         zoomPercentageLabel.font = NSFont.systemFont(ofSize: 11)
         zoomPercentageLabel.textColor = .secondaryLabelColor
         zoomPercentageLabel.alignment = .right
+        zoomPercentageLabel.setAccessibilityRole(.staticText)
+        zoomPercentageLabel.setAccessibilityLabel(L10n.text("Zoom percentage"))
         view.addSubview(zoomPercentageLabel)
 
         NSLayoutConstraint.activate([
@@ -96,19 +104,19 @@ class StatusBarViewController: NSViewController {
     func updateFileInformation(selectedCount: Int, totalSize: Int64, diskSpace: String?) {
         if selectedCount > 0 {
             let formattedSize = ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
-            let itemText = selectedCount == 1 ? "item" : "items"
-            statusLabel.stringValue = "\(selectedCount) \(itemText) selected, \(formattedSize)"
+            let itemText = selectedCount == 1 ? L10n.text("item") : L10n.text("items")
+            statusLabel.stringValue = String(format: L10n.text("%d %@ selected, %@"), selectedCount, itemText, formattedSize)
             // Show disk space in center when files are selected
             if let diskSpace = diskSpace {
-                centerLabel.stringValue = "\(diskSpace) available"
+                centerLabel.stringValue = String(format: L10n.text("%@ available"), diskSpace)
             } else {
                 centerLabel.stringValue = ""
             }
         } else {
-            statusLabel.stringValue = "Ready"
+            statusLabel.stringValue = L10n.text("Ready")
             // Show disk space in center when no files are selected
             if let diskSpace = diskSpace {
-                centerLabel.stringValue = "\(diskSpace) available"
+                centerLabel.stringValue = String(format: L10n.text("%@ available"), diskSpace)
             } else {
                 centerLabel.stringValue = ""
             }
@@ -122,7 +130,7 @@ class StatusBarViewController: NSViewController {
     
     private func updateZoomPercentageLabel() {
         let zoomPercentage = Int(zoomSlider.doubleValue * 100)
-        zoomPercentageLabel.stringValue = "\(zoomPercentage)%"
+        zoomPercentageLabel.stringValue = String(format: L10n.text("%d%%"), zoomPercentage)
     }
 
     // MARK: - Actions

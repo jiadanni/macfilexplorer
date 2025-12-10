@@ -54,18 +54,17 @@ class FileItem: Hashable {
             if let isSymlink = resourceValues.isSymbolicLink, isSymlink {
                 if let destination = try? FileManager.default.destinationOfSymbolicLink(atPath: url.path) {
                     var symlinkIsDir: ObjCBool = false
-                    let destinationPath = (destination as NSString).hasPrefix("/") ? destination : url.deletingLastPathComponent().appendingPathComponent(destination).path
+                    let destinationPath = destination.hasPrefix("/") ? destination : url.deletingLastPathComponent().appendingPathComponent(destination).path
                     FileManager.default.fileExists(atPath: destinationPath, isDirectory: &symlinkIsDir)
                     detectedAsDirectory = symlinkIsDir.boolValue
                 }
             }
             
             // Packages are treated as files unless they're also directories
-            if let isPackage = resourceValues.isPackage, isPackage {
-                // Only override if we're certain it's not a directory
-                if !detectedAsDirectory {
-                    detectedAsDirectory = false
-                }
+            if let isPackage = resourceValues.isPackage,
+               isPackage,
+               resourceValues.isDirectory != true {
+                detectedAsDirectory = false
             }
             if let tagNames = resourceValues.tagNames {
                 self.tags = tagNames
@@ -77,13 +76,13 @@ class FileItem: Hashable {
 
         // Debug logging for cloud storage directories
         if url.path.contains("Google Drive") {
-            print("🔍 FileItem init: \(name)")
-            print("   Path: \(url.path)")
-            print("   isDirectory: \(detectedAsDirectory)")
+            debugLog("🔍 FileItem init: \(name)")
+            debugLog("   Path: \(url.path)")
+            debugLog("   isDirectory: \(detectedAsDirectory)")
             if let rv = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .contentTypeKey]) {
-                print("   Resource isDirectory: \(rv.isDirectory ?? false)")
-                print("   Resource isSymlink: \(rv.isSymbolicLink ?? false)")
-                print("   Content Type: \(rv.contentType?.identifier ?? "nil")")
+                debugLog("   Resource isDirectory: \(rv.isDirectory ?? false)")
+                debugLog("   Resource isSymlink: \(rv.isSymbolicLink ?? false)")
+                debugLog("   Content Type: \(rv.contentType?.identifier ?? "nil")")
             }
         }
 
@@ -134,17 +133,22 @@ class FileItem: Hashable {
     func loadChildren(showsHiddenFiles: Bool = false, recursive: Bool = false, errorHandler: ((String) -> Void)? = nil) -> Bool {
         guard isDirectory else { return false }
 
+        // Ensure security-scoped access for sandboxed builds when folder is already granted.
+        _ = PermissionsManager.shared.ensureAccess(for: url)
+
         let fileManager = FileManager.default
+        let resolvedURL = url.resolvingSymlinksInPath()
+        let isGoogleDrive = FileItem.isGoogleDrivePath(resolvedURL.path)
 
         // Debug logging for Google Drive
-        if url.path.contains("Google Drive") {
-            print("📂 loadChildren called for: \(url.path)")
-            print("   showsHiddenFiles: \(showsHiddenFiles)")
+        if isGoogleDrive {
+            debugLog("📂 loadChildren called for: \(url.path)")
+            debugLog("   showsHiddenFiles: \(showsHiddenFiles)")
         }
 
         // Special handling for root directory "/" to avoid permission dialogs
-        if url.path == "/" {
-            print("📂 Special handling for root directory /")
+        if resolvedURL.path == "/" {
+            debugLog("📂 Special handling for root directory /")
             
             // For root, only show /Volumes and maybe /Users/<username>
             var safeRootItems: [URL] = []
@@ -187,7 +191,7 @@ class FileItem: Hashable {
                 }
             }
             
-            print("   ✅ Root directory loaded with \(children?.count ?? 0) safe items")
+            debugLog("   ✅ Root directory loaded with \(children?.count ?? 0) safe items")
             return true
         }
 
@@ -198,7 +202,7 @@ class FileItem: Hashable {
             }
 
             if recursive {
-                let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey, .isReadableKey], options: options)
+                let enumerator = fileManager.enumerator(at: resolvedURL, includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey, .isReadableKey], options: options)
                 var urls: [URL] = []
                 while let fileURL = enumerator?.nextObject() as? URL {
                     urls.append(fileURL)
@@ -210,13 +214,13 @@ class FileItem: Hashable {
 
             // Try to get contents - for cloud storage like Google Drive, this might need special handling
             let urls = try fileManager.contentsOfDirectory(
-                at: url,
+                at: resolvedURL,
                 includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey, .isReadableKey],
                 options: options
             )
 
-            if url.path.contains("Google Drive") {
-                print("   ✅ Got \(urls.count) items from contentsOfDirectory")
+            if isGoogleDrive {
+                debugLog("   ✅ Got \(urls.count) items from contentsOfDirectory")
             }
 
             children = urls.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
@@ -229,42 +233,29 @@ class FileItem: Hashable {
                 }
             }
 
-            if url.path.contains("Google Drive") {
-                print("   Final children count: \(children?.count ?? 0)")
+            if isGoogleDrive {
+                debugLog("   Final children count: \(children?.count ?? 0)")
             }
             return true
         } catch let error as NSError {
             // Log the error with more detail for debugging
-            print("❌ Error loading children for \(url.path):")
-            print("  Error code: \(error.code)")
-            print("  Error domain: \(error.domain)")
-            print("  Error description: \(error.localizedDescription)")
-            print("  User info: \(error.userInfo)")
+            debugLog("❌ Error loading children for \(url.path):")
+            debugLog("  Error code: \(error.code)")
+            debugLog("  Error domain: \(error.domain)")
+            debugLog("  Error description: \(error.localizedDescription)")
+            debugLog("  User info: \(error.userInfo)")
 
             // For Google Drive and other cloud storage, try alternative approach
-            if error.domain == NSCocoaErrorDomain && (error.code == 257 || error.code == 260) {
-                print("  🔄 Trying enumerator fallback...")
-                // Permission denied or file not found - might be cloud storage issue
-                // Try using FileManager enumerator instead
-                if let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: showsHiddenFiles ? [] : [.skipsHiddenFiles]) {
-                    var foundURLs: [URL] = []
-                    for case let fileURL as URL in enumerator {
-                        // Only get immediate children, not recursive
-                        if fileURL.deletingLastPathComponent() == url {
-                            foundURLs.append(fileURL)
-                        } else {
-                            enumerator.skipDescendants()
-                        }
-                    }
-                    print("  ✅ Enumerator found \(foundURLs.count) items")
-                    children = foundURLs.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
-                        .map { FileItem(url: $0) }
-
-                    children?.forEach { child in
-                        if child.isDirectory && child.children == nil {
-                            child.children = []
-                        }
-                    }
+            if isGoogleDrive {
+                debugLog("  🔄 Trying Google Drive enumerator fallback...")
+                if let fallback = loadChildrenWithEnumerator(fileManager: fileManager, baseURL: url, resolvedURL: resolvedURL, showsHiddenFiles: showsHiddenFiles) {
+                    children = fallback
+                    return true
+                }
+            } else if error.domain == NSCocoaErrorDomain && (error.code == 257 || error.code == 260) {
+                debugLog("  🔄 Trying enumerator fallback...")
+                if let fallback = loadChildrenWithEnumerator(fileManager: fileManager, baseURL: url, resolvedURL: resolvedURL, showsHiddenFiles: showsHiddenFiles) {
+                    children = fallback
                     return true
                 }
             }
@@ -283,61 +274,68 @@ class FileItem: Hashable {
             children = []
             return false
         } catch {
-            print("❌ Unexpected error loading children for \(url.path): \(error)")
+            debugLog("❌ Unexpected error loading children for \(url.path): \(error)")
             errorHandler?("An unexpected error occurred while opening '\(name)'.")
             children = []
             return false
         }
     }
 
+    private func loadChildrenWithEnumerator(fileManager: FileManager, baseURL: URL, resolvedURL: URL, showsHiddenFiles: Bool) -> [FileItem]? {
+        let urls = enumeratorChildren(fileManager: fileManager, at: baseURL, showsHiddenFiles: showsHiddenFiles)
+            ?? enumeratorChildren(fileManager: fileManager, at: resolvedURL, showsHiddenFiles: showsHiddenFiles)
+
+        guard let foundURLs = urls else { return nil }
+
+        let items = foundURLs.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+            .map { FileItem(url: $0) }
+
+        items.forEach { child in
+            if child.isDirectory && child.children == nil {
+                child.children = []
+            }
+        }
+        return items
+    }
+
+    private func enumeratorChildren(fileManager: FileManager, at baseURL: URL, showsHiddenFiles: Bool) -> [URL]? {
+        guard let enumerator = fileManager.enumerator(at: baseURL, includingPropertiesForKeys: [.isDirectoryKey], options: showsHiddenFiles ? [] : [.skipsHiddenFiles]) else {
+            return nil
+        }
+
+        var foundURLs: [URL] = []
+        for case let fileURL as URL in enumerator {
+            // Only gather immediate children
+            if fileURL.deletingLastPathComponent() == baseURL {
+                foundURLs.append(fileURL)
+            } else {
+                enumerator.skipDescendants()
+            }
+        }
+        debugLog("  ✅ Enumerator found \(foundURLs.count) items at \(baseURL.path)")
+        return foundURLs
+    }
+
+    private static func isGoogleDrivePath(_ path: String) -> Bool {
+        let lowercased = path.lowercased()
+        return lowercased.contains("google drive") || lowercased.contains("googledrive")
+    }
+
     // MARK: - Computed Properties
 
     var icon: NSImage {
-        // Use generic SF Symbol icons for protected user folders to avoid TCC permission dialogs
-        // Only applies to folders in the user's home directory
-        if isDirectory {
-            let homePath = FileManager.default.homeDirectoryForCurrentUser.path
-            let parentPath = url.deletingLastPathComponent().path
-
-            if parentPath == homePath {
-                let folderName = url.lastPathComponent
-                switch folderName {
-                case "Desktop":
-                    if let icon = NSImage(systemSymbolName: "desktopcomputer", accessibilityDescription: nil) {
-                        return icon
-                    }
-                case "Documents":
-                    if let icon = NSImage(systemSymbolName: "doc.text", accessibilityDescription: nil) {
-                        return icon
-                    }
-                case "Downloads":
-                    if let icon = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil) {
-                        return icon
-                    }
-                case "Pictures":
-                    if let icon = NSImage(systemSymbolName: "photo", accessibilityDescription: nil) {
-                        return icon
-                    }
-                case "Music":
-                    if let icon = NSImage(systemSymbolName: "music.note", accessibilityDescription: nil) {
-                        return icon
-                    }
-                case "Movies":
-                    if let icon = NSImage(systemSymbolName: "film", accessibilityDescription: nil) {
-                        return icon
-                    }
-                default:
-                    break
-                }
-            }
-        }
-
-        let baseIcon = NSWorkspace.shared.icon(forFile: url.path)
         let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+
         if useGrayscale {
-            return baseIcon.grayscale()
+            // Grayscale mode: use monochrome SF Symbol for folders, grayscale file icons otherwise
+            if isDirectory, let folderIcon = NSImage(systemSymbolName: "folder", accessibilityDescription: "Folder") {
+                return folderIcon.grayscale()
+            }
+            return NSWorkspace.shared.icon(forFile: url.path).grayscale()
+        } else {
+            // Default (Finder-style color icons)
+            return NSWorkspace.shared.icon(forFile: url.path)
         }
-        return baseIcon
     }
 
     var isImage: Bool {

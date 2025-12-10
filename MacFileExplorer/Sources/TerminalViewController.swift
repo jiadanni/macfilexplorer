@@ -14,17 +14,21 @@ class TerminalViewController: NSViewController {
     private var titleLabel: NSTextField!
     private var scrollView: NSScrollView!
     private var textView: NSTextView!
-    private var inputField: NSTextField!
     private var currentDirectory: String = ""
     private var commandHistory: [String] = []
     private var historyIndex = 0
+    private var promptLocation: Int = 0
 
-    // PTY-based shell session
-    private var masterFileDescriptor: Int32 = -1
+    // Shell session via PTY so output is line-buffered like a real terminal
     private var shellTask: Process?
-    private var inputSource: DispatchSourceRead?
+    private var masterFD: Int32 = -1
+    private var slaveFD: Int32 = -1
+    private var masterSource: DispatchSourceRead?
+    private let sentinelEcho = "MFE_SENTINEL_12345"
+    private var lastSyncedDirectory: String?
     private var outputQueue = DispatchQueue(label: "com.macfileexplorer.terminal.output")
     private var inputBuffer = ""
+    private var suppressOutputUntilSentinel = false
 
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 200))
@@ -34,13 +38,18 @@ class TerminalViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         currentDirectory = FileManager.default.homeDirectoryForCurrentUser.path
+        appendOutput(String(format: L10n.text("Terminal initializing in %@\n"), currentDirectory), color: .darkGray)
         startShellSession()
     }
 
     override func viewDidAppear() {
         super.viewDidAppear()
-        focusInput()
-        inputField.becomeFirstResponder()
+        // Only focus if the window is fully loaded and ready
+        if view.window != nil {
+            DispatchQueue.main.async { [weak self] in
+                self?.focusInput()
+            }
+        }
     }
 
     deinit {
@@ -59,10 +68,12 @@ class TerminalViewController: NSViewController {
         view.addSubview(headerView)
 
         // Create title label
-        titleLabel = NSTextField(labelWithString: "Terminal")
+        titleLabel = NSTextField(labelWithString: L10n.text("Terminal"))
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.textColor = NSColor(white: 0.9, alpha: 1.0)
         titleLabel.font = NSFont.boldSystemFont(ofSize: 12)
+        titleLabel.setAccessibilityLabel(L10n.text("Terminal"))
+        titleLabel.setAccessibilityRole(.staticText)
         headerView.addSubview(titleLabel)
 
         // Create close button
@@ -73,6 +84,8 @@ class TerminalViewController: NSViewController {
         closeButton.target = self
         closeButton.action = #selector(closeButtonClicked(_:))
         closeButton.isBordered = false
+        closeButton.setAccessibilityRole(.button)
+        closeButton.setAccessibilityLabel(L10n.text("Close Terminal"))
         headerView.addSubview(closeButton)
 
         // Create scroll view for terminal output
@@ -81,31 +94,30 @@ class TerminalViewController: NSViewController {
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        scrollView.verticalScroller?.alphaValue = 0
+        scrollView.contentInsets = NSEdgeInsets(top: 0, left: 0, bottom: 36, right: 0)
         view.addSubview(scrollView)
 
         // Create text view for terminal output
         textView = NSTextView()
-        textView.isEditable = false
+        textView.isEditable = true
         textView.isSelectable = true
         textView.backgroundColor = NSColor(white: 0.1, alpha: 1.0)
         textView.textColor = NSColor(white: 0.9, alpha: 1.0)
         textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         textView.textContainerInset = NSSize(width: 10, height: 10)
+        textView.isVerticallyResizable = true
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width, .height]
+        textView.delegate = self
+        textView.setAccessibilityLabel(L10n.text("Terminal input and output"))
+        textView.setAccessibilityRole(.textArea)
+        if let container = textView.textContainer {
+            container.containerSize = NSSize(width: scrollView.contentSize.width, height: .greatestFiniteMagnitude)
+            container.widthTracksTextView = true
+        }
+        textView.frame = scrollView.contentView.bounds
         scrollView.documentView = textView
-
-        // Create input field for commands
-        inputField = NSTextField()
-        inputField.translatesAutoresizingMaskIntoConstraints = false
-        inputField.backgroundColor = NSColor(white: 0.15, alpha: 1.0)
-        inputField.textColor = NSColor(white: 0.9, alpha: 1.0)
-        inputField.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        inputField.isBordered = false
-        inputField.focusRingType = .none
-        inputField.placeholderString = "$"
-        inputField.delegate = self
-        inputField.target = self
-        inputField.action = #selector(handleEnterKey(_:))
-        view.addSubview(inputField)
 
         // Set up constraints
         NSLayoutConstraint.activate([
@@ -125,142 +137,154 @@ class TerminalViewController: NSViewController {
             scrollView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: inputField.topAnchor, constant: -1),
-
-            inputField.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            inputField.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            inputField.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            inputField.heightAnchor.constraint(equalToConstant: 30)
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
 
     // MARK: - PTY Shell Session Management
 
     private func startShellSession() {
-        // Get the user's shell
+        // Get the user's shell (PTY-backed for interactive behavior)
         let shellPath = getShellPath()
+        appendOutput("Starting shell (\(shellPath))...\n", color: .gray)
 
         // Create PTY
-        masterFileDescriptor = posix_openpt(O_RDWR | O_NOCTTY)
-        guard masterFileDescriptor >= 0 else {
+        var master: Int32 = -1
+        var slave: Int32 = -1
+        var win = winsize()
+        win.ws_row = 40
+        win.ws_col = 120
+        win.ws_xpixel = 0
+        win.ws_ypixel = 0
+
+        if openpty(&master, &slave, nil, nil, &win) != 0 {
             appendOutput("Failed to create PTY\n", color: .red)
             return
         }
+        masterFD = master
+        slaveFD = slave
 
-        guard grantpt(masterFileDescriptor) == 0,
-              unlockpt(masterFileDescriptor) == 0 else {
-            appendOutput("Failed to configure PTY\n", color: .red)
-            close(masterFileDescriptor)
-            masterFileDescriptor = -1
-            return
-        }
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: shellPath)
+        task.arguments = ["-l"]
 
-        // Get slave PTY path
-        guard let slaveName = String(validatingUTF8: ptsname(masterFileDescriptor)) else {
-            appendOutput("Failed to get PTY slave name\n", color: .red)
-            close(masterFileDescriptor)
-            masterFileDescriptor = -1
-            return
-        }
-
-        // Spawn shell process
-        shellTask = Process()
-        shellTask?.executableURL = URL(fileURLWithPath: shellPath)
-        shellTask?.arguments = ["-l"]  // Login shell
-
-        // Set environment
         var environment = ProcessInfo.processInfo.environment
         environment["TERM"] = "xterm-256color"
         environment["CLICOLOR"] = "1"
         environment["COLORTERM"] = "truecolor"
         environment["PWD"] = currentDirectory
-        shellTask?.environment = environment
-        shellTask?.currentDirectoryURL = URL(fileURLWithPath: currentDirectory)
+        // Disable zsh's partial line indicator (the % symbol)
+        environment["PROMPT_EOL_MARK"] = ""
+        task.environment = environment
+        task.currentDirectoryURL = URL(fileURLWithPath: currentDirectory)
 
-        // Open slave PTY for stdin/stdout/stderr
-        let slaveFile = open(slaveName, O_RDWR)
-        guard slaveFile >= 0 else {
-            appendOutput("Failed to open PTY slave\n", color: .red)
-            close(masterFileDescriptor)
-            masterFileDescriptor = -1
-            return
+        let slaveHandle = FileHandle(fileDescriptor: slave, closeOnDealloc: false)
+        task.standardInput = slaveHandle
+        task.standardOutput = slaveHandle
+        task.standardError = slaveHandle
+
+        task.terminationHandler = { [weak self] proc in
+            DispatchQueue.main.async {
+                self?.appendOutput("\nShell exited (\(proc.terminationStatus))\n", color: .gray)
+            }
         }
-
-        // Redirect process I/O to slave PTY
-        shellTask?.standardInput = FileHandle(fileDescriptor: slaveFile, closeOnDealloc: false)
-        shellTask?.standardOutput = FileHandle(fileDescriptor: slaveFile, closeOnDealloc: false)
-        shellTask?.standardError = FileHandle(fileDescriptor: slaveFile, closeOnDealloc: false)
 
         do {
-            try shellTask?.run()
-            close(slaveFile)  // Close slave in parent process
-
-            // Start reading from master PTY
-            startReadingOutput()
-
+            try task.run()
+            shellTask = task
+            startReadingPTY()
             appendOutput("Shell session started (\(shellPath))\n", color: .green)
+            lastSyncedDirectory = currentDirectory
+            // Disable shell-side echo so input isn't duplicated; hide command output via sentinel.
+            suppressOutputUntilSentinel = true
+            writeToShell("stty -echo; printf \"\(sentinelEcho)\\n\"\n")
+            // Trigger prompt display without altering user prompt or shell rc behavior
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                self?.writeToShell("\n")
+            }
         } catch {
             appendOutput("Failed to start shell: \(error.localizedDescription)\n", color: .red)
-            close(slaveFile)
-            close(masterFileDescriptor)
-            masterFileDescriptor = -1
+            shellTask = nil
+            if masterFD >= 0 {
+                close(masterFD)
+                masterFD = -1
+            }
+            if slaveFD >= 0 {
+                close(slaveFD)
+                slaveFD = -1
+            }
         }
     }
 
-    private func startReadingOutput() {
-        guard masterFileDescriptor >= 0 else { return }
+    private func startReadingPTY() {
+        guard masterFD >= 0 else { return }
 
-        // Set terminal window size
-        var winsize = winsize()
-        winsize.ws_row = 24
-        winsize.ws_col = 80
-        winsize.ws_xpixel = 0
-        winsize.ws_ypixel = 0
-        _ = ioctl(masterFileDescriptor, TIOCSWINSZ, &winsize)
+        // Make non-blocking
+        let flags = fcntl(masterFD, F_GETFL)
+        _ = fcntl(masterFD, F_SETFL, flags | O_NONBLOCK)
 
-        // Make file descriptor non-blocking
-        let flags = fcntl(masterFileDescriptor, F_GETFL)
-        _ = fcntl(masterFileDescriptor, F_SETFL, flags | O_NONBLOCK)
-
-        // Create dispatch source to read from PTY
-        inputSource = DispatchSource.makeReadSource(fileDescriptor: masterFileDescriptor, queue: outputQueue)
-
-        inputSource?.setEventHandler { [weak self] in
-            self?.readFromPTY()
+        let source = DispatchSource.makeReadSource(fileDescriptor: masterFD, queue: outputQueue)
+        source.setEventHandler { [weak self] in
+            guard let self else { return }
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            while true {
+                let bytes = read(self.masterFD, &buffer, buffer.count)
+                if bytes > 0 {
+                    if let output = String(bytes: buffer.prefix(bytes), encoding: .utf8) {
+                        DispatchQueue.main.async {
+                            self.processOutput(output)
+                        }
+                    }
+                } else {
+                    break
+                }
+            }
         }
-
-        inputSource?.setCancelHandler { [weak self] in
-            if let fd = self?.masterFileDescriptor, fd >= 0 {
+        source.setCancelHandler { [weak self] in
+            if let fd = self?.masterFD, fd >= 0 {
                 close(fd)
+                self?.masterFD = -1
             }
         }
-
-        inputSource?.resume()
-
-        // Send initial newline to trigger shell prompt
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            self?.writeToPTY("\n")
-        }
-    }
-
-    private func readFromPTY() {
-        var buffer = [UInt8](repeating: 0, count: 4096)
-        let bytesRead = read(masterFileDescriptor, &buffer, buffer.count)
-
-        guard bytesRead > 0 else { return }
-
-        if let output = String(bytes: buffer.prefix(bytesRead), encoding: .utf8) {
-            DispatchQueue.main.async { [weak self] in
-                self?.processOutput(output)
-            }
-        }
+        masterSource = source
+        source.resume()
     }
 
     private func processOutput(_ output: String) {
-        // Parse ANSI escape codes and apply formatting
-        let attributed = parseANSI(output)
-        textView.textStorage?.append(attributed)
-        textView.scrollToEndOfDocument(nil)
+        // Drop any programmatic cd echoes until the sentinel is seen so the UI stays clean
+        var text = output
+        if suppressOutputUntilSentinel {
+            if let sentinelRange = text.range(of: sentinelEcho) {
+                suppressOutputUntilSentinel = false
+                text = String(text[sentinelRange.upperBound...])
+            } else {
+                return
+            }
+        }
+
+        // Normalize CRLF/CR so carriage returns don't leave ghost prompts in the text view.
+        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        let cleaned = stripControlSequences(normalized)
+        let filtered = cleaned
+            .components(separatedBy: "\n")
+            .filter { !$0.contains(sentinelEcho) }
+            .joined(separator: "\n")
+            .replacingOccurrences(of: "\\n", with: "\n") // Avoid literal \n noise from stty or prompts
+
+        let attributed = parseANSI(filtered)
+        if attributed.length > 0 {
+            textView.textStorage?.append(attributed)
+            textView.scrollToEndOfDocument(nil)
+            updateScrollVisibility()
+            // Update prompt location to the end of the text
+            promptLocation = textView.string.count
+            // Ensure cursor is positioned at the end for user input
+            textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
+        } else if suppressOutputUntilSentinel == false {
+            // Even if no text was added, update cursor position (e.g., after sentinel-only output)
+            promptLocation = textView.string.count
+            textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
+        }
     }
 
     private func parseANSI(_ text: String) -> NSAttributedString {
@@ -356,26 +380,65 @@ class TerminalViewController: NSViewController {
         return result
     }
 
-    private func writeToPTY(_ text: String) {
-        guard masterFileDescriptor >= 0 else { return }
+    // Remove OSC (Operating System Command) sequences like ESC ] ... BEL / ESC \ that can appear in prompts
+    private func stripControlSequences(_ text: String) -> String {
+        var output = ""
+        var i = text.startIndex
+        while i < text.endIndex {
+            let char = text[i]
+            if char == "\u{1B}" { // ESC
+                let next = text.index(after: i)
+                if next < text.endIndex && text[next] == "]" {
+                    // Skip until BEL or ST (ESC \)
+                    var j = text.index(after: next)
+                    while j < text.endIndex && text[j] != "\u{07}" {
+                        if text[j] == "\u{1B}" {
+                            let maybe = text.index(after: j)
+                            if maybe < text.endIndex && text[maybe] == "\\" {
+                                j = text.index(after: maybe)
+                                break
+                            }
+                        }
+                        j = text.index(after: j)
+                    }
+                    if j < text.endIndex && text[j] == "\u{07}" {
+                        i = text.index(after: j)
+                    } else {
+                        i = j
+                    }
+                    continue
+                }
+            }
+            output.append(char)
+            i = text.index(after: i)
+        }
+        return output
+    }
 
+    private func writeToShell(_ text: String) {
+        guard masterFD >= 0 else { return }
         if let data = text.data(using: .utf8) {
-            data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
-                _ = write(masterFileDescriptor, bytes.baseAddress, data.count)
+            data.withUnsafeBytes { ptr in
+                _ = write(masterFD, ptr.baseAddress, data.count)
             }
         }
     }
 
     private func terminateShellSession() {
-        inputSource?.cancel()
-        inputSource = nil
+        masterSource?.cancel()
+        masterSource = nil
 
         shellTask?.terminate()
         shellTask = nil
 
-        if masterFileDescriptor >= 0 {
-            close(masterFileDescriptor)
-            masterFileDescriptor = -1
+        if slaveFD >= 0 {
+            close(slaveFD)
+            slaveFD = -1
+        }
+
+        if masterFD >= 0 {
+            close(masterFD)
+            masterFD = -1
         }
     }
 
@@ -396,15 +459,26 @@ class TerminalViewController: NSViewController {
     // MARK: - Public Methods
 
     func changeDirectory(to path: String) {
+        if path == lastSyncedDirectory { return }
+        lastSyncedDirectory = path
         currentDirectory = path
-        print("TerminalViewController: changeDirectory to \(path)")
-        // Send cd command to shell
-        writeToPTY("cd '\(path)'\n")
+        debugLog("TerminalViewController: changeDirectory to \(path)")
+        // Send cd command without echoing to the terminal and drop any echoed text until sentinel arrives
+        suppressOutputUntilSentinel = true
+        // Escape single quotes in the path for the shell.
+        let escapedPath = path.replacingOccurrences(of: "'", with: "'\"'\"'")
+        let command = "cd '\(escapedPath)' 2>/dev/null; printf \"\(sentinelEcho)\\n\"\n"
+        writeToShell(command)
     }
 
     func focusInput() {
-        print("TerminalViewController: focusInput called")
-        view.window?.makeFirstResponder(inputField)
+        debugLog("TerminalViewController: focusInput called")
+        guard let window = view.window, window.isVisible else {
+            debugLog("  Window not ready for focus, deferring")
+            return
+        }
+        window.makeFirstResponder(textView)
+        textView.moveToEndOfDocument(nil)
     }
 
     // MARK: - Private Methods
@@ -420,61 +494,71 @@ class TerminalViewController: NSViewController {
 
         textView.textStorage?.append(attributedString)
         textView.scrollToEndOfDocument(nil)
-    }
-
-    @objc private func handleEnterKey(_ sender: NSTextField) {
-        let command = sender.stringValue
-        guard !command.isEmpty else {
-            writeToPTY("\n")
-            sender.stringValue = ""
-            return
-        }
-
-        commandHistory.append(command)
-        historyIndex = commandHistory.count
-
-        // Send command to PTY
-        writeToPTY(command + "\n")
-        sender.stringValue = ""
-    }
-
-    private func handleTabCompletion() {
-        // Send tab character to shell for completion
-        writeToPTY("\t")
+        updateScrollVisibility()
     }
 
     @objc private func closeButtonClicked(_ sender: Any) {
         delegate?.terminalViewControllerDidRequestClose(self)
     }
+
+    private func updateScrollVisibility() {
+        let isEmpty = textView.string.isEmpty
+        scrollView.verticalScroller?.alphaValue = isEmpty ? 0 : 1
+    }
 }
 
-// MARK: - NSTextFieldDelegate
+// MARK: - NSTextViewDelegate for inline input
 
-extension TerminalViewController: NSTextFieldDelegate {
-    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-        // Handle special keys
-        if commandSelector == #selector(NSResponder.moveUp(_:)) {
-            // Up arrow - previous command
+extension TerminalViewController: NSTextViewDelegate {
+    func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
+        // Prevent editing before the prompt; only allow insert/replace within the current input line.
+        let promptStart = promptLocation
+        let currentLength = textView.string.utf16.count
+        if affectedCharRange.location < promptStart {
+            textView.setSelectedRange(NSRange(location: currentLength, length: 0))
+            return false
+        }
+        // Disallow inserting newlines directly; Return is handled in doCommandBy.
+        if replacementString == "\n" || replacementString == "\r" {
+            return false
+        }
+        return true
+    }
+
+    func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            let fullText = textView.string as NSString
+            let input = fullText.substring(from: promptLocation)
+            commandHistory.append(input)
+            historyIndex = commandHistory.count
+            writeToShell(input + "\n")
+            return true
+        } else if commandSelector == #selector(NSResponder.moveUp(_:)) {
             if historyIndex > 0 {
                 historyIndex -= 1
-                inputField.stringValue = commandHistory[historyIndex]
+                replaceCurrentInput(with: commandHistory[historyIndex])
             }
             return true
         } else if commandSelector == #selector(NSResponder.moveDown(_:)) {
-            // Down arrow - next command
             if historyIndex < commandHistory.count - 1 {
                 historyIndex += 1
-                inputField.stringValue = commandHistory[historyIndex]
-            } else if historyIndex == commandHistory.count - 1 {
+                replaceCurrentInput(with: commandHistory[historyIndex])
+            } else {
                 historyIndex = commandHistory.count
-                inputField.stringValue = ""
+                replaceCurrentInput(with: "")
             }
             return true
         } else if commandSelector == #selector(NSResponder.insertTab(_:)) {
-            // Tab - trigger completion
-            handleTabCompletion()
+            writeToShell("\t")
             return true
         }
         return false
+    }
+
+    private func replaceCurrentInput(with text: String) {
+        let nsString = textView.string as NSString
+        let range = NSRange(location: promptLocation, length: nsString.length - promptLocation)
+        textView.replaceCharacters(in: range, with: text)
+        textView.setSelectedRange(NSRange(location: promptLocation + text.count, length: 0))
     }
 }

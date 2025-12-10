@@ -22,6 +22,17 @@ class FilterPanelViewController: NSViewController {
     private var dateMaxPicker: NSDatePicker!
     private var dateMinCheckbox: NSButton!
     private var dateMaxCheckbox: NSButton!
+
+    private var fileTypeOptions: [(title: String, extensions: [String])] {
+        [
+            (L10n.text("All Files"), ["*"]),
+            (L10n.text("Documents"), ["pdf", "doc", "docx", "txt", "rtf", "pages"]),
+            (L10n.text("Images"), ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "heic"]),
+            (L10n.text("Videos"), ["mp4", "mov", "avi", "mkv", "m4v"]),
+            (L10n.text("Audio"), ["mp3", "m4a", "aac", "wav", "flac"]),
+            (L10n.text("Archives"), ["zip", "rar", "7z", "tar", "gz", "dmg"])
+        ]
+    }
     
     init(currentFilter: FilterCriteria, onApply: @escaping (FilterCriteria) -> Void) {
         self.currentFilter = currentFilter
@@ -30,7 +41,9 @@ class FilterPanelViewController: NSViewController {
     }
     
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        self.currentFilter = FilterCriteria()
+        self.onApply = nil
+        super.init(coder: coder)
     }
     
     override func loadView() {
@@ -64,8 +77,9 @@ class FilterPanelViewController: NSViewController {
         scrollView.documentView = contentView
         
         // Title
-        let titleLabel = NSTextField(labelWithString: "Filter Files")
+        let titleLabel = NSTextField(labelWithString: L10n.text("Filter Files"))
         titleLabel.font = NSFont.boldSystemFont(ofSize: 16)
+        titleLabel.setAccessibilityLabel(L10n.text("Filter Files"))
         stackView.addArrangedSubview(titleLabel)
         
         // File Type Section
@@ -96,20 +110,11 @@ class FilterPanelViewController: NSViewController {
     }
     
     private func addFileTypeSection() {
-        let sectionLabel = NSTextField(labelWithString: "File Type:")
+        let sectionLabel = NSTextField(labelWithString: L10n.text("File Type:"))
         sectionLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stackView.addArrangedSubview(sectionLabel)
         
-        let fileTypes: [(String, [String])] = [
-            ("All Files", ["*"]),
-            ("Documents", ["pdf", "doc", "docx", "txt", "rtf", "pages"]),
-            ("Images", ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "heic"]),
-            ("Videos", ["mp4", "mov", "avi", "mkv", "m4v"]),
-            ("Audio", ["mp3", "m4a", "aac", "wav", "flac"]),
-            ("Archives", ["zip", "rar", "7z", "tar", "gz", "dmg"])
-        ]
-        
-        for (name, types) in fileTypes {
+        for (name, types) in fileTypeOptions {
             let checkbox = AccentCheckbox(title: name, target: self, action: #selector(fileTypeChanged(_:)))
             checkbox.translatesAutoresizingMaskIntoConstraints = false
             
@@ -128,18 +133,19 @@ class FilterPanelViewController: NSViewController {
         spacer.heightAnchor.constraint(equalToConstant: 8).isActive = true
         stackView.addArrangedSubview(spacer)
         
-        let sectionLabel = NSTextField(labelWithString: "Size:")
+        let sectionLabel = NSTextField(labelWithString: L10n.text("Size:"))
         sectionLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stackView.addArrangedSubview(sectionLabel)
         
         // Min size
         let minContainer = NSView()
         minContainer.translatesAutoresizingMaskIntoConstraints = false
-        let minLabel = NSTextField(labelWithString: "Minimum:")
+        let minLabel = NSTextField(labelWithString: L10n.text("Minimum:"))
         minLabel.translatesAutoresizingMaskIntoConstraints = false
         sizeMinField = NSTextField()
         sizeMinField.translatesAutoresizingMaskIntoConstraints = false
-        sizeMinField.placeholderString = "No minimum"
+        sizeMinField.placeholderString = L10n.text("No minimum")
+        sizeMinField.setAccessibilityLabel(L10n.text("Minimum size value"))
         if let min = currentFilter.sizeMin {
             sizeMinField.stringValue = "\(min / 1024)" // Display in KB
         }
@@ -162,11 +168,12 @@ class FilterPanelViewController: NSViewController {
         // Max size
         let maxContainer = NSView()
         maxContainer.translatesAutoresizingMaskIntoConstraints = false
-        let maxLabel = NSTextField(labelWithString: "Maximum:")
+        let maxLabel = NSTextField(labelWithString: L10n.text("Maximum:"))
         maxLabel.translatesAutoresizingMaskIntoConstraints = false
         sizeMaxField = NSTextField()
         sizeMaxField.translatesAutoresizingMaskIntoConstraints = false
-        sizeMaxField.placeholderString = "No maximum"
+        sizeMaxField.placeholderString = L10n.text("No maximum")
+        sizeMaxField.setAccessibilityLabel(L10n.text("Maximum size value"))
         if let max = currentFilter.sizeMax {
             sizeMaxField.stringValue = "\(max / 1024)" // Display in KB
         }
@@ -189,8 +196,9 @@ class FilterPanelViewController: NSViewController {
         // Size unit popup
         sizeUnitPopup = AccentPopUpButton()
         sizeUnitPopup.translatesAutoresizingMaskIntoConstraints = false
-        sizeUnitPopup.addItems(withTitles: ["KB", "MB", "GB"])
+        sizeUnitPopup.addItems(withTitles: [L10n.text("KB"), L10n.text("MB"), L10n.text("GB")])
         sizeUnitPopup.selectItem(at: 1) // Default to MB
+        sizeUnitPopup.setAccessibilityLabel(L10n.text("Size unit"))
         stackView.addArrangedSubview(sizeUnitPopup)
     }
     
@@ -200,12 +208,12 @@ class FilterPanelViewController: NSViewController {
         spacer.heightAnchor.constraint(equalToConstant: 8).isActive = true
         stackView.addArrangedSubview(spacer)
         
-        let sectionLabel = NSTextField(labelWithString: "Modified Date:")
+        let sectionLabel = NSTextField(labelWithString: L10n.text("Modified Date:"))
         sectionLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stackView.addArrangedSubview(sectionLabel)
         
         // Min date
-        dateMinCheckbox = AccentCheckbox(title: "After:", target: self, action: #selector(dateCheckboxChanged(_:)))
+        dateMinCheckbox = AccentCheckbox(title: L10n.text("After:"), target: self, action: #selector(dateCheckboxChanged(_:)))
         dateMinCheckbox.state = currentFilter.dateMin != nil ? .on : .off
         stackView.addArrangedSubview(dateMinCheckbox)
         
@@ -215,10 +223,11 @@ class FilterPanelViewController: NSViewController {
         dateMinPicker.datePickerElements = .yearMonthDay
         dateMinPicker.dateValue = currentFilter.dateMin ?? Date()
         dateMinPicker.isEnabled = currentFilter.dateMin != nil
+        dateMinPicker.setAccessibilityLabel(L10n.text("Earliest modified date"))
         stackView.addArrangedSubview(dateMinPicker)
         
         // Max date
-        dateMaxCheckbox = AccentCheckbox(title: "Before:", target: self, action: #selector(dateCheckboxChanged(_:)))
+        dateMaxCheckbox = AccentCheckbox(title: L10n.text("Before:"), target: self, action: #selector(dateCheckboxChanged(_:)))
         dateMaxCheckbox.state = currentFilter.dateMax != nil ? .on : .off
         stackView.addArrangedSubview(dateMaxCheckbox)
         
@@ -228,6 +237,7 @@ class FilterPanelViewController: NSViewController {
         dateMaxPicker.datePickerElements = .yearMonthDay
         dateMaxPicker.dateValue = currentFilter.dateMax ?? Date()
         dateMaxPicker.isEnabled = currentFilter.dateMax != nil
+        dateMaxPicker.setAccessibilityLabel(L10n.text("Latest modified date"))
         stackView.addArrangedSubview(dateMaxPicker)
     }
     
@@ -235,17 +245,20 @@ class FilterPanelViewController: NSViewController {
         let buttonContainer = NSView()
         buttonContainer.translatesAutoresizingMaskIntoConstraints = false
         
-        let clearButton = NSButton(title: "Clear All", target: self, action: #selector(clearFilters(_:)))
+        let clearButton = NSButton(title: L10n.text("Clear All"), target: self, action: #selector(clearFilters(_:)))
         clearButton.translatesAutoresizingMaskIntoConstraints = false
+        clearButton.setAccessibilityLabel(L10n.text("Clear All Filters"))
         
-        let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel(_:)))
+        let cancelButton = NSButton(title: L10n.text("Cancel"), target: self, action: #selector(cancel(_:)))
         cancelButton.translatesAutoresizingMaskIntoConstraints = false
         cancelButton.keyEquivalent = "\u{1b}" // Escape key
+        cancelButton.setAccessibilityLabel(L10n.text("Cancel filtering"))
         
-        let applyButton = NSButton(title: "Apply", target: self, action: #selector(applyFilters(_:)))
+        let applyButton = NSButton(title: L10n.text("Apply"), target: self, action: #selector(applyFilters(_:)))
         applyButton.translatesAutoresizingMaskIntoConstraints = false
         applyButton.keyEquivalent = "\r" // Return key
         applyButton.bezelStyle = .rounded
+        applyButton.setAccessibilityLabel(L10n.text("Apply filters"))
         
         buttonContainer.addSubview(clearButton)
         buttonContainer.addSubview(cancelButton)
@@ -305,15 +318,7 @@ class FilterPanelViewController: NSViewController {
         var newFilter = FilterCriteria()
         
         // Collect file types
-        let fileTypeMap: [String: [String]] = [
-            "All Files": ["*"],
-            "Documents": ["pdf", "doc", "docx", "txt", "rtf", "pages"],
-            "Images": ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "heic"],
-            "Videos": ["mp4", "mov", "avi", "mkv", "m4v"],
-            "Audio": ["mp3", "m4a", "aac", "wav", "flac"],
-            "Archives": ["zip", "rar", "7z", "tar", "gz", "dmg"]
-        ]
-        
+        let fileTypeMap = Dictionary(uniqueKeysWithValues: fileTypeOptions.map { ($0.title, $0.extensions) })
         for (name, checkbox) in fileTypeCheckboxes {
             if checkbox.state == .on, let types = fileTypeMap[name] {
                 newFilter.fileTypes.formUnion(types)
