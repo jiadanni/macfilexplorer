@@ -239,6 +239,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     private enum BrowserSetupState { case idle, preparing, creatingBrowser, ready, failed }
     private var browserSetupState: BrowserSetupState = .idle {
         didSet {
+#if DEBUG
             let msg = "DEBUG: browserSetupState -> \(browserSetupState)"
             debugLog(msg)
             if let handle = FileHandle(forWritingAtPath: "/tmp/macfileexplorer_column_debug.log") {
@@ -248,6 +249,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 }
                 handle.closeFile()
             }
+#endif
         }
     }
 
@@ -273,6 +275,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
     private func beginBrowserSetup() -> BrowserSetupToken? {
         guard browserSetupState == .idle || browserSetupState == .failed else {
+#if DEBUG
             let msg = "DEBUG: beginBrowserSetup blocked; state=\(browserSetupState)"
             debugLog(msg)
             if let handle = FileHandle(forWritingAtPath: "/tmp/macfileexplorer_column_debug.log") {
@@ -280,6 +283,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 if let data = (msg + "\n").data(using: .utf8) { handle.write(data) }
                 handle.closeFile()
             }
+#endif
             return nil
         }
         return BrowserSetupToken(owner: self)
@@ -324,6 +328,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     private var rootItem: FileItem!
     private var selectedItems: Set<FileItem> = []
     private var currentViewMode: ViewMode = .list // Default view mode
+    private let selectionManager = FileBrowserSelectionManager()
 
     // Navigation history
     private var navigationHistory: [URL] = []
@@ -828,9 +833,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     private func currentSingleSelection() -> FileItem? {
-        let selected = outlineView.selectedRowIndexes
-        guard selected.count == 1, let row = selected.first else { return nil }
-        return outlineView.item(atRow: row) as? FileItem
+        selectionManager.currentSingleSelection(outlineView: outlineView)
     }
 
     // Update preview pane with a newly selected file or clear if nil/multiple
@@ -859,6 +862,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         assert(Thread.isMainThread, "displayFiles must run on main thread")
         if browserSetupState == .preparing || browserSetupState == .creatingBrowser {
             suppressedDisplayCalls += 1
+#if DEBUG
             let msg = "DEBUG: displayFiles blocked (state=\(browserSetupState)) count=\(suppressedDisplayCalls)"
             debugLog(msg)
             if let handle = FileHandle(forWritingAtPath: "/tmp/macfileexplorer_column_debug.log") {
@@ -866,6 +870,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 if let data = (msg + "\n").data(using: .utf8) { handle.write(data) }
                 handle.closeFile()
             }
+#endif
             return
         }
         debugLog("Displaying files for view mode: \(viewMode)")
@@ -1996,53 +2001,20 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     func getSelectedItems() -> [FileItem] {
-        var items: [FileItem] = []
+        var items = selectionManager.selectedItems(
+            outlineView: outlineView,
+            collectionView: collectionView,
+            browserView: browserView,
+            fileItemForColumn: { [weak self] column in self?.fileItemForColumn(column) },
+            viewMode: currentViewMode,
+            rootItem: rootItem
+        )
 
-        switch currentViewMode {
-        case .list:
-            let selectedRows = outlineView.selectedRowIndexes
-
-            // If there are selected rows, use those
-            if !selectedRows.isEmpty {
-                selectedRows.forEach { row in
-                    if let item = outlineView.item(atRow: row) as? FileItem {
-                        items.append(item)
-                    }
-                }
-            } else {
-                // If no selection, check if there's a clicked row (for context menu)
-                let clickedRow = outlineView.clickedRow
-                if clickedRow >= 0, let item = outlineView.item(atRow: clickedRow) as? FileItem {
-                    items.append(item)
-                }
-            }
-
-        case .icons, .windowsList:
-            guard let collectionView = collectionView else { return items }
-            let selectedIndexPaths = collectionView.selectionIndexPaths
-
-            if !selectedIndexPaths.isEmpty {
-                selectedIndexPaths.forEach { indexPath in
-                    if let item = collectionView.item(at: indexPath) as? FileIconItem,
-                       let fileItem = item.fileItem {
-                        items.append(fileItem)
-                    }
-                }
-            }
-
-        case .columns:
-            guard let browserView = browserView else { return items }
-            let selectedColumn = browserView.selectedColumn
-
-            if selectedColumn >= 0 {
-                let selectedRows = browserView.selectedRowIndexes(inColumn: selectedColumn)
-                selectedRows?.forEach { row in
-                    if let item = fileItemForColumn(selectedColumn),
-                       let children = item.children,
-                       row < children.count {
-                        items.append(children[row])
-                    }
-                }
+        // Fallback for context menu when nothing is formally selected.
+        if items.isEmpty && currentViewMode == .list {
+            let clickedRow = outlineView.clickedRow
+            if clickedRow >= 0, let item = outlineView.item(atRow: clickedRow) as? FileItem {
+                items.append(item)
             }
         }
 
