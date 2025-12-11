@@ -17,6 +17,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     var isTerminalVisible = false
     private var hasInitializedTabs = false
     private let minimumContentWidth: CGFloat = 320 // keep room for file panes
+    private var isAdjustingSplitPosition = false // prevent recursive position updates
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -227,11 +228,25 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         // Persist sidebar width only when the main split view (sidebar + content) resizes.
         guard notification.object as? NSSplitView === splitView else { return }
         guard splitViewItems.count > 0 else { return }
-        let sidebarWidth = adjustedSidebarWidth(proposed: splitViewItems[0].viewController.view.frame.width)
-        // Apply correction immediately if needed to keep content visible
-        splitView.setPosition(sidebarWidth, ofDividerAt: 0)
-        if sidebarWidth > 120 {
-            let clampedWidth = max(140.0, min(sidebarWidth, 240.0))
+        guard !isAdjustingSplitPosition else { return } // prevent recursive calls
+        
+        let currentWidth = splitViewItems[0].viewController.view.frame.width
+        let adjustedWidth = adjustedSidebarWidth(proposed: currentWidth)
+        
+        // Only adjust if the difference is significant and would improve layout
+        if abs(currentWidth - adjustedWidth) > 1.0 {
+            isAdjustingSplitPosition = true
+            // Defer to avoid constraint conflicts during active layout
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                self.splitView.setPosition(adjustedWidth, ofDividerAt: 0)
+                self.isAdjustingSplitPosition = false
+            }
+        }
+        
+        // Persist width for next launch
+        if currentWidth > 120 {
+            let clampedWidth = max(140.0, min(currentWidth, 240.0))
             UserDefaults.standard.set(clampedWidth, forKey: "sidebarFixedWidth")
         }
     }
