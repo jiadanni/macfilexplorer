@@ -1033,7 +1033,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         newCollectionView.allowsEmptySelection = true
         newCollectionView.backgroundColors = [.clear]
         newCollectionView.setAccessibilityElement(true)
-        newCollectionView.setAccessibilityRole(.collectionView)
+        newCollectionView.setAccessibilityRole(.group)
         newCollectionView.setAccessibilityLabel(L10n.text("Icon grid"))
         newCollectionView.delegate = self
         newCollectionView.dataSource = self

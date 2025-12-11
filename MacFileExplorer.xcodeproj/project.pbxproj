@@ -79,8 +79,8 @@
 		2EE3071256D14F848904E873 /* StorageProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageProgressViewController.swift; sourceTree = "<group>"; };
 		3CC9FC164EB649DC8E794014 /* QuickActionsWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsWidgetView.swift; sourceTree = "<group>"; };
 		4F42A041AC2EE71E4CDDECBC /* Localizable.strings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = Localizable.strings; sourceTree = "<group>"; };
-		533E45BA233E6BBAE045936E /* Logging.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Logging.swift; path = Sources/Logging.swift; sourceTree = "<group>"; };
-		536E7006B83B9250EEBC9F98 /* L10n.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = L10n.swift; path = Sources/L10n.swift; sourceTree = "<group>"; };
+		533E45BA233E6BBAE045936E /* Logging.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Logging.swift; path = Logging.swift; sourceTree = "<group>"; };
+		536E7006B83B9250EEBC9F98 /* L10n.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = L10n.swift; path = L10n.swift; sourceTree = "<group>"; };
 		5D1E7DCD9FE14FF7B5FDA8E9 /* StorageSummaryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageSummaryViewController.swift; sourceTree = "<group>"; };
 		65E9B8A3D560CC7CD32E7587 /* PreviewPaneViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PreviewPaneViewController.swift; sourceTree = "<group>"; };
 		67FC3670FEF34117B1EA37F4 /* StartDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartDesignSystem.swift; sourceTree = "<group>"; };
