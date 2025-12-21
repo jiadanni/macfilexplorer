@@ -1818,15 +1818,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     @objc func contextMenuNewFolder(_ sender: Any) {
-        let newFolderName = "Untitled Folder"
-        var finalName = newFolderName
-        var counter = 1
-        while FileManager.default.fileExists(atPath: currentDirectory.appendingPathComponent(finalName).path) {
-            finalName = "\(newFolderName) \(counter)"
-            counter += 1
-        }
+        guard let folderName = FileBrowserDialogHelper.showNewFolderDialog() else { return }
         
-        let newFolderURL = currentDirectory.appendingPathComponent(finalName)
+        let newFolderURL = currentDirectory.appendingPathComponent(folderName)
         
         do {
             try FileManager.default.createDirectory(at: newFolderURL, withIntermediateDirectories: false, attributes: nil)
@@ -1837,28 +1831,14 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     @objc func contextMenuNewFile(_ sender: Any) {
-        let alert = NSAlert()
-        alert.messageText = "New File"
-        alert.informativeText = "Enter the name for the new file:"
+        guard let newFileName = FileBrowserDialogHelper.showNewFileDialog() else { return }
         
-        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
-        textField.stringValue = "untitled.txt"
-        alert.accessoryView = textField
-        
-        alert.addButton(withTitle: "Create")
-        alert.addButton(withTitle: "Cancel")
-        
-        if alert.runModal() == .alertFirstButtonReturn {
-            let newFileName = textField.stringValue
-            if !newFileName.isEmpty {
-                let newFileURL = currentDirectory.appendingPathComponent(newFileName)
-                if !FileManager.default.fileExists(atPath: newFileURL.path) {
-                    FileManager.default.createFile(atPath: newFileURL.path, contents: nil, attributes: nil)
-                    refreshCurrentDirectory()
-                } else {
-                    showError("A file with this name already exists.")
-                }
-            }
+        let newFileURL = currentDirectory.appendingPathComponent(newFileName)
+        if !FileManager.default.fileExists(atPath: newFileURL.path) {
+            FileManager.default.createFile(atPath: newFileURL.path, contents: nil, attributes: nil)
+            refreshCurrentDirectory()
+        } else {
+            showError("A file with this name already exists.")
         }
     }
 
