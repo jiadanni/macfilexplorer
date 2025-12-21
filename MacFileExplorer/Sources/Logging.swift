@@ -13,15 +13,15 @@ func debugLog(_ items: Any..., separator: String = " ", terminator: String = "\n
 extension String {
     func safeLocalizedCompare(_ other: String) -> ComparisonResult {
         // Wrap in autoreleasepool to prevent memory buildup
-        return autoreleasepool {
-            return self.localizedStandardCompare(other)
+        autoreleasepool {
+            self.localizedStandardCompare(other)
         }
     }
     
     func safeLocalizedCaseInsensitiveCompare(_ other: String) -> ComparisonResult {
         // Wrap in autoreleasepool to prevent memory buildup
-        return autoreleasepool {
-            return self.localizedCaseInsensitiveCompare(other)
+        autoreleasepool {
+            self.localizedCaseInsensitiveCompare(other)
         }
     }
 }

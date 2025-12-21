@@ -74,12 +74,16 @@ class FileBrowserDataSource {
             
             let item = FileItem(url: url)
             // Note: recursive=isSearch logic from VC
-            _ = item.loadChildren(showsHiddenFiles: showsHidden, recursive: isSearch) { errorMsg in
+            let success = item.loadChildren(showsHiddenFiles: showsHidden, recursive: isSearch) { errorMsg in
                 // We'll treat the string error as an NSError for the protocol
                 let error = NSError(domain: "FileBrowserDataSource", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMsg])
                 DispatchQueue.main.async {
                     self.delegate?.dataSource(self, didFailToLoad: error)
                 }
+            }
+            
+            if !success {
+                debugLog("Warning: Failed to load children for \(url.path)")
             }
             
             DispatchQueue.main.async {

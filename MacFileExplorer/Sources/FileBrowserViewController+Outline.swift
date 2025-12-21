@@ -100,6 +100,14 @@ extension FileBrowserViewController {
             delegate?.fileBrowser(self, didSelectFile: nil)
         }
     }
+    
+    // MARK: - Row Height (macOS 15+ Compatibility)
+    
+    /// Provides row height for outline view.
+    /// Replaces deprecated `outlineView.rowHeight` property which crashes on macOS 15+.
+    func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
+        return 22.0
+    }
 }
 
 // MARK: - NSOutlineView Drag & Drop
