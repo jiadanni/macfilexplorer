@@ -1126,13 +1126,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         }
     }
 
-    private func formattedAvailableDiskSpace() -> String? {
-        let diskSpace = FileBrowserActionHelper.getAvailableDiskSpace(for: currentDirectory)
-        return FileBrowserActionHelper.formatDiskSpace(diskSpace)
-    }
-
     func updateStatusBarDisplay(selectedCount: Int, totalSize: Int64) {
-        let diskSpace = formattedAvailableDiskSpace()
+        let diskSpace = FileBrowserActionHelper.formatDiskSpace(
+            FileBrowserActionHelper.getAvailableDiskSpace(for: currentDirectory)
+        )
         statusBarViewController?.updateFileInformation(selectedCount: selectedCount, totalSize: totalSize, diskSpace: diskSpace)
         delegate?.fileBrowser(self, didUpdateSelection: selectedCount, totalSize: totalSize)
         delegate?.fileBrowser(self, didUpdateDiskSpace: diskSpace)
