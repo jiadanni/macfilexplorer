@@ -393,26 +393,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         let items = getSelectedItems()
         guard !items.isEmpty else { return }
         
-        let fileManager = FileManager.default
         for item in items {
-            var counter = 1
-            var newURL: URL
-            let nameWithoutExtension = (item.name as NSString).deletingPathExtension
-            let fileExtension = (item.name as NSString).pathExtension
-            
-            repeat {
-                let newName: String
-                if fileExtension.isEmpty {
-                    newName = "\(nameWithoutExtension) copy \(counter)"
-                } else {
-                    newName = "\(nameWithoutExtension) copy \(counter).\(fileExtension)"
-                }
-                newURL = currentDirectory.appendingPathComponent(newName)
-                counter += 1
-            } while fileManager.fileExists(atPath: newURL.path)
-            
             do {
-                try fileManager.copyItem(at: item.url, to: newURL)
+                let _ = try FileBrowserActionHelper.duplicate(item.url)
             } catch {
                 showError("Failed to duplicate '\(item.name)': \(error.localizedDescription)")
             }
@@ -1144,17 +1127,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     private func formattedAvailableDiskSpace() -> String? {
-        let keys: Set<URLResourceKey> = [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey]
-        guard let values = try? currentDirectory.resourceValues(forKeys: keys) else { return nil }
-
-        if let importantUsage = values.volumeAvailableCapacityForImportantUsage {
-            return ByteCountFormatter.string(fromByteCount: importantUsage, countStyle: .file)
-        }
-        if let available = values.volumeAvailableCapacity {
-            return ByteCountFormatter.string(fromByteCount: Int64(available), countStyle: .file)
-        }
-
-        return nil
+        let diskSpace = FileBrowserActionHelper.getAvailableDiskSpace(for: currentDirectory)
+        return FileBrowserActionHelper.formatDiskSpace(diskSpace)
     }
 
     func updateStatusBarDisplay(selectedCount: Int, totalSize: Int64) {
