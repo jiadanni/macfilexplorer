@@ -378,7 +378,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         if item.isDirectory {
             loadDirectory(item.url)
         } else {
-            NSWorkspace.shared.open(item.url)
+            FileBrowserActionHelper.openFile(item.url)
         }
     }
     
@@ -1885,9 +1885,11 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     @objc func contextMenuShowInFinder(_ sender: Any) {
         let items = getSelectedItems()
         if items.isEmpty {
-            NSWorkspace.shared.activateFileViewerSelecting([currentDirectory])
+            FileBrowserActionHelper.revealInFinder(currentDirectory)
         } else {
-            NSWorkspace.shared.activateFileViewerSelecting(items.map { $0.url })
+            for item in items {
+                FileBrowserActionHelper.revealInFinder(item.url)
+            }
         }
     }
     
