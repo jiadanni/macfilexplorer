@@ -283,13 +283,13 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         self.dataSource.sortAscending = settings.defaultSortAscending
 
         NotificationCenter.default.addObserver(forName: .globalFolderColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.globalFolderColorDidChange()
+            self?.refreshCurrentDirectory()
         }
         NotificationCenter.default.addObserver(forName: .showFileExtensionsDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.settingsDidChange()
+            self?.refreshCurrentDirectory()
         }
         NotificationCenter.default.addObserver(forName: .easySelectDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.settingsDidChange()
+            self?.refreshCurrentDirectory()
         }
     }
 
@@ -1088,14 +1088,6 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     func applySearchFilter() {
         // No-op or trigger datasource
         // Delegated to dataSource properties
-    }
-
-    private func globalFolderColorDidChange() {
-        refreshCurrentDirectory()
-    }
-
-    private func settingsDidChange() {
-        refreshCurrentDirectory()
     }
 
     private func toggleQuickLook() {
