@@ -340,23 +340,23 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         } else if event.keyCode == 53 { // Escape key
             clearSelection()
         } else if event.keyCode == 120 { // F2 key
-            renameSelection()
+            let items = getSelectedItems()
+            if let item = items.first, items.count == 1 {
+                contextMenuRename(item)
+            }
         } else if event.keyCode == 51 { // Backspace/Delete key
             if deleteWithBackspaceOnly {
                 // Delete with backspace only (no modifier needed)
-                deleteSelection()
+                contextMenuDelete(self)
             } else if event.modifierFlags.contains(.command) {
                 // Default behavior: Command+Delete
-                deleteSelection()
+                contextMenuDelete(self)
             }
         } else {
             super.keyDown(with: event)
         }
     }
 
-    private func deleteSelection() {
-        contextMenuDelete(self)
-    }
     
     private func clearSelection() {
         switch currentViewMode {
@@ -401,12 +401,6 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             }
         }
         refreshCurrentDirectory()
-    }
-
-    private func renameSelection() {
-        let items = getSelectedItems()
-        guard let item = items.first, items.count == 1 else { return }
-        contextMenuRename(item)
     }
 
     private func setupUI() {
