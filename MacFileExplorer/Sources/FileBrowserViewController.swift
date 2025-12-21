@@ -404,7 +404,19 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     private func setupUI() {
-        // Create toolbar
+        setupToolbar()
+        setupStatusBar()
+        setupContainerAndOutlineView()
+        setupOutlineViewColumns()
+        setupOutlineViewBehavior()
+        setupConstraints()
+        view.wantsLayer = true
+        view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        displayFiles(for: currentViewMode)
+        updateZoomControlVisibility()
+    }
+
+    private func setupToolbar() {
         toolbarViewController = ToolbarViewController()
         toolbarViewController.delegate = self
         addChild(toolbarViewController)
@@ -412,56 +424,53 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         toolbarViewController.view.translatesAutoresizingMaskIntoConstraints = false
         toolbarViewController?.updateViewModeDisplay(for: currentViewMode)
         toolbarViewController?.updateSortDisplay(column: sortColumn, ascending: sortAscending)
+    }
 
-        // Create status bar
+    private func setupStatusBar() {
         statusBarViewController = StatusBarViewController()
         statusBarViewController.delegate = self
         addChild(statusBarViewController)
         view.addSubview(statusBarViewController.view)
         statusBarViewController.view.translatesAutoresizingMaskIntoConstraints = false
+    }
 
-        // Create container view for file display
+    private func setupContainerAndOutlineView() {
         containerView = NSView()
         containerView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerView)
 
-        // Create scroll view for outline view
         scrollView = NSScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
-        // scrollView will be added to containerView later
 
-        // Create outline view (Windows Explorer list view style)
         outlineView = NSOutlineView()
         outlineView.setAccessibilityElement(true)
         outlineView.setAccessibilityRole(.table)
         outlineView.setAccessibilityLabel(L10n.text("File list"))
-        outlineView.style = .fullWidth  // More Windows Explorer-like
+        outlineView.style = .fullWidth
         outlineView.floatsGroupRows = false
         outlineView.rowSizeStyle = .default
-        outlineView.usesAlternatingRowBackgroundColors = true  // Like Windows Explorer
+        outlineView.usesAlternatingRowBackgroundColors = true
         outlineView.allowsMultipleSelection = true
         outlineView.autoresizesOutlineColumn = false
         outlineView.doubleAction = #selector(outlineViewDoubleClicked(_:))
         outlineView.target = self
         outlineView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
+        outlineView.headerView = NSTableHeaderView()
+        scrollView.documentView = outlineView
+    }
 
-        // Create and configure header view
-        let headerView = NSTableHeaderView()
-        outlineView.headerView = headerView
-
-        // Create columns - Windows Explorer style
+    private func setupOutlineViewColumns() {
         let nameColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("NameColumn"))
         nameColumn.title = L10n.text("Name")
         nameColumn.width = 250
         nameColumn.minWidth = 100
         nameColumn.maxWidth = 500
         nameColumn.resizingMask = .userResizingMask
-        let nameDescriptor = NSSortDescriptor(key: "name", ascending: true)
-        nameColumn.sortDescriptorPrototype = nameDescriptor
+        nameColumn.sortDescriptorPrototype = NSSortDescriptor(key: "name", ascending: true)
         outlineView.addTableColumn(nameColumn)
         outlineView.outlineTableColumn = nameColumn
 
@@ -471,8 +480,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         dateModifiedColumn.minWidth = 100
         dateModifiedColumn.maxWidth = 250
         dateModifiedColumn.resizingMask = .userResizingMask
-        let dateModifiedDescriptor = NSSortDescriptor(key: "modificationDate", ascending: false)
-        dateModifiedColumn.sortDescriptorPrototype = dateModifiedDescriptor
+        dateModifiedColumn.sortDescriptorPrototype = NSSortDescriptor(key: "modificationDate", ascending: false)
         outlineView.addTableColumn(dateModifiedColumn)
 
         let typeColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("TypeColumn"))
@@ -481,8 +489,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         typeColumn.minWidth = 80
         typeColumn.maxWidth = 200
         typeColumn.resizingMask = .userResizingMask
-        let typeDescriptor = NSSortDescriptor(key: "kind", ascending: true)
-        typeColumn.sortDescriptorPrototype = typeDescriptor
+        typeColumn.sortDescriptorPrototype = NSSortDescriptor(key: "kind", ascending: true)
         outlineView.addTableColumn(typeColumn)
 
         let sizeColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("SizeColumn"))
@@ -491,8 +498,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         sizeColumn.minWidth = 60
         sizeColumn.maxWidth = 150
         sizeColumn.resizingMask = .userResizingMask
-        let sizeDescriptor = NSSortDescriptor(key: "size", ascending: false)
-        sizeColumn.sortDescriptorPrototype = sizeDescriptor
+        sizeColumn.sortDescriptorPrototype = NSSortDescriptor(key: "size", ascending: false)
         outlineView.addTableColumn(sizeColumn)
 
         let dateCreatedColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("DateCreatedColumn"))
@@ -501,8 +507,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         dateCreatedColumn.minWidth = 100
         dateCreatedColumn.maxWidth = 250
         dateCreatedColumn.resizingMask = .userResizingMask
-        let dateCreatedDescriptor = NSSortDescriptor(key: "creationDate", ascending: false)
-        dateCreatedColumn.sortDescriptorPrototype = dateCreatedDescriptor
+        dateCreatedColumn.sortDescriptorPrototype = NSSortDescriptor(key: "creationDate", ascending: false)
         outlineView.addTableColumn(dateCreatedColumn)
 
         let tagsColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("TagsColumn"))
@@ -511,13 +516,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         tagsColumn.minWidth = 100
         tagsColumn.maxWidth = 250
         tagsColumn.resizingMask = .userResizingMask
-        let tagsDescriptor = NSSortDescriptor(key: "tags", ascending: true)
-        tagsColumn.sortDescriptorPrototype = tagsDescriptor
+        tagsColumn.sortDescriptorPrototype = NSSortDescriptor(key: "tags", ascending: true)
         outlineView.addTableColumn(tagsColumn)
 
-        scrollView.documentView = outlineView
-        
-        // Column visibility preferences (initialize defaults if missing)
         var columnVisibility = settings.columnVisibility
         if columnVisibility.isEmpty {
             columnVisibility = [
@@ -525,29 +526,25 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 "DateModifiedColumn": true,
                 "TypeColumn": true,
                 "SizeColumn": true,
-                // Hidden by default as requested
                 "DateCreatedColumn": false,
                 "TagsColumn": false
             ]
             settings.columnVisibility = columnVisibility
         }
         applyColumnVisibility(columnVisibility)
-        // Header right-click menu for toggling columns
         outlineView.headerView?.menu = createHeaderColumnsMenu()
-        
-        // Set delegate and dataSource
+    }
+
+    private func setupOutlineViewBehavior() {
         outlineView.delegate = self
         outlineView.dataSource = self
-
-        // Enable drag and drop
         outlineView.registerForDraggedTypes([.fileURL])
         outlineView.setDraggingSourceOperationMask([.copy, .move], forLocal: false)
         outlineView.setDraggingSourceOperationMask([.copy, .move], forLocal: true)
-
-        // Set up context menu
         outlineView.menu = createContextMenu()
+    }
 
-        // Set up constraints
+    private func setupConstraints() {
         NSLayoutConstraint.activate([
             toolbarViewController.view.topAnchor.constraint(equalTo: view.topAnchor),
             toolbarViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -564,14 +561,6 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             statusBarViewController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             statusBarViewController.view.heightAnchor.constraint(equalToConstant: 22)
         ])
-
-        // Apply Windows Explorer-like styling
-        view.wantsLayer = true
-        view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-
-        // Set initial view mode
-        displayFiles(for: currentViewMode)
-        updateZoomControlVisibility()
     }
 
     // Ensure active content view is embedded in preview split if preview visible
@@ -875,16 +864,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         // Instead, we'll create items manually in the data source method
         // This avoids the NSCollectionView instantiation issues with custom loadView()
 
-        // Add double-click gesture recognizer for handling double-clicks
-        let doubleClickGesture = NSClickGestureRecognizer(target: self, action: #selector(handleCollectionViewDoubleClick(_:)))
-        doubleClickGesture.numberOfClicksRequired = 2
-        newCollectionView.addGestureRecognizer(doubleClickGesture)
-        
-        // Add pan gesture for dragging icons in free-form mode
-        let panGesture = NSPanGestureRecognizer(target: self, action: #selector(handleIconDrag(_:)))
-        panGesture.delegate = self
-        panGesture.delaysPrimaryMouseButtonEvents = false
-        newCollectionView.addGestureRecognizer(panGesture)
+        setupCollectionViewGestures(newCollectionView)
 
         let newScrollView = NSScrollView()
         newScrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -896,6 +876,19 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
         collectionView = newCollectionView
         collectionViewScrollView = newScrollView
+    }
+
+    private func setupCollectionViewGestures(_ collectionView: NSCollectionView) {
+        // Add double-click gesture recognizer for handling double-clicks
+        let doubleClickGesture = NSClickGestureRecognizer(target: self, action: #selector(handleCollectionViewDoubleClick(_:)))
+        doubleClickGesture.numberOfClicksRequired = 2
+        collectionView.addGestureRecognizer(doubleClickGesture)
+        
+        // Add pan gesture for dragging icons in free-form mode
+        let panGesture = NSPanGestureRecognizer(target: self, action: #selector(handleIconDrag(_:)))
+        panGesture.delegate = self
+        panGesture.delaysPrimaryMouseButtonEvents = false
+        collectionView.addGestureRecognizer(panGesture)
     }
     
     private func setupBrowserView() {
@@ -909,6 +902,18 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         guard let token = beginBrowserSetup() else { return }
         token.markCreating()
 
+        let newBrowser = createBrowserControl()
+        browserView = newBrowser
+
+        // Set delegate AFTER creation and assignment
+        browserView.delegate = self
+
+        debugLog("BrowserView setup completed with minColumnWidth: 180")
+
+        token.markReady()
+    }
+
+    private func createBrowserControl() -> NSBrowser {
         // Construct NSBrowser here to avoid cross-file visibility issues
         let newBrowser = NSBrowser()
         newBrowser.translatesAutoresizingMaskIntoConstraints = false
@@ -926,15 +931,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         newBrowser.target = self
         newBrowser.setCellClass(NSBrowserCell.self)
         newBrowser.menu = createContextMenu()
-
-        browserView = newBrowser
-
-        // Set delegate AFTER creation and assignment
-        browserView.delegate = self
-
-        debugLog("BrowserView setup completed with minColumnWidth: 180")
-
-        token.markReady()
+        return newBrowser
     }
     
     @objc func handleBrowserDoubleClick(_ sender: NSBrowser) {
