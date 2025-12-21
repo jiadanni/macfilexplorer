@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		0056E7AFE18B4995869092AB /* StorageAnalyzerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8696DE7131D34C0BAB016416 /* StorageAnalyzerEngine.swift */; };
-		0094940B44A33FE5FE8F492B /* FileBrowserContextMenuProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5BD891DAC173822323876CF /* FileBrowserContextMenuProvider.swift */; };
 		01088225B45FC1AD5A3B122D /* SettingsUserDefaultsKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0375E31551A39394DACA077C /* SettingsUserDefaultsKeys.swift */; };
 		0533A2FEA61D47DBBB812F52 /* StorageSummaryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D1E7DCD9FE14FF7B5FDA8E9 /* StorageSummaryViewController.swift */; };
 		05DB5601FE8A4A869A4E2DAE /* QuickActionsWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC9FC164EB649DC8E794014 /* QuickActionsWidgetView.swift */; };
@@ -19,8 +18,6 @@
 		2295DF4DBB54CE0FD5104EB7 /* FileBrowserSupportTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64389EBA797C775B59AFC1BB /* FileBrowserSupportTypes.swift */; };
 		23F991C675C406AB4E378D5A /* PermissionsSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92FD942D5BA469E7FE8943C0 /* PermissionsSettingsViewController.swift */; };
 		261194ABC26C4934B258E765 /* WelcomeWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CA5260DDE46454E997823C4 /* WelcomeWidgetView.swift */; };
-		2919B2CE73309D677CAFB2F0 /* FileBrowserPreviewPaneCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57392EF27723AFDC6E1C1E82 /* FileBrowserPreviewPaneCoordinator.swift */; };
-		2B75D93462FB0E62CA549883 /* FileBrowserZoomCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B097C7B807AE09ABBF548523 /* FileBrowserZoomCoordinator.swift */; };
 		2EFFBF46D1B22A7C2EBD14CD /* ToolbarSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E0F3CDA206AA06DDA73C6D /* ToolbarSettingsViewController.swift */; };
 		3661ED6F8CD6F220263FA52A /* TerminalSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF7A16206E1A5FEA62C81C3F /* TerminalSettingsViewController.swift */; };
 		37B7CDFD76504BA1873EF4EF /* StorageListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1972F8A5DEE3441298641AFC /* StorageListViewController.swift */; };
@@ -38,7 +35,6 @@
 		77F59CBBE25241F78535867F /* GettingStartedWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FFE03C491D474790704210 /* GettingStartedWidgetView.swift */; };
 		7EE451F51B6448D0A546B2CD /* GeneralSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 313C281B1524A427D6E39CD0 /* GeneralSettingsViewController.swift */; };
 		7EEDC1A3B4C54D2F9A123456 /* FreeFormCollectionViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EEDC1A3B4C54D2F9A123457 /* FreeFormCollectionViewLayout.swift */; };
-		8790817EAC845A58BA1ED310 /* FileBrowserFilterCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDA2EA03BEC350732550C9A3 /* FileBrowserFilterCoordinator.swift */; };
 		8A1B2C3D4E5F678901234567 /* TabButtonContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1B2C3D4E5F678901234568 /* TabButtonContainerView.swift */; };
 		8F9A1D2E5C7B4E92A3F46B81 /* StorageAnalyzerTabViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C5E8F93A4D4761B9E72C40 /* StorageAnalyzerTabViewController.swift */; };
 		921129CF103EA5C95631022D /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 533E45BA233E6BBAE045936E /* Logging.swift */; };
@@ -85,18 +81,15 @@
 		C357D9EC2ECA0EDF001BA891 /* PreviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */; };
 		C3E3E8DF3B3B49068B6DD9C8 /* StorageCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A698595D0B4CF89651A85B /* StorageCategory.swift */; };
 		C4F1E8A3831726DD68683ABE /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 536E7006B83B9250EEBC9F98 /* L10n.swift */; };
-		C568332CDF01EEF141FC8DDB /* FileBrowserViewModeCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D01B4BBAAF51F1E05FCED8E /* FileBrowserViewModeCoordinator.swift */; };
 		CCCBA794A1A1D994A87C8115 /* PreviewPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65E9B8A3D560CC7CD32E7587 /* PreviewPaneViewController.swift */; };
 		D1F884BA491944349930279B /* StartDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67FC3670FEF34117B1EA37F4 /* StartDesignSystem.swift */; };
 		D5133A27DB7842BC207F66A4 /* AppearanceSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B091D0A463D4F89E7966E313 /* AppearanceSettingsViewController.swift */; };
 		D5ADEF7CBF5C46D6A5E89870 /* ContextualPermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F74C22C3ADD41E2A27FBABA /* ContextualPermissionManager.swift */; };
-		DB81D5A258028C7EFB780C61 /* FileBrowserSelectionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 144335B3CB676B31AEED8C8E /* FileBrowserSelectionCoordinator.swift */; };
 		E010E822F5B6962C1C72A271 /* StorageSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0330B936510D968B8821EE52 /* StorageSettingsViewController.swift */; };
 		E351B29A6543AF26A693A062 /* SettingsTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A396B5CC11AE1AF9E5DF55E1 /* SettingsTypes.swift */; };
 		E8B6E57A8136E5E2406883DF /* FileBrowserDialogHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DAEC933609FB68D93999CF3 /* FileBrowserDialogHelper.swift */; };
 		F0B10C20D30E40F50A60B70D /* FileOperationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B10C20D30E40F50A60B70C /* FileOperationsManager.swift */; };
 		F2F1F3B120814DC8BD4B145A /* StorageOverviewWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABBBCC2BFE824B9CB573D557 /* StorageOverviewWidgetView.swift */; };
-		F572B932DB893D1EDCC0650F /* FileBrowserNavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C05ADC931E15F2308ECAF8C /* FileBrowserNavigationCoordinator.swift */; };
 		F9FFEF95DD2049FABE8B6569 /* StorageItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D68A94874EBC4DC39B2A3061 /* StorageItem.swift */; };
 		FB1A2B3C4D5E6F708192A1B5 /* FileBrowserDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1A2B3C4D5E6F708192A1B4 /* FileBrowserDataSource.swift */; };
 		NAV0001000200030004000501 /* NavigationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = NAV0001000200030004000500 /* NavigationManager.swift */; };
@@ -106,7 +99,6 @@
 		0330B936510D968B8821EE52 /* StorageSettingsViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StorageSettingsViewController.swift; sourceTree = "<group>"; };
 		0375E31551A39394DACA077C /* SettingsUserDefaultsKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsUserDefaultsKeys.swift; sourceTree = "<group>"; };
 		08B971B3759F927A8101D61E /* AccentColorControls.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccentColorControls.swift; sourceTree = "<group>"; };
-		144335B3CB676B31AEED8C8E /* FileBrowserSelectionCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserSelectionCoordinator.swift; sourceTree = "<group>"; };
 		16F13AFA7D36527FAC1CEC06 /* Help */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; path = Help; sourceTree = "<group>"; };
 		1972F8A5DEE3441298641AFC /* StorageListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageListViewController.swift; sourceTree = "<group>"; };
 		1DAEC933609FB68D93999CF3 /* FileBrowserDialogHelper.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserDialogHelper.swift; sourceTree = "<group>"; };
@@ -115,19 +107,16 @@
 		2EE3071256D14F848904E873 /* StorageProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageProgressViewController.swift; sourceTree = "<group>"; };
 		313C281B1524A427D6E39CD0 /* GeneralSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsViewController.swift; sourceTree = "<group>"; };
 		3CC9FC164EB649DC8E794014 /* QuickActionsWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsWidgetView.swift; sourceTree = "<group>"; };
-		3D01B4BBAAF51F1E05FCED8E /* FileBrowserViewModeCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserViewModeCoordinator.swift; sourceTree = "<group>"; };
 		3DF128936A56C674C582D9CD /* TabsSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabsSettingsViewController.swift; sourceTree = "<group>"; };
 		4B1FADE6425CA28DEED521D3 /* NSColor+CustomAccentColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSColor+CustomAccentColor.swift"; sourceTree = "<group>"; };
 		4CCF47DFCFAE193F05B95700 /* FileOperationsSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileOperationsSettingsViewController.swift; sourceTree = "<group>"; };
 		4F42A041AC2EE71E4CDDECBC /* Localizable.strings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = Localizable.strings; sourceTree = "<group>"; };
 		533E45BA233E6BBAE045936E /* Logging.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = Logging.swift; path = Logging.swift; sourceTree = "<group>"; };
 		536E7006B83B9250EEBC9F98 /* L10n.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = L10n.swift; path = L10n.swift; sourceTree = "<group>"; };
-		57392EF27723AFDC6E1C1E82 /* FileBrowserPreviewPaneCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserPreviewPaneCoordinator.swift; sourceTree = "<group>"; };
 		5D1E7DCD9FE14FF7B5FDA8E9 /* StorageSummaryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageSummaryViewController.swift; sourceTree = "<group>"; };
 		64389EBA797C775B59AFC1BB /* FileBrowserSupportTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowserSupportTypes.swift; sourceTree = "<group>"; };
 		65E9B8A3D560CC7CD32E7587 /* PreviewPaneViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PreviewPaneViewController.swift; sourceTree = "<group>"; };
 		67FC3670FEF34117B1EA37F4 /* StartDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartDesignSystem.swift; sourceTree = "<group>"; };
-		6C05ADC931E15F2308ECAF8C /* FileBrowserNavigationCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserNavigationCoordinator.swift; sourceTree = "<group>"; };
 		7059AB63FC0A8FFE8457DD23 /* FileBrowserViewController+Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileBrowserViewController+Collection.swift"; sourceTree = "<group>"; };
 		7A8FC82D42CB696945230302 /* SidebarSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarSettingsViewController.swift; sourceTree = "<group>"; };
 		7C10E33E57143492B991CF25 /* AdvancedSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedSettingsViewController.swift; sourceTree = "<group>"; };
@@ -173,7 +162,6 @@
 		AF0B1C2D3E4F567890123458 /* NSImage+Grayscale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSImage+Grayscale.swift"; sourceTree = "<group>"; };
 		AF7A16206E1A5FEA62C81C3F /* TerminalSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSettingsViewController.swift; sourceTree = "<group>"; };
 		B091D0A463D4F89E7966E313 /* AppearanceSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsViewController.swift; sourceTree = "<group>"; };
-		B097C7B807AE09ABBF548523 /* FileBrowserZoomCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserZoomCoordinator.swift; sourceTree = "<group>"; };
 		B1FFE03C491D474790704210 /* GettingStartedWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GettingStartedWidgetView.swift; sourceTree = "<group>"; };
 		B2717543BED9FDD152C6B430 /* FileBrowserViewController+Outline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileBrowserViewController+Outline.swift"; sourceTree = "<group>"; };
 		B2C5E8F93A4D4761B9E72C40 /* StorageAnalyzerTabViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageAnalyzerTabViewController.swift; sourceTree = "<group>"; };
@@ -194,10 +182,8 @@
 		DC1234567890ABCDEFFEDCBA /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		E2E0F3CDA206AA06DDA73C6D /* ToolbarSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSettingsViewController.swift; sourceTree = "<group>"; };
 		F0B10C20D30E40F50A60B70C /* FileOperationsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileOperationsManager.swift; sourceTree = "<group>"; };
-		F5BD891DAC173822323876CF /* FileBrowserContextMenuProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserContextMenuProvider.swift; sourceTree = "<group>"; };
 		F9410711140846533B4EE97F /* PendingSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingSettings.swift; sourceTree = "<group>"; };
 		FB1A2B3C4D5E6F708192A1B4 /* FileBrowserDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowserDataSource.swift; sourceTree = "<group>"; };
-		FDA2EA03BEC350732550C9A3 /* FileBrowserFilterCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserFilterCoordinator.swift; sourceTree = "<group>"; };
 		NAV0001000200030004000500 /* NavigationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -324,13 +310,6 @@
 				536E7006B83B9250EEBC9F98 /* L10n.swift */,
 				9128C20CD205ABF8E7FD423E /* FileBrowserActionHelper.swift */,
 				1DAEC933609FB68D93999CF3 /* FileBrowserDialogHelper.swift */,
-				F5BD891DAC173822323876CF /* FileBrowserContextMenuProvider.swift */,
-				57392EF27723AFDC6E1C1E82 /* FileBrowserPreviewPaneCoordinator.swift */,
-				3D01B4BBAAF51F1E05FCED8E /* FileBrowserViewModeCoordinator.swift */,
-				B097C7B807AE09ABBF548523 /* FileBrowserZoomCoordinator.swift */,
-				FDA2EA03BEC350732550C9A3 /* FileBrowserFilterCoordinator.swift */,
-				6C05ADC931E15F2308ECAF8C /* FileBrowserNavigationCoordinator.swift */,
-				144335B3CB676B31AEED8C8E /* FileBrowserSelectionCoordinator.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -517,13 +496,6 @@
 				C4F1E8A3831726DD68683ABE /* L10n.swift in Sources */,
 				6031BD53EF224E56A641B0B0 /* FileBrowserActionHelper.swift in Sources */,
 				E8B6E57A8136E5E2406883DF /* FileBrowserDialogHelper.swift in Sources */,
-				0094940B44A33FE5FE8F492B /* FileBrowserContextMenuProvider.swift in Sources */,
-				2919B2CE73309D677CAFB2F0 /* FileBrowserPreviewPaneCoordinator.swift in Sources */,
-				C568332CDF01EEF141FC8DDB /* FileBrowserViewModeCoordinator.swift in Sources */,
-				2B75D93462FB0E62CA549883 /* FileBrowserZoomCoordinator.swift in Sources */,
-				8790817EAC845A58BA1ED310 /* FileBrowserFilterCoordinator.swift in Sources */,
-				F572B932DB893D1EDCC0650F /* FileBrowserNavigationCoordinator.swift in Sources */,
-				DB81D5A258028C7EFB780C61 /* FileBrowserSelectionCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

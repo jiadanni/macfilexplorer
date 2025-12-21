@@ -63,7 +63,7 @@ class FileBrowserActionHelper {
         do {
             try NSWorkspace.shared.open([url], withApplicationAt: appURL, options: [], configuration: [:])
         } catch {
-            debugLog("Error opening file with application: \(error)")
+            print("Error opening file with application: \(error)")
         }
     }
     
@@ -85,19 +85,16 @@ class FileBrowserActionHelper {
         if let scriptObject = NSAppleScript(source: script) {
             scriptObject.executeAndReturnError(&error)
             if let error = error {
-                debugLog("AppleScript error: \(error)")
+                print("AppleScript error: \(error)")
             }
         }
     }
     
     /// Returns the available disk space for a directory.
     static func getAvailableDiskSpace(for url: URL) -> UInt64? {
-        let keys: Set<URLResourceKey> = [.volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey]
+        let keys: Set<URLResourceKey> = [.volumeAvailableCapacityKey]
         guard let values = try? url.resourceValues(forKeys: keys) else { return nil }
         
-        if let importantUsage = values.volumeAvailableCapacityForImportant {
-            return UInt64(importantUsage)
-        }
         if let available = values.volumeAvailableCapacity {
             return UInt64(available)
         }
