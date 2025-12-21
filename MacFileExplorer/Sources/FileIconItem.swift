@@ -258,7 +258,8 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
         myTextField?.stringValue = fileItem.displayName
 
         // Apply custom folder color if set
-        if fileItem.isDirectory, let customColor = ColorManager.shared.getColor(for: fileItem.url) {
+        if fileItem.isDirectory,
+           let customColor = ColorManager.shared.getColor(forFolderName: fileItem.url.lastPathComponent) {
             myImageView?.contentTintColor = customColor
         } else {
             myImageView?.contentTintColor = nil // Reset tint color

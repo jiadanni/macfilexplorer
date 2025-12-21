@@ -10,7 +10,9 @@
       "Bash(log show:*)",
       "Bash(killall:*)",
       "Bash(grep:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(osascript:*)",
+      "Bash(./build-and-test.sh:*)"
     ],
     "deny": [],
     "ask": []

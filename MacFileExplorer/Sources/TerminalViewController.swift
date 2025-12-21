@@ -256,7 +256,14 @@ class TerminalViewController: NSViewController {
         if suppressOutputUntilSentinel {
             if let sentinelRange = text.range(of: sentinelEcho) {
                 suppressOutputUntilSentinel = false
-                text = String(text[sentinelRange.upperBound...])
+                let afterSentinel = text[sentinelRange.upperBound...]
+                // If nothing but whitespace follows the sentinel, just refresh the caret and bail.
+                if afterSentinel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    promptLocation = textView.string.count
+                    textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
+                    return
+                }
+                text = String(afterSentinel)
             } else {
                 return
             }

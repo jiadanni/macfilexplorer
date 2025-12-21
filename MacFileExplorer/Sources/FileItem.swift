@@ -1,24 +1,80 @@
 import Cocoa
 
+/// Represents a file system item (file or directory) with metadata and lazy-loading support.
+///
+/// `FileItem` provides a hierarchical representation of the file system with:
+/// - Lazy loading of directory contents for performance
+/// - Cloud storage support (Google Drive, iCloud)
+/// - Symlink resolution
+/// - Extended file attributes (tags, permissions, owner)
+///
+/// **Usage:**
+/// ```swift
+/// let item = FileItem(url: URL(fileURLWithPath: "/Users/username/Documents"))
+/// item.loadChildren()  // Load subdirectories and files
+/// for child in item.children ?? [] {
+///     print(child.displayName)
+/// }
+/// ```
+///
+/// **Performance:** Directory contents are loaded on-demand via `loadChildren()`.
+/// The `hasLoadedChildren` flag prevents redundant filesystem queries.
 class FileItem: Hashable {
+    /// The file system URL for this item.
     let url: URL
+    
+    /// The file or directory name (last path component).
     let name: String
+    
+    /// Whether this item represents a directory.
     let isDirectory: Bool
+    
+    /// Child items if this is a directory. `nil` if not loaded, empty array if directory is empty.
     var children: [FileItem]?
+    
+    /// Tracks whether we've enumerated children from the filesystem.
+    /// An empty `children` array alone is ambiguous (could mean not-loaded or empty directory).
+    private(set) var hasLoadedChildren = false
+    
+    /// File size in bytes. For directories, this is typically 0 unless explicitly calculated.
     private(set) var size: Int64 = 0
+    
+    /// File modification date from filesystem attributes.
     private(set) var modificationDate: Date?
+    
+    /// File creation date from filesystem attributes.
     private(set) var creationDate: Date?
+    
+    /// File type identifier (e.g., "public.plain-text").
     private(set) var fileType: String = ""
+    
+    /// Localized file kind description (e.g., "Folder", "Plain Text Document").
     private(set) var kind: String = ""
+    
+    /// POSIX permissions string (e.g., "drwxr-xr-x").
     private(set) var permissions: String = ""
+    
+    /// File owner's account name.
     private(set) var owner: String = ""
+    
+    /// macOS Finder tags associated with this file.
     private(set) var tags: [String] = []
 
+    /// Whether this item is hidden (name starts with '.').
     var isHidden: Bool = false
+    
+    /// Whether this directory needs its children loaded.
+    /// Returns `true` for directories that haven't been enumerated yet.
+    var needsChildLoading: Bool {
+        return isDirectory && !hasLoadedChildren
+    }
 
-    // Display name with or without extension based on user preference
+    /// Display name respecting user's file extension preference.
+    ///
+    /// If user has disabled file extensions (via SettingsStore), this returns
+    /// the name without extension for files. Directories always show full name.
     var displayName: String {
-        let showExtensions = UserDefaults.standard.object(forKey: UserDefaults.Keys.showFileExtensions.rawValue) as? Bool ?? true
+        let showExtensions = SettingsStore.shared.showFileExtensions
 
         if showExtensions || isDirectory {
             return name
@@ -132,6 +188,12 @@ class FileItem: Hashable {
     @discardableResult
     func loadChildren(showsHiddenFiles: Bool = false, recursive: Bool = false, errorHandler: ((String) -> Void)? = nil) -> Bool {
         guard isDirectory else { return false }
+        var didLoadChildren = false
+        defer {
+            if didLoadChildren {
+                hasLoadedChildren = true
+            }
+        }
 
         // Ensure security-scoped access for sandboxed builds when folder is already granted.
         _ = PermissionsManager.shared.ensureAccess(for: url)
@@ -140,11 +202,11 @@ class FileItem: Hashable {
         let resolvedURL = url.resolvingSymlinksInPath()
         let isGoogleDrive = FileItem.isGoogleDrivePath(resolvedURL.path)
 
-        // Debug logging for Google Drive
-        if isGoogleDrive {
-            debugLog("📂 loadChildren called for: \(url.path)")
-            debugLog("   showsHiddenFiles: \(showsHiddenFiles)")
-        }
+        // Debug logging for all directories
+        debugLog("📂 loadChildren called for: \(url.path)")
+        debugLog("   resolvedURL: \(resolvedURL.path)")
+        debugLog("   showsHiddenFiles: \(showsHiddenFiles)")
+        debugLog("   isReadable: \(fileManager.isReadableFile(atPath: resolvedURL.path))")
 
         // Special handling for root directory "/" to avoid permission dialogs
         if resolvedURL.path == "/" {
@@ -182,8 +244,10 @@ class FileItem: Hashable {
                 }
             }
             
-            children = safeRootItems.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+            // Use non-localized comparison during initialization to avoid ICU crashes
+            children = safeRootItems.sorted { $0.lastPathComponent.caseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
                 .map { FileItem(url: $0) }
+            didLoadChildren = true
             
             children?.forEach { child in
                 if child.isDirectory && child.children == nil {
@@ -208,6 +272,7 @@ class FileItem: Hashable {
                     urls.append(fileURL)
                 }
                 children = urls.map { FileItem(url: $0) }
+                didLoadChildren = true
                 return true
             }
 
@@ -219,11 +284,16 @@ class FileItem: Hashable {
                 options: options
             )
 
-            if isGoogleDrive {
-                debugLog("   ✅ Got \(urls.count) items from contentsOfDirectory")
+            debugLog("   ✅ Got \(urls.count) items from contentsOfDirectory")
+            for (index, fileURL) in urls.prefix(5).enumerated() {
+                debugLog("      [\(index)] \(fileURL.lastPathComponent)")
+            }
+            if urls.count > 5 {
+                debugLog("      ... and \(urls.count - 5) more")
             }
 
-            children = urls.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+            // Use non-localized comparison during initialization to avoid ICU crashes
+            children = urls.sorted { $0.lastPathComponent.caseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
                 .map { FileItem(url: $0) }
 
             // Only initialize children array for subdirectories, don't recursively load
@@ -233,9 +303,8 @@ class FileItem: Hashable {
                 }
             }
 
-            if isGoogleDrive {
-                debugLog("   Final children count: \(children?.count ?? 0)")
-            }
+            debugLog("   Final children count: \(children?.count ?? 0)")
+            didLoadChildren = true
             return true
         } catch let error as NSError {
             // Log the error with more detail for debugging
@@ -250,12 +319,14 @@ class FileItem: Hashable {
                 debugLog("  🔄 Trying Google Drive enumerator fallback...")
                 if let fallback = loadChildrenWithEnumerator(fileManager: fileManager, baseURL: url, resolvedURL: resolvedURL, showsHiddenFiles: showsHiddenFiles) {
                     children = fallback
+                    didLoadChildren = true
                     return true
                 }
             } else if error.domain == NSCocoaErrorDomain && (error.code == 257 || error.code == 260) {
                 debugLog("  🔄 Trying enumerator fallback...")
                 if let fallback = loadChildrenWithEnumerator(fileManager: fileManager, baseURL: url, resolvedURL: resolvedURL, showsHiddenFiles: showsHiddenFiles) {
                     children = fallback
+                    didLoadChildren = true
                     return true
                 }
             }
@@ -286,7 +357,6 @@ class FileItem: Hashable {
             ?? enumeratorChildren(fileManager: fileManager, at: resolvedURL, showsHiddenFiles: showsHiddenFiles)
 
         guard let foundURLs = urls else { return nil }
-
         let items = foundURLs.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
             .map { FileItem(url: $0) }
 
@@ -324,7 +394,7 @@ class FileItem: Hashable {
     // MARK: - Computed Properties
 
     var icon: NSImage {
-        let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+        let useGrayscale = SettingsStore.shared.useGrayscaleIcons
 
         if useGrayscale {
             // Grayscale mode: use monochrome SF Symbol for folders, grayscale file icons otherwise
@@ -396,7 +466,7 @@ class FileItem: Hashable {
     var sizeString: String {
         if isDirectory {
             // Check if user has enabled folder size calculation
-            let showFolderSizes = UserDefaults.standard.bool(forKey: "showFolderSizes")
+            let showFolderSizes = SettingsStore.shared.showFolderSizes
             if showFolderSizes && size > 0 {
                 return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
             }

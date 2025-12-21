@@ -361,8 +361,9 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
     func togglePreviewPane() {
         // Delegate toggle to active pane's internal preview implementation
         guard activePaneIndex < panes.count else { return }
-        panes[activePaneIndex].toolbarDidTogglePreviewPane()
-        NotificationCenter.default.post(name: Notification.Name("previewPaneToggled"), object: nil)
+        let activePane = panes[activePaneIndex]
+        activePane.toolbarDidTogglePreviewPane()
+        SettingsStore.shared.previewPaneVisible = activePane.previewVisible
     }
 
     @objc private func handlePreviewPaneCloseRequested() {

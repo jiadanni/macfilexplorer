@@ -1,7 +1,7 @@
 import Cocoa
 
 @main
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, SettingsStoreDelegate {
 
     var windowController: MainWindowController?
     var settingsWindowController: SettingsWindowController?
@@ -9,6 +9,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        // Initialize locale early to prevent ICU crashes during localized comparisons
+        _ = Locale.current
+        _ = NSLocale.current
+        
         // Configure tooltip delay via UserDefaults (reduce from default ~1.0 seconds to 0.3 seconds)
         UserDefaults.standard.set(0.3, forKey: "NSInitialToolTipDelay")
 
@@ -18,9 +22,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Check if this is first launch
-        let hasLaunchedBefore = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hasLaunchedBefore.rawValue)
+        let settings = SettingsStore.shared
+        let hasLaunchedBefore = settings.hasLaunchedBefore
         if !hasLaunchedBefore {
-            UserDefaults.standard.set(true, forKey: UserDefaults.Keys.hasLaunchedBefore.rawValue)
+            settings.hasLaunchedBefore = true
         }
 
         // Create and show the main window
@@ -35,8 +40,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         createEditMenu()
 
-        NotificationCenter.default.addObserver(self, selector: #selector(updatePreviewPaneMenuItem), name: Notification.Name("previewPaneToggled"), object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(updateHiddenFilesMenuItem), name: Notification.Name("hiddenFilesToggled"), object: nil)
+        // Register as delegate for settings changes
+        SettingsStore.shared.addDelegate(self)
 
         // Set initial dynamic titles based on current states
         updatePreviewPaneMenuItem()
@@ -68,7 +73,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let mainMenu = NSApp.mainMenu {
             if let viewMenu = mainMenu.item(withTitle: "View")?.submenu {
                 if let previewMenuItem = viewMenu.item(withTitle: "Show Preview Pane") ?? viewMenu.item(withTitle: "Hide Preview Pane") {
-                    let isShowing = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
+                    let isShowing = SettingsStore.shared.previewPaneVisible
                     previewMenuItem.title = isShowing ? "Hide Preview Pane" : "Show Preview Pane"
                     previewMenuItem.keyEquivalent = "p"
                     previewMenuItem.keyEquivalentModifierMask = [.command]
@@ -379,7 +384,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @IBAction func goToAirDrop(_ sender: Any?) {
         // AirDrop uses a special URL scheme
-        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.AirDrop-Handoff-Settings")!)
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.AirDrop-Handoff-Settings") else {
+            debugLog("Invalid AirDrop preferences URL")
+            return
+        }
+
+        if !NSWorkspace.shared.open(url) {
+            showError(L10n.text("Unable to open AirDrop settings."))
+        }
     }
 
     @IBAction func goToNetwork(_ sender: Any?) {
@@ -438,7 +450,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Try to mount the network location
-        NSWorkspace.shared.open(url)
+        let success = NSWorkspace.shared.open(url)
+        if !success {
+            showError(L10n.text("Unable to mount the network location. Please verify the address and your permissions."))
+        }
     }
 
     private func showError(_ message: String) {
@@ -506,5 +521,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             alert.addButton(withTitle: "OK")
             alert.runModal()
         }
+    }
+}
+
+// MARK: - SettingsStoreDelegate
+extension AppDelegate {
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, previewPaneVisibilityDidChange isVisible: Bool) {
+        updatePreviewPaneMenuItem()
+    }
+    
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, hiddenFilesStateDidChange isVisible: Bool) {
+        updateHiddenFilesMenuItem()
     }
 }

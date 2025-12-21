@@ -631,11 +631,11 @@ class SidebarViewController: NSViewController {
 
     private func saveFavorites() {
         let favoritePaths = favoriteItems.map { $0.url.path }
-        UserDefaults.standard.set(favoritePaths, forKey: "SidebarFavorites")
+        SettingsStore.shared.sidebarFavorites = favoritePaths
     }
 
     private func loadFavoritesFromDefaults() {
-        guard let savedPaths = UserDefaults.standard.array(forKey: "SidebarFavorites") as? [String] else { return }
+        let savedPaths = SettingsStore.shared.sidebarFavorites
         let workspace = NSWorkspace.shared
         for path in savedPaths {
             let url = URL(fileURLWithPath: path)
@@ -649,7 +649,7 @@ class SidebarViewController: NSViewController {
     
     // MARK: - Auto-expand Folder Explorer
     private func autoExpandFolderExplorer(to url: URL) {
-        guard UserDefaults.standard.bool(forKey: UserDefaults.Keys.expandSidebarToCurrentDirectory.rawValue) else { return }
+        guard SettingsStore.shared.expandSidebarToCurrentDirectory else { return }
         var pathComponents: [URL] = []
         var currentURL = url
         while currentURL.path != "/" && currentURL.path != folderExplorerRootItem.url.path {
@@ -688,7 +688,7 @@ class SidebarViewController: NSViewController {
         folderExplorerOutlineView.expandItem(item)
 
         // Load children if not loaded, but skip user home folder to avoid TCC dialogs
-        if item.children == nil && !isUserHomeFolder {
+        if item.needsChildLoading && !isUserHomeFolder {
             item.loadChildren(showsHiddenFiles: false) { _ in
                 DispatchQueue.main.async { [weak self] in
                     self?.folderExplorerOutlineView.reloadItem(item, reloadChildren: true)

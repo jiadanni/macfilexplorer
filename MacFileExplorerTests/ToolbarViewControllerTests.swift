@@ -65,4 +65,20 @@ class ToolbarViewControllerTests: XCTestCase {
         toolbarViewController.updateSortDisplay(column: "DateModifiedColumn", ascending: true)
         XCTAssertTrue(true, "Should update sort display for date modified")
     }
+
+    func testSettingsCallbacksUpdateToolbarButtons() {
+        let defaults = UserDefaults(suiteName: "com.macfileexplorer.tests.toolbar.\(UUID().uuidString)")!
+        let store = SettingsStore(defaults: defaults)
+        toolbarViewController = ToolbarViewController(settings: store)
+        _ = toolbarViewController.view
+
+        store.previewPaneVisible = true
+        store.hiddenFilesState = true
+
+        XCTAssertEqual(toolbarViewController.testingPreviewPaneButtonToolTip, "Hide Preview Pane")
+        XCTAssertEqual(toolbarViewController.testingHiddenFilesButtonState, .on)
+
+        store.hiddenFilesState = false
+        XCTAssertEqual(toolbarViewController.testingHiddenFilesButtonState, .off)
+    }
 }

@@ -36,7 +36,8 @@ xcodebuild -project MacFileExplorer.xcodeproj \
            -scheme MacFileExplorer \
            -configuration Debug \
            -quiet \
-           clean build
+           clean build \
+           CODE_SIGN_ENTITLEMENTS="MacFileExplorer/Supporting Files/MacFileExplorer.entitlements"
 
 if [ $? -eq 0 ]; then
     echo ""

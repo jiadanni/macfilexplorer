@@ -44,6 +44,15 @@ class FileItemTests: XCTestCase {
         XCTAssertTrue(dirItem.isDirectory, "Should be identified as directory")
         XCTAssertNotNil(dirItem.children, "Directory should have children array")
     }
+
+    func testDirectoryLazyLoadingFlag() throws {
+        let dirItem = FileItem(url: tempDirectoryURL)
+        XCTAssertTrue(dirItem.needsChildLoading, "New directory should require lazy loading")
+
+        XCTAssertTrue(dirItem.loadChildren(), "Directory should load children successfully")
+        XCTAssertTrue(dirItem.hasLoadedChildren, "Directory should record that children were loaded")
+        XCTAssertFalse(dirItem.needsChildLoading, "Directory should not require loading after children are loaded")
+    }
     
     func testFileItemName() throws {
         let fileItem = FileItem(url: tempFileURL)

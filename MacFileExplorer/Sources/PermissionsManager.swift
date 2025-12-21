@@ -2,6 +2,7 @@ import Cocoa
 import Photos
 import AVFoundation
 
+/// Represents different types of system permissions the app can request.
 enum PermissionType: String, CaseIterable {
     case fullDiskAccess = "Full Disk Access"
     case photos = "Photos"
@@ -35,6 +36,7 @@ enum PermissionType: String, CaseIterable {
     }
 }
 
+/// Represents the current status of a permission request.
 enum PermissionStatus {
     case granted
     case denied
@@ -68,7 +70,16 @@ enum PermissionStatus {
     }
 }
 
-class PermissionsManager {
+/// Manages system permissions and security-scoped bookmark access for sandboxed applications.
+///
+/// This singleton handles:
+/// - Security-scoped bookmark creation and resolution
+/// - Directory access permission tracking
+/// - System permission status checking (Photos, Camera, Microphone, Full Disk Access)
+/// - Thread-safe access to granted directories
+///
+/// Thread Safety: All methods are thread-safe through NSLock synchronization.
+final class PermissionsManager {
     static let shared = PermissionsManager()
 
     private init() {}
@@ -77,8 +88,61 @@ class PermissionsManager {
     private let grantedDirectoriesKey = UserDefaults.Keys.grantedDirectoriesPaths.rawValue
     private let grantedDirectoryBookmarksKey = UserDefaults.Keys.grantedDirectoryBookmarks.rawValue
     private let migrationFlagKey = UserDefaults.Keys.grantedDirectoryBookmarksMigrated.rawValue
-    private var activeSecurityScopedURLs: Set<URL> = []
+    
+    // Thread safety: Protected by lock
+    private var _activeSecurityScopedURLs: Set<URL> = []
+    private let lock = NSLock()
+    
+    /// Thread-safe access to active security-scoped URLs
+    private var activeSecurityScopedURLs: Set<URL> {
+        get {
+            lock.lock()
+            defer { lock.unlock() }
+            return _activeSecurityScopedURLs
+        }
+        set {
+            lock.lock()
+            defer { lock.unlock() }
+            _activeSecurityScopedURLs = newValue
+        }
+    }
+    
+    /// Thread-safe insertion into active security-scoped URLs
+    private func insertActiveURL(_ url: URL) {
+        lock.lock()
+        defer { lock.unlock() }
+        _activeSecurityScopedURLs.insert(url)
+    }
+    
+    /// Thread-safe removal from active security-scoped URLs
+    private func removeActiveURL(_ url: URL) {
+        lock.lock()
+        defer { lock.unlock() }
+        _activeSecurityScopedURLs.remove(url)
+    }
+    
+    /// Thread-safe check if URL is active
+    private func containsActiveURL(_ url: URL) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return _activeSecurityScopedURLs.contains(url)
+    }
+    
+    /// Thread-safe retrieval of all active URLs
+    private func getAllActiveURLs() -> [URL] {
+        lock.lock()
+        defer { lock.unlock() }
+        return Array(_activeSecurityScopedURLs)
+    }
+    
+    /// Thread-safe removal of all active URLs
+    private func removeAllActiveURLs() {
+        lock.lock()
+        defer { lock.unlock() }
+        _activeSecurityScopedURLs.removeAll()
+    }
 
+    /// Represents a resolved granted directory entry with its validation state.
     struct ResolvedGrantedDirectoryEntry {
         let url: URL?
         let path: String
@@ -90,10 +154,11 @@ class PermissionsManager {
     func migratePathsToBookmarksIfNeeded() {
         // Only meaningful in sandboxed context; skip otherwise
         guard isSandboxed() else { return }
-        let migrated = UserDefaults.standard.bool(forKey: migrationFlagKey)
+        let migrated = SettingsStore.shared.permissionsMigrationFlag
         guard !migrated else { return }
-        guard let paths = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String], !paths.isEmpty else {
-            UserDefaults.standard.set(true, forKey: migrationFlagKey)
+        let paths = SettingsStore.shared.grantedDirectories
+        guard !paths.isEmpty else {
+            SettingsStore.shared.permissionsMigrationFlag = true
             return
         }
         var bookmarkDatas: [Data] = []
@@ -107,19 +172,20 @@ class PermissionsManager {
             }
         }
         if !bookmarkDatas.isEmpty {
-            UserDefaults.standard.set(bookmarkDatas, forKey: grantedDirectoryBookmarksKey)
+            SettingsStore.shared.grantedDirectoryBookmarks = bookmarkDatas
         }
-        UserDefaults.standard.set(true, forKey: migrationFlagKey)
+        SettingsStore.shared.permissionsMigrationFlag = true
     }
 
     func grantedDirectories() -> [URL] {
         // Prefer bookmarks if present
         if isSandboxed() {
-            if let datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data], !datas.isEmpty {
+            let datas = SettingsStore.shared.grantedDirectoryBookmarks
+            if !datas.isEmpty {
                 return datas.compactMap { resolveBookmarkData($0).url }
             }
         }
-        guard let paths = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String] else { return [] }
+        let paths = SettingsStore.shared.grantedDirectories
         return paths.compactMap { URL(fileURLWithPath: $0) }
     }
 
@@ -129,11 +195,11 @@ class PermissionsManager {
         
         // In non-sandboxed builds we only store path strings.
         guard isSandboxed() else {
-            var existing = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String] ?? []
+            var existing = SettingsStore.shared.grantedDirectories
             debugLog("[PermissionsManager] Existing paths: \(existing)")
             if !existing.contains(url.path) {
                 existing.append(url.path)
-                UserDefaults.standard.set(existing, forKey: grantedDirectoriesKey)
+                SettingsStore.shared.grantedDirectories = existing
                 debugLog("[PermissionsManager] Added path: \(url.path)")
                 debugLog("[PermissionsManager] Updated paths: \(existing)")
             } else {
@@ -143,16 +209,16 @@ class PermissionsManager {
         }
         do {
             let data = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
-            var existingDatas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data] ?? []
+            var existingDatas = SettingsStore.shared.grantedDirectoryBookmarks
             if !existingDatas.contains(where: { resolveBookmarkData($0).path == url.path }) {
                 existingDatas.append(data)
-                UserDefaults.standard.set(existingDatas, forKey: grantedDirectoryBookmarksKey)
+                SettingsStore.shared.grantedDirectoryBookmarks = existingDatas
             }
             // Immediately begin accessing so the user isn't prompted again in this session.
             var stale = false
             if let resolvedURL = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &stale),
                resolvedURL.startAccessingSecurityScopedResource() {
-                activeSecurityScopedURLs.insert(resolvedURL)
+                insertActiveURL(resolvedURL)
             }
         } catch {
             NSLog("[PermissionsManager] Bookmark creation failed in sandbox for \(url.path): \(error)")
@@ -160,26 +226,28 @@ class PermissionsManager {
     }
 
     func removeGrantedDirectory(_ url: URL) {
-        if var datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data], !datas.isEmpty {
+        var datas = SettingsStore.shared.grantedDirectoryBookmarks
+        if !datas.isEmpty {
             datas.removeAll { resolveBookmarkData($0).path == url.path }
-            UserDefaults.standard.set(datas, forKey: grantedDirectoryBookmarksKey)
+            SettingsStore.shared.grantedDirectoryBookmarks = datas
         }
-        if activeSecurityScopedURLs.contains(url) {
+        if containsActiveURL(url) {
             url.stopAccessingSecurityScopedResource()
-            activeSecurityScopedURLs.remove(url)
+            removeActiveURL(url)
         }
-        var existing = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String] ?? []
+        var existing = SettingsStore.shared.grantedDirectories
         existing.removeAll { $0 == url.path }
-        UserDefaults.standard.set(existing, forKey: grantedDirectoriesKey)
+        SettingsStore.shared.grantedDirectories = existing
     }
 
     func hasGrantedDirectory(_ url: URL) -> Bool {
         if isSandboxed() {
-            if let datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data], !datas.isEmpty {
+            let datas = SettingsStore.shared.grantedDirectoryBookmarks
+            if !datas.isEmpty {
                 return datas.contains { resolveBookmarkData($0).path == url.path }
             }
         }
-        let existing = UserDefaults.standard.array(forKey: grantedDirectoriesKey) as? [String] ?? []
+        let existing = SettingsStore.shared.grantedDirectories
         return existing.contains(url.path)
     }
 
@@ -200,8 +268,9 @@ class PermissionsManager {
         debugLog("[PermissionsManager] Is sandboxed: \(isSandboxed())")
         
         if isSandboxed() {
-            if let datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data] {
-                debugLog("[PermissionsManager] Found \(datas.count) bookmarks")
+            let datas = SettingsStore.shared.grantedDirectoryBookmarks
+            debugLog("[PermissionsManager] Found \(datas.count) bookmarks")
+            if !datas.isEmpty {
                 return datas.map { resolveBookmarkData($0) }
             }
         }
@@ -217,25 +286,36 @@ class PermissionsManager {
     }
 
     // MARK: - Security Scoped Lifecycle
+    /// Starts accessing all granted security-scoped URLs.
+    /// Call this during app startup to restore access to previously granted directories.
+    /// Thread-safe.
     func startAccessingAllSecurityScoped() {
         guard isSandboxed() else { return }
         for entry in resolvedGrantedDirectoryEntries() {
-            if let url = entry.url, entry.isValid, !activeSecurityScopedURLs.contains(url) {
+            if let url = entry.url, entry.isValid, !containsActiveURL(url) {
                 if url.startAccessingSecurityScopedResource() {
-                    activeSecurityScopedURLs.insert(url)
+                    insertActiveURL(url)
                 }
             }
         }
     }
 
+    /// Stops accessing all security-scoped URLs.
+    /// Call this during app termination to properly release resources.
+    /// Thread-safe.
     func stopAccessingAllSecurityScoped() {
-        for url in activeSecurityScopedURLs {
+        for url in getAllActiveURLs() {
             url.stopAccessingSecurityScopedResource()
         }
-        activeSecurityScopedURLs.removeAll()
+        removeAllActiveURLs()
     }
 
-    /// Ensure an accessible security-scoped URL for the given path if it lies under a granted directory.
+    /// Ensures access to a security-scoped URL if it lies under a granted directory.
+    ///
+    /// - Parameter url: The URL to ensure access for.
+    /// - Returns: `true` if access is granted or the app is not sandboxed, `false` otherwise.
+    ///
+    /// Thread-safe. This method automatically starts accessing the security-scoped resource if needed.
     @discardableResult
     func ensureAccess(for url: URL) -> Bool {
         guard isSandboxed() else { return true }
@@ -243,8 +323,8 @@ class PermissionsManager {
         for entry in resolvedGrantedDirectoryEntries() {
             guard let grantedURL = entry.url, entry.isValid else { continue }
             if path == grantedURL.path || path.hasPrefix(grantedURL.path + "/") {
-                if !activeSecurityScopedURLs.contains(grantedURL) && grantedURL.startAccessingSecurityScopedResource() {
-                    activeSecurityScopedURLs.insert(grantedURL)
+                if !containsActiveURL(grantedURL) && grantedURL.startAccessingSecurityScopedResource() {
+                    insertActiveURL(grantedURL)
                 }
                 return true
             }
@@ -260,7 +340,9 @@ class PermissionsManager {
 
     func refreshBookmarkIfStale(for url: URL) {
         guard isSandboxed() else { return }
-        guard let datas = UserDefaults.standard.array(forKey: grantedDirectoryBookmarksKey) as? [Data] else { return }
+        let datas = SettingsStore.shared.grantedDirectoryBookmarks
+        guard !datas.isEmpty else { return }
+        
         var updated: [Data] = []
         for data in datas {
             let entry = resolveBookmarkData(data)
@@ -277,7 +359,7 @@ class PermissionsManager {
             }
             updated.append(data)
         }
-        UserDefaults.standard.set(updated, forKey: grantedDirectoryBookmarksKey)
+        SettingsStore.shared.grantedDirectoryBookmarks = updated
     }
 
     func checkPermissionStatus(for type: PermissionType) -> PermissionStatus {

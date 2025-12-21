@@ -1,93 +1,104 @@
 import Cocoa
 
-class ColorManager {
+/// Manages folder icon colors and global folder color preferences.
+///
+/// `ColorManager` provides centralized management of:
+/// - Per-folder custom colors (stored by folder name)
+/// - Global folder color applied to all folders
+/// - Color persistence via SettingsStore
+///
+/// **Usage:**
+/// ```swift
+/// // Set global folder color
+/// ColorManager.setGlobalFolderColor(NSColor.blue)
+///
+/// // Get color for specific folder
+/// let color = ColorManager.shared.getColor(forFolderName: "Documents")
+///
+/// // Set color for specific folder name
+/// ColorManager.shared.setColor(NSColor.red, forFolderName: "Documents")
+/// ```
+///
+/// **Color Priority:**
+/// 1. Per-folder custom color (if set)
+/// 2. Global folder color (if set)
+/// 3. System default
+final class ColorManager {
     static let shared = ColorManager()
-
-    private let userDefaults = UserDefaults.standard
-    private let colorKey = "GlobalFolderColors"
-    private let globalColorKey = UserDefaults.Keys.globalFolderColor.rawValue
 
     private init() {}
 
     // MARK: - Public Methods
 
+    /// Sets a custom color for a specific folder name.
+    ///
+    /// - Parameters:
+    ///   - color: The color to apply to folders with this name.
+    ///   - name: The folder name (last path component).
+    ///
+    /// Persists to SettingsStore and posts a global notification (handled by SettingsStore).
     func setColor(_ color: NSColor, forFolderName name: String) {
-        var stored = loadColorDictionary()
+        var stored = SettingsStore.shared.folderColors
         stored[name] = color.toHex()
-        persistColorDictionary(stored)
-        NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+        SettingsStore.shared.folderColors = stored
     }
 
     func getColor(forFolderName name: String) -> NSColor? {
-        guard let hex = loadColorDictionary()[name] else { return nil }
+        guard let hex = SettingsStore.shared.folderColors[name] else { return nil }
         return NSColor(hex: hex)
     }
 
-    func getColor(for url: URL) -> NSColor? {
-        if let nameColor = getColor(forFolderName: url.lastPathComponent) {
-            return nameColor
-        }
-        return getGlobalFolderColor()
-    }
-
-    func getGlobalFolderColor() -> NSColor? {
-        if let colorData = userDefaults.data(forKey: globalColorKey),
+    /// Returns the folder icon color for a given URL.
+    ///
+    /// - Returns: Custom color if set for this folder name, otherwise global folder color, or nil.
+    static func getGlobalFolderColor() -> NSColor? {
+        // Try to read Data first (new format)
+        if let colorData = SettingsStore.shared.globalFolderColor,
            let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: colorData) {
             return color
         }
 
-        if let hex = userDefaults.string(forKey: globalColorKey) {
+        // Fallback to Hex string (legacy format)
+        if let hex = SettingsStore.shared.globalFolderColorHex {
             return NSColor(hex: hex)
         }
-
+        
         return nil
     }
 
-    func setGlobalFolderColor(_ color: NSColor?) {
+    static func setGlobalFolderColor(_ color: NSColor?) {
         if let color {
             if let data = try? NSKeyedArchiver.archivedData(withRootObject: color, requiringSecureCoding: false) {
-                userDefaults.set(data, forKey: globalColorKey)
+                SettingsStore.shared.globalFolderColor = data
             } else {
-                userDefaults.set(color.toHex(), forKey: globalColorKey)
+                SettingsStore.shared.globalFolderColorHex = color.toHex()
             }
         } else {
-            userDefaults.removeObject(forKey: globalColorKey)
+            SettingsStore.shared.globalFolderColor = nil
         }
-        NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
     }
 
     func removeColor(forFolderName name: String) {
-        var stored = loadColorDictionary()
+        var stored = SettingsStore.shared.folderColors
         stored.removeValue(forKey: name)
-        persistColorDictionary(stored)
-        NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+        SettingsStore.shared.folderColors = stored
     }
 
     func clearAllColors() {
-        userDefaults.removeObject(forKey: colorKey)
-        userDefaults.removeObject(forKey: globalColorKey)
-        NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+        SettingsStore.shared.folderColors = [:]
+        SettingsStore.shared.globalFolderColor = nil
     }
 
     func getAllColoredFolderNames() -> [String] {
-        return Array(loadColorDictionary().keys)
-    }
-
-    // MARK: - Private Helpers
-
-    private func loadColorDictionary() -> [String: String] {
-        return userDefaults.dictionary(forKey: colorKey) as? [String: String] ?? [:]
-    }
-
-    private func persistColorDictionary(_ dictionary: [String: String]) {
-        userDefaults.set(dictionary, forKey: colorKey)
+        return Array(SettingsStore.shared.folderColors.keys)
     }
 }
 
-// MARK: - NSColor Extension
-
 extension NSColor {
-    func toHex() -> String {
+    /// Converts this color to a hexadecimal string representation.
+    ///
+    /// - Returns: A hex string in the format "#RRGGBB".
+    var hexString: String {
         guard let rgbColor = usingColorSpace(.deviceRGB) else {
             return "#000000"
         }
@@ -97,6 +108,11 @@ extension NSColor {
         let blue = Int(rgbColor.blueComponent * 255.0)
 
         return String(format: "#%02X%02X%02X", red, green, blue)
+    }
+    
+    /// Legacy method - use hexString property instead.
+    func toHex() -> String {
+        return hexString
     }
 
     convenience init?(hex: String) {
@@ -114,28 +130,5 @@ extension NSColor {
         let blue = CGFloat(rgb & 0x0000FF) / 255.0
 
         self.init(red: red, green: green, blue: blue, alpha: 1.0)
-    }
-}
-
-// MARK: - NSImage Grayscale Helper
-// Grayscale helper now lives in NSImage+Grayscale.swift
-
-extension NSImage {
-    /// Returns a grayscale copy of the image. If conversion fails, returns original.
-    func grayscale() -> NSImage {
-        guard let tiff = self.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiff) else {
-            return self
-        }
-
-        let ciImage = CIImage(bitmapImageRep: bitmap)
-        let filter = CIFilter(name: "CIPhotoEffectMono")
-        filter?.setValue(ciImage, forKey: kCIInputImageKey)
-        guard let output = filter?.outputImage else { return self }
-
-        let rep = NSCIImageRep(ciImage: output)
-        let img = NSImage(size: rep.size)
-        img.addRepresentation(rep)
-        return img
     }
 }

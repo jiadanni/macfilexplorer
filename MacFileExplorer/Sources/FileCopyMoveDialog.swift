@@ -11,13 +11,14 @@ class FileCopyMoveDialog: NSWindowController {
     private var statusLabel: NSTextField!
     private var titleLabel: NSTextField!
 
-    private var isPaused = false
-    private var isCancelled = false
+    @Atomic private var isPaused = false
+    @Atomic private var isCancelled = false
     private var operation: FileOperation?
 
     private var startTime: Date?
     private var totalBytesProcessed: Int64 = 0
     private var totalBytesToProcess: Int64 = 0
+    var onCompletion: (() -> Void)?
 
     enum OperationType {
         case copy
@@ -145,9 +146,12 @@ class FileCopyMoveDialog: NSWindowController {
     }
 
     @objc private func pauseButtonClicked(_ sender: NSButton) {
-        isPaused.toggle()
+        let paused = $isPaused.update { value in
+            value.toggle()
+            return value
+        }
 
-        if isPaused {
+        if paused {
             pauseButton.title = L10n.text("Resume")
             pauseButton.setAccessibilityLabel(L10n.text("Resume"))
             operation?.pause()
@@ -167,7 +171,12 @@ class FileCopyMoveDialog: NSWindowController {
         alert.addButton(withTitle: L10n.text("Continue"))
 
         if alert.runModal() == .alertFirstButtonReturn {
-            isCancelled = true
+            let shouldCancel = $isCancelled.update { cancelled in
+                if cancelled { return false }
+                cancelled = true
+                return true
+            }
+            guard shouldCancel else { return }
             operation?.cancel()
             close()
         }
@@ -220,6 +229,8 @@ extension FileCopyMoveDialog: FileOperationDelegate {
             self.statusLabel.stringValue = L10n.text("All files processed successfully")
             self.progressIndicator.doubleValue = 100
             self.pauseButton.isEnabled = false
+
+            self.onCompletion?()
 
             if let start = self.startTime {
                 OperationMetricsManager.append(type: self.operation?.type == .copy ? "advanced-copy" : "advanced-move", bytes: self.totalBytesProcessed, files: self.operation?.sourceFiles.count ?? 0, start: start, end: Date())
@@ -366,7 +377,7 @@ class FileOperation {
             // Check for conflict and handle auto-rename if needed
             var finalDestination = destinationURL
             if fileManager.fileExists(atPath: destinationURL.path) {
-                if UserDefaults.standard.bool(forKey: UserDefaults.Keys.autoRenameOnConflict.rawValue) {
+                if SettingsStore.shared.autoRenameOnConflict {
                     finalDestination = generateUniqueURL(for: destinationURL)
                 } else {
                     // Show conflict dialog (simplified for now)

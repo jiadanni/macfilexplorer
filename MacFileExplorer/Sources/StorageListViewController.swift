@@ -204,7 +204,7 @@ class StorageListViewController: NSViewController {
 
             switch sortColumn {
             case "name":
-                result = lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                result = lhs.name.safeLocalizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
             case "size":
                 result = lhs.totalSize < rhs.totalSize
             case "percentage":
@@ -216,7 +216,7 @@ class StorageListViewController: NSViewController {
                 let rhsDate = rhs.modificationDate ?? Date.distantPast
                 result = lhsDate < rhsDate
             case "type":
-                result = lhs.category.rawValue.localizedCaseInsensitiveCompare(rhs.category.rawValue) == .orderedAscending
+                result = lhs.category.rawValue.safeLocalizedCaseInsensitiveCompare(rhs.category.rawValue) == .orderedAscending
             default:
                 result = false
             }

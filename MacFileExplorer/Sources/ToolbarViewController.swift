@@ -25,9 +25,11 @@ protocol ToolbarDelegate: AnyObject {
     func toolbarDidRequestOpenInTerminal()
 }
 
-class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
+class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsStoreDelegate {
 
     weak var delegate: ToolbarDelegate?
+    
+    private let settings: SettingsStoreProtocol
 
     private var backButton: NSButton!
     private var forwardButton: NSButton!
@@ -61,23 +63,33 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
     private var currentHistoryIndex: Int = -1
     private var showingHiddenFiles: Bool = false
 
+    init(settings: SettingsStoreProtocol = SettingsStore.shared) {
+        self.settings = settings
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        self.settings = SettingsStore.shared
+        super.init(coder: coder)
+    }
+
     override func loadView() {
         // Increased height to accommodate two rows: buttons (40) + breadcrumb bar (30) + extra padding
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 84))
         setupUI()
-        // Observe preview pane visibility changes to update toggle button state
-        NotificationCenter.default.addObserver(self, selector: #selector(handlePreviewPaneToggled(_:)), name: .previewPaneToggled, object: nil)
+        // Set as delegate for settings changes
+        settings.addDelegate(self)
         // Observe toolbar settings changes so visibility toggles update live
         NotificationCenter.default.addObserver(self, selector: #selector(handleToolbarSettingsChanged(_:)), name: .toolbarSettingsDidChangeNotification, object: nil)
         // Observe accent color changes
         NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange), name: .accentColorDidChangeNotification, object: nil)
         // Initial state update based on persisted preference
-        let initiallyShowingPreview = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
+        let initiallyShowingPreview = settings.previewPaneVisible
         updatePreviewPaneDisplay(showing: initiallyShowingPreview)
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self, name: .previewPaneToggled, object: nil)
+        settings.removeDelegate(self)
         NotificationCenter.default.removeObserver(self, name: .accentColorDidChangeNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: .toolbarSettingsDidChangeNotification, object: nil)
     }
@@ -93,16 +105,16 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
         bottomBorder.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(bottomBorder)
 
-        // Load toolbar visibility settings from UserDefaults
-        let showBackForward = UserDefaults.standard.object(forKey: UserDefaults.Keys.showBackForwardButtons.rawValue) as? Bool ?? true
-        let showViewMode = UserDefaults.standard.object(forKey: UserDefaults.Keys.showViewModeButton.rawValue) as? Bool ?? true
-        let showHiddenFiles = UserDefaults.standard.object(forKey: UserDefaults.Keys.showHiddenFilesButton.rawValue) as? Bool ?? true
-        let showSplit = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSplitButtons.rawValue) as? Bool ?? true
-        let showPreviewPane = UserDefaults.standard.object(forKey: UserDefaults.Keys.showPreviewPaneButton.rawValue) as? Bool ?? true
-        let showNewFolder = UserDefaults.standard.object(forKey: UserDefaults.Keys.showNewFolderButton.rawValue) as? Bool ?? true
-        let showSort = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSortButton.rawValue) as? Bool ?? true
-        let showStorageAnalyzer = UserDefaults.standard.object(forKey: "showStorageAnalyzerButton") as? Bool ?? true
-        let showOpenTerminal = UserDefaults.standard.object(forKey: UserDefaults.Keys.showOpenTerminalButton.rawValue) as? Bool ?? true
+        // Load toolbar visibility settings from SettingsStore
+        let showBackForward = settings.showBackForwardButtons
+        let showViewMode = settings.showViewModeButton
+        let showHiddenFiles = settings.showHiddenFilesButton
+        let showSplit = settings.showSplitButtons
+        let showPreviewPane = settings.showPreviewPaneButton
+        let showNewFolder = settings.showNewFolderButton
+        let showSort = settings.showSortButton
+        let showStorageAnalyzer = settings.showStorageAnalyzerButton
+        let showOpenTerminal = settings.showOpenTerminalButton
 
         // Back button
         backButton = NSButton()
@@ -515,15 +527,15 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
 
     @objc private func handleToolbarSettingsChanged(_ notification: Notification) {
         // Re-read visibility preferences and apply to UI elements
-        let showBackForward = UserDefaults.standard.object(forKey: UserDefaults.Keys.showBackForwardButtons.rawValue) as? Bool ?? true
-        let showViewMode = UserDefaults.standard.object(forKey: UserDefaults.Keys.showViewModeButton.rawValue) as? Bool ?? true
-        let showHiddenFiles = UserDefaults.standard.object(forKey: UserDefaults.Keys.showHiddenFilesButton.rawValue) as? Bool ?? true
-        let showSplit = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSplitButtons.rawValue) as? Bool ?? true
-        let showPreviewPane = UserDefaults.standard.object(forKey: UserDefaults.Keys.showPreviewPaneButton.rawValue) as? Bool ?? true
-        let showNewFolder = UserDefaults.standard.object(forKey: UserDefaults.Keys.showNewFolderButton.rawValue) as? Bool ?? true
-        let showSort = UserDefaults.standard.object(forKey: UserDefaults.Keys.showSortButton.rawValue) as? Bool ?? true
-        let showStorageAnalyzer = UserDefaults.standard.object(forKey: "showStorageAnalyzerButton") as? Bool ?? true
-        let showOpenTerminal = UserDefaults.standard.object(forKey: UserDefaults.Keys.showOpenTerminalButton.rawValue) as? Bool ?? true
+        let showBackForward = settings.showBackForwardButtons
+        let showViewMode = settings.showViewModeButton
+        let showHiddenFiles = settings.showHiddenFilesButton
+        let showSplit = settings.showSplitButtons
+        let showPreviewPane = settings.showPreviewPaneButton
+        let showNewFolder = settings.showNewFolderButton
+        let showSort = settings.showSortButton
+        let showStorageAnalyzer = settings.showStorageAnalyzerButton
+        let showOpenTerminal = settings.showOpenTerminalButton
 
         backButton.isHidden = !showBackForward
         forwardButton.isHidden = !showBackForward
@@ -639,8 +651,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
         splitHorizontalButton.isEnabled = canAddMore
 
         if !canAddMore {
-            let maxPanes = UserDefaults.standard.integer(forKey: UserDefaults.Keys.maximumPanes.rawValue)
-            let limit = maxPanes > 0 ? maxPanes : 2
+            let limit = settings.maximumPanes
             splitVerticalButton.toolTip = "Maximum panes reached (\(limit)). Increase in Settings > Advanced."
             splitHorizontalButton.toolTip = "Maximum panes reached (\(limit)). Increase in Settings > Advanced."
         } else {
@@ -666,6 +677,16 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
                 previewPaneButton.toolTip = "Show Preview Pane"
             }
         }
+    }
+
+    // MARK: - Testing
+
+    var testingHiddenFilesButtonState: NSControl.StateValue {
+        hiddenFilesButton.state
+    }
+
+    var testingPreviewPaneButtonToolTip: String? {
+        previewPaneButton.toolTip
     }
     
     override func viewDidLayout() {
@@ -698,8 +719,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
         for btn in allButtons {
             guard let b = btn else { continue }
             
-            let key = buttonToPreferenceKey(b)
-            let userWantsVisible = key == nil || (UserDefaults.standard.object(forKey: key!) as? Bool ?? true)
+            let userWantsVisible = isButtonVisible(b)
 
             if !userWantsVisible {
                 if !b.isHidden { b.isHidden = true }
@@ -756,6 +776,31 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
             return nil
         }
     }
+    
+    private func isButtonVisible(_ button: NSButton) -> Bool {
+        switch button {
+        case backButton, forwardButton:
+            return settings.showBackForwardButtons
+        case listModeButton, iconsModeButton, columnsModeButton, windowsListModeButton:
+            return settings.showViewModeButton
+        case hiddenFilesButton:
+            return settings.showHiddenFilesButton
+        case splitVerticalButton, splitHorizontalButton:
+            return settings.showSplitButtons
+        case previewPaneButton:
+            return settings.showPreviewPaneButton
+        case newFolderButton:
+            return settings.showNewFolderButton
+        case sortButton:
+            return settings.showSortButton
+        case storageAnalyzerButton:
+            return settings.showStorageAnalyzerButton
+        case openTerminalButton:
+            return settings.showOpenTerminalButton
+        default:
+            return true
+        }
+    }
 
     @objc private func overflowButtonClicked(_ sender: NSButton) {
         let location = NSPoint(x: 0, y: sender.bounds.height)
@@ -764,7 +809,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
 
     @objc private func accentColorDidChange() {
         // Update preview pane button color if it's active
-        let isShowingPreview = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
+        let isShowingPreview = settings.previewPaneVisible
         if isShowingPreview {
             previewPaneButton.contentTintColor = NSColor.customAccentColor
         }
@@ -774,68 +819,93 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
         // Clear existing breadcrumbs
         breadcrumbStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
+        // 1. Build full list of button components and separators
+        var components: [NSView] = []
         let pathComponents = url.pathComponents
-        var displayComponents: [String] = []
         var breadcrumbURLs: [URL] = []
 
-        if pathComponents.count == 1 && pathComponents[0] == "/" {
-            // Handle root path "/"
-            displayComponents.append("/")
-            breadcrumbURLs.append(URL(fileURLWithPath: "/"))
-        } else if pathComponents.count > 1 {
-            // Merge "/" with the first directory component
-            let firstCombinedComponent = pathComponents[0] + pathComponents[1] // e.g., "/Applications"
-            displayComponents.append(firstCombinedComponent)
-            breadcrumbURLs.append(URL(fileURLWithPath: pathComponents[0]).appendingPathComponent(pathComponents[1]))
+        if pathComponents.isEmpty { return }
 
-            // Add remaining components
-            guard var currentPathURL = breadcrumbURLs.last else { return }
-            for i in 2..<pathComponents.count {
-                let component = pathComponents[i]
-                displayComponents.append(component)
-                currentPathURL.appendPathComponent(component)
-                breadcrumbURLs.append(currentPathURL)
-            }
+        // Generate URL for each component
+        var currentURL = URL(fileURLWithPath: "/")
+        breadcrumbURLs.append(currentURL)
+        for i in 1..<pathComponents.count {
+            currentURL.appendPathComponent(pathComponents[i])
+            breadcrumbURLs.append(currentURL)
         }
 
-        // Create breadcrumb buttons
-        for (index, component) in displayComponents.enumerated() {
-            // Add separator (except before first item)
+        for (index, component) in pathComponents.enumerated() {
             if index > 0 {
                 let separator = NSTextField(labelWithString: " ▸ ")
                 separator.textColor = .secondaryLabelColor
                 separator.font = NSFont.systemFont(ofSize: 12)
-                breadcrumbStackView.addArrangedSubview(separator)
+                components.append(separator)
             }
 
-            // Create breadcrumb button
             let button = NSButton()
-            let originalComponent = component
-            // Truncate long path segments for display, keep tooltip full
-            var displayTitle = originalComponent
-            if originalComponent.count > 22 {
-                let prefix = originalComponent.prefix(10)
-                let suffix = originalComponent.suffix(8)
-                displayTitle = String(prefix) + "…" + String(suffix)
-            }
-            button.title = displayTitle
+            let title = (component == "/") ? " " : component // Use a space for the root slash for better clicking
+            button.title = title
             button.bezelStyle = .roundRect
             button.isBordered = false
             button.font = NSFont.systemFont(ofSize: 12)
             button.target = self
             button.action = #selector(breadcrumbClicked(_:))
-            button.toolTip = originalComponent
+            button.toolTip = url.pathComponents[0...index].joined(separator: "/").dropFirst().description
             button.setContentHuggingPriority(.defaultLow, for: .horizontal)
             button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             button.lineBreakMode = .byTruncatingMiddle
-            
-            // Set the URL for this component
+
             if index < breadcrumbURLs.count {
                 button.identifier = NSUserInterfaceItemIdentifier(breadcrumbURLs[index].path)
             }
-
-            breadcrumbStackView.addArrangedSubview(button)
+            components.append(button)
         }
+
+        // 2. Measure total width and available width
+        let totalWidth = components.reduce(0) { $0 + $1.intrinsicContentSize.width }
+        let availableWidth = breadcrumbScrollView.bounds.width - 12 // 6pt padding on each side
+
+        // 3. If oversized, replace middle components with an ellipsis
+        if totalWidth > availableWidth {
+            var finalComponents: [NSView] = []
+            var currentWidth: CGFloat = 0
+
+            // Ellipsis button
+            let ellipsis = NSTextField(labelWithString: " ... ")
+            ellipsis.textColor = .secondaryLabelColor
+            ellipsis.font = NSFont.systemFont(ofSize: 12)
+            let ellipsisWidth = ellipsis.intrinsicContentSize.width
+
+            // Add first component (root)
+            if let first = components.first {
+                finalComponents.append(first)
+                currentWidth += first.intrinsicContentSize.width
+            }
+
+            // Add components from the end until space runs out
+            var tail: [NSView] = []
+            for i in stride(from: components.count - 1, to: 0, by: -1) {
+                let component = components[i]
+                let componentWidth = component.intrinsicContentSize.width
+                if currentWidth + ellipsisWidth + componentWidth > availableWidth {
+                    break
+                }
+                tail.insert(component, at: 0)
+                currentWidth += componentWidth
+            }
+
+            // Add ellipsis if there's a gap
+            finalComponents.append(ellipsis)
+            finalComponents.append(contentsOf: tail)
+            
+            components = finalComponents
+        }
+        
+        // 4. Add final components to stack view
+        components.forEach(breadcrumbStackView.addArrangedSubview)
+
+        // 5. Scroll to the end to show the most recent path component
+        breadcrumbScrollView.documentView?.enclosingScrollView?.contentView.scroll(to: NSPoint(x: breadcrumbStackView.bounds.width, y: 0))
     }
 
     // MARK: - Actions
@@ -1022,12 +1092,17 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate {
     }
 }
 
-// MARK: - Notification Handling
+// MARK: - SettingsStoreDelegate
 extension ToolbarViewController {
-    @objc private func handlePreviewPaneToggled(_ notification: Notification) {
-        // Determine current visibility from UserDefaults (since notification carries no userInfo)
-        let showing = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showPreviewPane.rawValue)
-        updatePreviewPaneDisplay(showing: showing)
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, previewPaneVisibilityDidChange isVisible: Bool) {
+        updatePreviewPaneDisplay(showing: isVisible)
+    }
+    
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, hiddenFilesStateDidChange isVisible: Bool) {
+        // Update hidden files button state if it exists
+        if let button = hiddenFilesButton {
+            button.state = isVisible ? .on : .off
+        }
     }
 }
 
