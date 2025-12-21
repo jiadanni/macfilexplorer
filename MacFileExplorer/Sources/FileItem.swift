@@ -22,15 +22,30 @@ import Cocoa
 class FileItem: Hashable {
     /// The file system URL for this item.
     let url: URL
-    
+
     /// The file or directory name (last path component).
     let name: String
-    
+
     /// Whether this item represents a directory.
     let isDirectory: Bool
-    
+
     /// Child items if this is a directory. `nil` if not loaded, empty array if directory is empty.
-    var children: [FileItem]?
+    /// **Thread-safe**: Protected by childrenLock for concurrent access.
+    private var _children: [FileItem]?
+    private let childrenLock = NSLock()
+
+    var children: [FileItem]? {
+        get {
+            childrenLock.lock()
+            defer { childrenLock.unlock() }
+            return _children
+        }
+        set {
+            childrenLock.lock()
+            defer { childrenLock.unlock() }
+            _children = newValue
+        }
+    }
     
     /// Tracks whether we've enumerated children from the filesystem.
     /// An empty `children` array alone is ambiguous (could mean not-loaded or empty directory).
@@ -73,9 +88,21 @@ class FileItem: Hashable {
     ///
     /// If user has disabled file extensions (via SettingsStore), this returns
     /// the name without extension for files. Directories always show full name.
+    ///
+    /// **Backward compatibility property** - accesses SettingsStore.shared.
+    /// For better testability, use `displayName(showExtensions:)` method instead.
     var displayName: String {
-        let showExtensions = SettingsStore.shared.showFileExtensions
+        return displayName(showExtensions: SettingsStore.shared.showFileExtensions)
+    }
 
+    /// Returns display name with explicitly provided extension visibility preference.
+    ///
+    /// This method breaks the circular dependency on SettingsStore and allows
+    /// testability by passing the extension preference directly.
+    ///
+    /// - Parameter showExtensions: Whether to show file extensions
+    /// - Returns: The display name for this file item
+    func displayName(showExtensions: Bool) -> String {
         if showExtensions || isDirectory {
             return name
         } else {
@@ -108,11 +135,33 @@ class FileItem: Hashable {
             
             // If it's a symbolic link (Google Drive File Stream uses symlinks), resolve it
             if let isSymlink = resourceValues.isSymbolicLink, isSymlink {
-                if let destination = try? FileManager.default.destinationOfSymbolicLink(atPath: url.path) {
+                do {
+                    let destination = try FileManager.default.destinationOfSymbolicLink(atPath: url.path)
                     var symlinkIsDir: ObjCBool = false
-                    let destinationPath = destination.hasPrefix("/") ? destination : url.deletingLastPathComponent().appendingPathComponent(destination).path
-                    FileManager.default.fileExists(atPath: destinationPath, isDirectory: &symlinkIsDir)
+
+                    // Resolve symlink target safely using resolvingSymlinksInPath
+                    let symlinksResolved = URL(fileURLWithPath: destination, isDirectory: false)
+                        .resolvingSymlinksInPath()
+
+                    // If relative symlink, resolve relative to the parent of the symlink
+                    let resolvedPath: String
+                    if destination.hasPrefix("/") {
+                        // Absolute path - use as-is
+                        resolvedPath = destination
+                    } else {
+                        // Relative path - resolve relative to symlink's parent directory
+                        // Use URL path operations to avoid string concatenation vulnerabilities
+                        let parentURL = url.deletingLastPathComponent()
+                        let resolvedURL = parentURL.appendingPathComponent(destination).standardizedFileURL
+                        resolvedPath = resolvedURL.path
+                    }
+
+                    FileManager.default.fileExists(atPath: resolvedPath, isDirectory: &symlinkIsDir)
                     detectedAsDirectory = symlinkIsDir.boolValue
+                } catch {
+                    // If we can't resolve the symlink, trust the resource values instead
+                    // This is safer than guessing or failing silently
+                    debugLog("Warning: Failed to resolve symlink at \(url.path): \(error)")
                 }
             }
             

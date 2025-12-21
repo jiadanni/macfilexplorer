@@ -1736,16 +1736,19 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     @objc private func contextMenuCut(_ sender: Any) {
         let items = getSelectedItems()
         guard !items.isEmpty else { return }
-        
+
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.declareTypes([.fileURL], owner: nil)
-        
+
+        // Declare both fileURL and our custom cut marker type
+        let customCutMarkerType = NSPasteboard.PasteboardType("com.macfileexplorer.cutMarker")
+        pasteboard.declareTypes([.fileURL, customCutMarkerType], owner: nil)
+
         let fileURLs = items.map { $0.url as NSURL }
         pasteboard.writeObjects(fileURLs)
-        
+
         // Add a custom type to indicate it's a cut operation
-        pasteboard.setString("cut", forType: .string)
+        pasteboard.setString("cut", forType: customCutMarkerType)
     }
 
     @objc private func contextMenuMoveTo(_ sender: Any) {
@@ -1770,11 +1773,13 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         let pasteboard = NSPasteboard.general
         guard let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], !fileURLs.isEmpty else { return }
 
-        let isCut = pasteboard.string(forType: .string) == "cut"
+        // Check for our custom cut marker type
+        let customCutMarkerType = NSPasteboard.PasteboardType("com.macfileexplorer.cutMarker")
+        let isCut = pasteboard.string(forType: customCutMarkerType) == "cut"
         let operation: FileOperationType = isCut ? .move : .copy
 
         performFileOperation(operation, items: fileURLs, destination: currentDirectory)
-        
+
         // Clear pasteboard after a cut operation
         if isCut {
             pasteboard.clearContents()

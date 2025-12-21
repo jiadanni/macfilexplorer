@@ -59,9 +59,9 @@ final class FileOperationsManager {
             
             confirmationDialog.onCompletion = { [weak self] in
                 guard let self else { return }
-                delegate?.fileOperationsManagerDidRequestRefresh(self)
+                self.delegate?.fileOperationsManagerDidRequestRefresh(self)
                 if operation == .move, let sourcePane {
-                    delegate?.fileOperationsManagerDidRequestRefreshSource(self, sourcePane: sourcePane)
+                    self.delegate?.fileOperationsManagerDidRequestRefreshSource(self, sourcePane: sourcePane)
                 }
             }
             
