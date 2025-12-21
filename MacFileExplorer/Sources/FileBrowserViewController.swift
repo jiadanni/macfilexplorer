@@ -703,137 +703,149 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
         switch viewMode {
         case .list:
-            // Use outlineView for list view
-            if scrollView.superview == nil {
-                containerView.addSubview(scrollView)
-            }
-            scrollView.isHidden = false
-            
-            if !previewVisible {
-                activeConstraints = [
-                    scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                    scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                    scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                    scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-                ]
-                NSLayoutConstraint.activate(activeConstraints)
-            }
-            outlineView.reloadData() // Reloads the outline view
-
-            // Use dispatch to ensure window is ready
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.view.window?.makeFirstResponder(self.view)
-            }
-            
-        case .icons, .windowsList: // Handle both icons and windowsList with collectionView
-            // Ensure collectionView is set up
-            if collectionView == nil {
-                setupCollectionView()
-            }
-            
-            // Safety check
-            guard let collectionView = collectionView, let collectionViewScrollView = collectionViewScrollView else {
-                debugLog("Error: CollectionView not properly initialized")
-                currentViewMode = .list
-                displayFiles(for: .list)
-                return
-            }
-            
-            // Add to container if not in split view (preview will handle embedding)
-            if collectionViewScrollView.superview == nil && !previewVisible {
-                containerView.addSubview(collectionViewScrollView)
-            }
-            collectionViewScrollView.isHidden = false
-            
-            // Only set constraints if preview is not visible (preview split will manage layout)
-            if !previewVisible {
-                activeConstraints = [
-                    collectionViewScrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                    collectionViewScrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                    collectionViewScrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                    collectionViewScrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-                ]
-                NSLayoutConstraint.activate(activeConstraints)
-            }
-
-            // Configure layout based on viewMode
-            if viewMode == .windowsList {
-                let flowLayout = NSCollectionViewFlowLayout()
-                let baseWidth: CGFloat = 150
-                let baseHeight: CGFloat = 20
-                let baseLineSpacing: CGFloat = 2
-                let baseInteritemSpacing: CGFloat = 10
-                flowLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
-                flowLayout.sectionInset = NSEdgeInsets(top: 5, left: 5, bottom: 5, right: 5)
-                flowLayout.minimumLineSpacing = baseLineSpacing * zoomLevel
-                flowLayout.minimumInteritemSpacing = baseInteritemSpacing * zoomLevel
-                flowLayout.scrollDirection = .horizontal
-                collectionView.collectionViewLayout = flowLayout
-                freeFormLayout = nil
-            } else { // .icons mode
-                if let freeFormLayout = freeFormLayout {
-                    // Update free-form layout item size and spacing
-                    let baseWidth: CGFloat = 110  // Matches icon base: 85pt + padding
-                    let baseHeight: CGFloat = 130 // Matches icon base: 85pt + spacing + label
-                    let baseSpacing: CGFloat = 10
-                    freeFormLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
-                    freeFormLayout.gridSpacing = baseSpacing * zoomLevel
-                    freeFormLayout.invalidateLayout()
-                } else {
-                    // Fallback to flow layout (shouldn't happen)
-                    let flowLayout = NSCollectionViewFlowLayout()
-                    let baseWidth: CGFloat = 110
-                    let baseHeight: CGFloat = 130
-                    let baseSpacing: CGFloat = 10
-                    flowLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
-                    flowLayout.sectionInset = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
-                    flowLayout.minimumLineSpacing = baseSpacing * zoomLevel
-                    flowLayout.minimumInteritemSpacing = baseSpacing * zoomLevel
-                    flowLayout.scrollDirection = .vertical
-                    collectionView.collectionViewLayout = flowLayout
-                }
-            }
-
-            collectionView.reloadData()
-
-            // Use dispatch to ensure window is ready
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                self.view.window?.makeFirstResponder(self.view)
-            }
-            
+            displayListView()
+        case .icons, .windowsList:
+            displayCollectionView(for: viewMode)
         case .columns:
-            // Use NSBrowser for columns view
-            withBrowserReady { [weak self] browserView in
-                guard let self else { return }
-
-                if browserView.superview == nil && !previewVisible {
-                    containerView.addSubview(browserView)
-                }
-                browserView.isHidden = false
-                
-                if !previewVisible {
-                    activeConstraints = [
-                        browserView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                        browserView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                        browserView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                        browserView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-                    ]
-                    NSLayoutConstraint.activate(activeConstraints)
-                }
-                
-                // Force layout update and load current directory into column zero
-                debugLog("displayFiles: Setting up browser view, rootItem has \(self.rootItem?.children?.count ?? 0) children")
-                browserView.layoutSubtreeIfNeeded()
-                browserView.loadColumnZero()
-                browserView.setNeedsDisplay(browserView.bounds)
-
-                self.view.window?.makeFirstResponder(self.view)
-            }
+            displayColumnsView()
         }
+        
         // If preview visible, ensure split embedding stays consistent after view switch
         if previewVisible { ensureContentInPreviewSplit() }
+    }
+
+    private func displayListView() {
+        // Use outlineView for list view
+        if scrollView.superview == nil {
+            containerView.addSubview(scrollView)
+        }
+        scrollView.isHidden = false
+        
+        if !previewVisible {
+            activeConstraints = [
+                scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+            ]
+            NSLayoutConstraint.activate(activeConstraints)
+        }
+        outlineView.reloadData()
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.view.window?.makeFirstResponder(self.view)
+        }
+    }
+
+    private func displayCollectionView(for viewMode: ViewMode) {
+        // Ensure collectionView is set up
+        if collectionView == nil {
+            setupCollectionView()
+        }
+        
+        // Safety check
+        guard let collectionView = collectionView, let collectionViewScrollView = collectionViewScrollView else {
+            debugLog("Error: CollectionView not properly initialized")
+            currentViewMode = .list
+            displayFiles(for: .list)
+            return
+        }
+        
+        // Add to container if not in split view (preview will handle embedding)
+        if collectionViewScrollView.superview == nil && !previewVisible {
+            containerView.addSubview(collectionViewScrollView)
+        }
+        collectionViewScrollView.isHidden = false
+        
+        // Only set constraints if preview is not visible (preview split will manage layout)
+        if !previewVisible {
+            activeConstraints = [
+                collectionViewScrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                collectionViewScrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                collectionViewScrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                collectionViewScrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+            ]
+            NSLayoutConstraint.activate(activeConstraints)
+        }
+
+        configureCollectionViewLayout(for: viewMode, collectionView: collectionView)
+        
+        collectionView.reloadData()
+
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.view.window?.makeFirstResponder(self.view)
+        }
+    }
+
+    private func configureCollectionViewLayout(for viewMode: ViewMode, collectionView: NSCollectionView) {
+        if viewMode == .windowsList {
+            let flowLayout = NSCollectionViewFlowLayout()
+            let baseWidth: CGFloat = 150
+            let baseHeight: CGFloat = 20
+            let baseLineSpacing: CGFloat = 2
+            let baseInteritemSpacing: CGFloat = 10
+            flowLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
+            flowLayout.sectionInset = NSEdgeInsets(top: 5, left: 5, bottom: 5, right: 5)
+            flowLayout.minimumLineSpacing = baseLineSpacing * zoomLevel
+            flowLayout.minimumInteritemSpacing = baseInteritemSpacing * zoomLevel
+            flowLayout.scrollDirection = .horizontal
+            collectionView.collectionViewLayout = flowLayout
+            freeFormLayout = nil
+        } else { // .icons mode
+            if let freeFormLayout = freeFormLayout {
+                // Update free-form layout item size and spacing
+                let baseWidth: CGFloat = 110  // Matches icon base: 85pt + padding
+                let baseHeight: CGFloat = 130 // Matches icon base: 85pt + spacing + label
+                let baseSpacing: CGFloat = 10
+                freeFormLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
+                freeFormLayout.gridSpacing = baseSpacing * zoomLevel
+                freeFormLayout.invalidateLayout()
+            } else {
+                // Fallback to flow layout (shouldn't happen)
+                let flowLayout = NSCollectionViewFlowLayout()
+                let baseWidth: CGFloat = 110
+                let baseHeight: CGFloat = 130
+                let baseSpacing: CGFloat = 10
+                flowLayout.itemSize = NSSize(width: baseWidth * zoomLevel, height: baseHeight * zoomLevel)
+                flowLayout.sectionInset = NSEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+                flowLayout.minimumLineSpacing = baseSpacing * zoomLevel
+                flowLayout.minimumInteritemSpacing = baseSpacing * zoomLevel
+                flowLayout.scrollDirection = .vertical
+                collectionView.collectionViewLayout = flowLayout
+            }
+        }
+    }
+
+    private func displayColumnsView() {
+        // Use NSBrowser for columns view
+        withBrowserReady { [weak self] browserView in
+            guard let self else { return }
+
+            if browserView.superview == nil && !previewVisible {
+                containerView.addSubview(browserView)
+            }
+            browserView.isHidden = false
+            
+            if !previewVisible {
+                activeConstraints = [
+                    browserView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                    browserView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                    browserView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                    browserView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+                ]
+                NSLayoutConstraint.activate(activeConstraints)
+            }
+            
+            // Force layout update and load current directory into column zero
+            debugLog("displayFiles: Setting up browser view, rootItem has \(self.rootItem?.children?.count ?? 0) children")
+            browserView.layoutSubtreeIfNeeded()
+            browserView.loadColumnZero()
+            browserView.setNeedsDisplay(browserView.bounds)
+
+            self.view.window?.makeFirstResponder(self.view)
+        }
     }
 
     private func setupCollectionView() {
