@@ -48,6 +48,7 @@ class StorageAnalyzerEngine {
         var followSymlinks: Bool = false
         var skipPackages: Bool = false
         var minimumSize: Int64 = 0 // Skip items smaller than this
+        var maxDepth: Int = 100 // Prevent unbounded recursion
 
         static let `default` = ScanOptions()
     }
@@ -167,9 +168,10 @@ class StorageAnalyzerEngine {
 
             var itemsScanned = 0
             var totalSize: Int64 = 0
+            var visitedPaths = Set<String>()
 
-            // Scan recursively
-            try scanDirectory(item: root, itemsScanned: &itemsScanned, totalSize: &totalSize)
+            // Scan recursively with cycle detection
+            try scanDirectory(item: root, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: 0, visitedPaths: &visitedPaths)
 
             // Check if cancelled
             if isCancelled {
@@ -201,13 +203,19 @@ class StorageAnalyzerEngine {
         }
     }
 
-    private func scanDirectory(item: StorageItem, itemsScanned: inout Int, totalSize: inout Int64) throws {
+    private func scanDirectory(item: StorageItem, itemsScanned: inout Int, totalSize: inout Int64, currentDepth: Int = 0, visitedPaths: inout Set<String>) throws {
         // Check for cancellation
         if isCancelled { return }
 
         // Handle pause
         waitIfPaused()
         if isCancelled { return }
+
+        // Depth limit to prevent unbounded recursion
+        guard currentDepth < options.maxDepth else {
+            debugLog("Max recursion depth \(options.maxDepth) reached at \(item.url.path)")
+            return
+        }
 
         guard item.isDirectory else {
             // File - just count it
@@ -216,6 +224,14 @@ class StorageAnalyzerEngine {
             reportProgress(path: item.url.path, itemsScanned: itemsScanned, totalSize: totalSize)
             return
         }
+
+        // Cycle detection using canonical paths
+        let canonicalPath = item.url.standardizedFileURL.path
+        guard !visitedPaths.contains(canonicalPath) else {
+            debugLog("Cycle detected at \(canonicalPath), skipping")
+            return
+        }
+        visitedPaths.insert(canonicalPath)
 
         // Directory - enumerate contents
         let fileManager = FileManager.default
@@ -275,9 +291,9 @@ class StorageAnalyzerEngine {
                 let childFileItem = FileItem(url: fileURL)
                 let childStorageItem = StorageItem(fileItem: childFileItem)
 
-                // Recurse if directory
+                // Recurse if directory (with depth check and cycle detection)
                 if childStorageItem.isDirectory {
-                    try scanDirectory(item: childStorageItem, itemsScanned: &itemsScanned, totalSize: &totalSize)
+                    try scanDirectory(item: childStorageItem, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: currentDepth + 1, visitedPaths: &visitedPaths)
                 } else {
                     itemsScanned += 1
                     totalSize += childStorageItem.totalSize

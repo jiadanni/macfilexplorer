@@ -29,6 +29,7 @@ final class FileSystemMonitor {
     private var fileDescriptor: CInt = -1
     private var source: DispatchSourceFileSystemObject?
     private let callback: () -> Void
+    private let queue = DispatchQueue(label: "com.macfileexplorer.filesystemmonitor", qos: .background)
 
     /// Initializes a file system monitor for the specified directory.
     ///
@@ -66,7 +67,7 @@ final class FileSystemMonitor {
         source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fileDescriptor,
             eventMask: [.write, .delete, .rename, .link],
-            queue: DispatchQueue.global(qos: .background)
+            queue: queue
         )
 
         source?.setEventHandler { [weak self] in
@@ -74,7 +75,10 @@ final class FileSystemMonitor {
         }
 
         source?.setCancelHandler { [weak self] in
-            guard let fd = self?.fileDescriptor else { return }
+            guard let self = self, self.fileDescriptor >= 0 else { return }
+            let fd = self.fileDescriptor
+            // Ensure file descriptor is marked invalid before closing
+            self.fileDescriptor = -1
             close(fd)
         }
 
@@ -82,7 +86,14 @@ final class FileSystemMonitor {
     }
 
     private func stopMonitoring() {
+        // Cancel the source, which triggers the cancel handler to close the fd
         source?.cancel()
         source = nil
+        
+        // Safety: ensure fd is closed if cancel handler wasn't called
+        if fileDescriptor >= 0 {
+            close(fileDescriptor)
+            fileDescriptor = -1
+        }
     }
 }

@@ -20,9 +20,23 @@ final class FileOperationsManager {
     // MARK: - Validation
 
     func isValidDestination(_ destination: URL, for urls: [URL]) -> Bool {
+        // Use canonical paths to prevent path traversal bypasses
+        let canonicalDest = destination.standardizedFileURL
+        
         for source in urls {
-            if source == destination { return false }
-            if destination.path.hasPrefix(source.path + "/") { return false }
+            let canonicalSource = source.standardizedFileURL
+            
+            // Check for exact match
+            if canonicalSource == canonicalDest { return false }
+            
+            // Check if destination is a child of source using path components
+            let sourceComponents = canonicalSource.pathComponents
+            let destComponents = canonicalDest.pathComponents
+            
+            if destComponents.count > sourceComponents.count {
+                let isChild = zip(sourceComponents, destComponents).allSatisfy { $0 == $1 }
+                if isChild { return false }
+            }
         }
         return true
     }
@@ -105,34 +119,48 @@ final class FileOperationsManager {
                         }
                     }
                 } else if var targetURL = targetURL {
-                    // Handle name conflicts
-                    if autoRename && fileManager.fileExists(atPath: targetURL.path) {
-                        var counter = 1
-                        let nameWithoutExt = (sourceURL.lastPathComponent as NSString).deletingPathExtension
-                        let ext = (sourceURL.lastPathComponent as NSString).pathExtension
-                        repeat {
-                            let newName = ext.isEmpty ? "\(nameWithoutExt) \(counter)" : "\(nameWithoutExt) \(counter).\(ext)"
-                            targetURL = (targetURL.deletingLastPathComponent()).appendingPathComponent(newName)
-                            counter += 1
-                        } while fileManager.fileExists(atPath: targetURL.path)
+                    // Handle name conflicts atomically via operation error handling
+                    // Prevent TOCTOU race: let FileManager report the error, then auto-rename if enabled
+                    var finalURL = targetURL
+                    var attemptCount = 0
+                    let maxAttempts = 1000
+                    var operationSucceeded = false
+                    var lastError: Error? = nil
+                    
+                    while attemptCount < maxAttempts && !operationSucceeded {
+                        do {
+                            if operation == .copy {
+                                try fileManager.copyItem(at: sourceURL, to: finalURL)
+                                operationSucceeded = true
+                                // Calculate size for metrics
+                                if let attrs = try? fileManager.attributesOfItem(atPath: sourceURL.path) {
+                                    totalSize += (attrs[.size] as? Int64) ?? 0
+                                }
+                            } else { // .move
+                                try fileManager.moveItem(at: sourceURL, to: finalURL)
+                                operationSucceeded = true
+                                // Calculate size for metrics
+                                if let attrs = try? fileManager.attributesOfItem(atPath: sourceURL.path) {
+                                    totalSize += (attrs[.size] as? Int64) ?? 0
+                                }
+                            }
+                        } catch CocoaError.fileWriteFileExists where autoRename && attemptCount < maxAttempts - 1 {
+                            // Atomic error: file exists and auto-rename is enabled, try with new name
+                            let nameWithoutExt = (sourceURL.lastPathComponent as NSString).deletingPathExtension
+                            let ext = (sourceURL.lastPathComponent as NSString).pathExtension
+                            let newName = ext.isEmpty ? "\(nameWithoutExt) \(attemptCount + 1)" : "\(nameWithoutExt) \(attemptCount + 1).\(ext)"
+                            finalURL = (targetURL.deletingLastPathComponent()).appendingPathComponent(newName)
+                            attemptCount += 1
+                        } catch {
+                            lastError = error
+                            break
+                        }
                     }
                     
-                    do {
-                        if operation == .copy {
-                            try fileManager.copyItem(at: sourceURL, to: targetURL)
-                            // Calculate size for metrics if needed
-                             if let attrs = try? fileManager.attributesOfItem(atPath: sourceURL.path) {
-                                totalSize += (attrs[.size] as? Int64) ?? 0
-                            }
-                        } else { // .move
-                             if let attrs = try? fileManager.attributesOfItem(atPath: sourceURL.path) {
-                                totalSize += (attrs[.size] as? Int64) ?? 0
-                            }
-                            try fileManager.moveItem(at: sourceURL, to: targetURL)
-                        }
-                    } catch {
+                    if !operationSucceeded {
+                        let displayError = lastError ?? NSError(domain: NSCocoaErrorDomain, code: NSFileWriteUnknownError, userInfo: [NSLocalizedDescriptionKey: "Failed after \(attemptCount) rename attempts"])
                         DispatchQueue.main.async {
-                            self.delegate?.fileOperationsManager(self, didRequestPresentError: "Failed to \(operation.rawValue) '\(sourceURL.lastPathComponent)': \(error.localizedDescription)")
+                            self.delegate?.fileOperationsManager(self, didRequestPresentError: "Failed to \(operation.rawValue) '\(sourceURL.lastPathComponent)': \(displayError.localizedDescription)")
                         }
                     }
                 }

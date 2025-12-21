@@ -2050,3 +2050,30 @@ extension FileBrowserViewController {
         )
     }
 }
+
+// MARK: - Filter Delegate Support
+
+extension FileBrowserViewController {
+    /// Provides filter panel for use with FileBrowserFilterCoordinator
+    func getFilterPanel() -> FilterPanelViewController {
+        let panel = FilterPanelViewController(currentFilter: filterCriteria) { [weak self] newFilter in
+            self?.setFilter(newFilter)
+        }
+        return panel
+    }
+    
+    /// Returns settings store for coordinator
+    func getSettingsStore() -> SettingsStore {
+        return SettingsStore.shared
+    }
+    
+    /// Reloads browser data (delegate method)
+    func reloadBrowserData() {
+        refreshCurrentDirectory()
+    }
+    
+    /// Sets filter criteria (delegate method)
+    func setFilterCriteria(_ criteria: FilterCriteria) {
+        filterCriteria = criteria
+    }
+}
