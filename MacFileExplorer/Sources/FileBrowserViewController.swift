@@ -960,7 +960,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         if fileItem.isDirectory {
             loadDirectory(fileItem.url)
         } else {
-            NSWorkspace.shared.open(fileItem.url)
+            FileBrowserActionHelper.openFile(fileItem.url)
         }
     }
     
@@ -975,7 +975,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             if fileItem.isDirectory {
                 loadDirectory(fileItem.url)
             } else {
-                NSWorkspace.shared.open(fileItem.url)
+                FileBrowserActionHelper.openFile(fileItem.url)
             }
         }
     }
@@ -1151,7 +1151,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 loadDirectory(item.url)
             } else {
                 // Open file with default application
-                NSWorkspace.shared.open(item.url)
+                FileBrowserActionHelper.openFile(item.url)
             }
         }
     }
@@ -1606,33 +1606,24 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         let items = getSelectedItems()
         guard !items.isEmpty else { return }
 
-        let alert = NSAlert()
-        alert.messageText = "Add New Tag"
-        alert.informativeText = "Enter the name for the selected items:"
-        alert.addButton(withTitle: "Add")
-        alert.addButton(withTitle: "Cancel")
+        guard let newTag = FileBrowserDialogHelper.showTextInputDialog(
+            title: "Add New Tag",
+            message: "Enter the name for the selected items:"
+        ), !newTag.isEmpty else { return }
 
-        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
-        alert.accessoryView = textField
+        for item in items {
+            var tags = item.tags
+            if !tags.contains(newTag) {
+                tags.append(newTag)
+            }
 
-        if alert.runModal() == .alertFirstButtonReturn {
-            let newTag = textField.stringValue
-            if !newTag.isEmpty {
-                for item in items {
-                    var tags = item.tags
-                    if !tags.contains(newTag) {
-                        tags.append(newTag)
-                    }
-
-                    do {
-                        try (item.url as NSURL).setResourceValue(tags, forKey: .tagNamesKey)
-                    } catch {
-                        showError("Failed to update tags for \(item.name): \(error.localizedDescription)")
-                    }
-                }
-                refreshCurrentDirectory()
+            do {
+                try (item.url as NSURL).setResourceValue(tags, forKey: .tagNamesKey)
+            } catch {
+                showError("Failed to update tags for \(item.name): \(error.localizedDescription)")
             }
         }
+        refreshCurrentDirectory()
     }
 
     private func getSelectedFileURLs() -> [URL] {
@@ -1646,11 +1637,11 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             if item.isDirectory {
                 loadDirectory(item.url)
             } else {
-                NSWorkspace.shared.open(item.url)
+                FileBrowserActionHelper.openFile(item.url)
             }
         } else if items.count > 1 {
             for url in items.map({ $0.url }) {
-                NSWorkspace.shared.open(url)
+                FileBrowserActionHelper.openFile(url)
             }
         }
     }
@@ -1700,7 +1691,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         let items = getSelectedItems()
         guard let item = items.first, items.count == 1 else { return }
         
-        NSWorkspace.shared.open([item.url], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration())
+        FileBrowserActionHelper.openFile(item.url, withApplication: appURL)
     }
 
     @objc func openWithOther(_ sender: Any) {
@@ -1713,7 +1704,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         openPanel.allowsMultipleSelection = false
         
         if openPanel.runModal() == .OK, let appURL = openPanel.url {
-            NSWorkspace.shared.open([item.url], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration())
+            FileBrowserActionHelper.openFile(item.url, withApplication: appURL)
         }
     }
 
@@ -1816,15 +1807,12 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         let items = getSelectedItems()
         guard !items.isEmpty else { return }
 
-        // Confirmation dialog
-        let alert = NSAlert()
-        alert.messageText = "Delete \(items.count) item(s)?"
-        alert.informativeText = "Are you sure you want to move \(items.count) item(s) to the Trash?"
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Move to Trash")
-        alert.addButton(withTitle: "Cancel")
-
-        if alert.runModal() == .alertFirstButtonReturn {
+        let confirmed = FileBrowserDialogHelper.showConfirmationDialog(
+            title: "Delete \(items.count) item(s)?",
+            message: "Are you sure you want to move \(items.count) item(s) to the Trash?"
+        )
+        
+        if confirmed {
             performFileOperation(.delete, items: items.map { $0.url }, destination: nil)
         }
     }
