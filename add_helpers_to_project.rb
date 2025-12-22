@@ -24,7 +24,10 @@ files_to_add = [
   'FileBrowserZoomCoordinator.swift',
   'FileBrowserFilterCoordinator.swift',
   'FileBrowserNavigationCoordinator.swift',
-  'FileBrowserSelectionCoordinator.swift'
+  'FileBrowserSelectionCoordinator.swift',
+  'AppConfig.swift',
+  'SettingsStoreProtocol.swift',
+  'KeychainStore.swift'
 ]
 
 target = project.targets.first

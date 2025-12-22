@@ -1,6 +1,15 @@
 import Cocoa
 import Quartz
 
+// MARK: - View Mode
+
+enum ViewMode: String, CaseIterable, Codable {
+    case list = "List"
+    case icons = "Icons"
+    case columns = "Columns"
+    case windowsList = "List (Win)"
+}
+
 // MARK: - Filter Criteria
 
 enum FileOperationType: String {
@@ -9,19 +18,41 @@ enum FileOperationType: String {
     case delete = "delete"
 }
 
-struct FilterCriteria {
+struct FilterCriteria: Codable {
+    var searchText: String = ""
     var fileTypes: Set<String> = []  // Extensions like "pdf", "jpg", "txt"
     var sizeMin: Int64? = nil         // Minimum size in bytes
     var sizeMax: Int64? = nil         // Maximum size in bytes
     var dateMin: Date? = nil          // Minimum modification date
     var dateMax: Date? = nil          // Maximum modification date
+    var includeHidden: Bool = false
 
     var isActive: Bool {
-        !fileTypes.isEmpty || sizeMin != nil || sizeMax != nil || dateMin != nil || dateMax != nil
+        !searchText.isEmpty ||
+            !fileTypes.isEmpty ||
+            sizeMin != nil ||
+            sizeMax != nil ||
+            dateMin != nil ||
+            dateMax != nil ||
+            includeHidden
     }
 
     func matches(_ item: FileItem) -> Bool {
-        // File type filter
+        if !searchText.isEmpty {
+            if !item.name.localizedCaseInsensitiveContains(searchText) &&
+                !item.url.path.localizedCaseInsensitiveContains(searchText) {
+                return false
+            }
+        }
+
+        if !includeHidden && item.isHidden {
+            return false
+        }
+
+        if item.isDirectory {
+            return true
+        }
+
         if !fileTypes.isEmpty {
             let ext = item.url.pathExtension.lowercased()
             if !fileTypes.contains(ext) && !fileTypes.contains("*") {
@@ -29,7 +60,6 @@ struct FilterCriteria {
             }
         }
 
-        // Size filter
         if let min = sizeMin, item.size < min {
             return false
         }
@@ -37,7 +67,6 @@ struct FilterCriteria {
             return false
         }
 
-        // Date filter
         if let min = dateMin, let modDate = item.modificationDate, modDate < min {
             return false
         }
@@ -160,4 +189,3 @@ final class OperationMetricsManager {
         return decoded
     }
 }
-

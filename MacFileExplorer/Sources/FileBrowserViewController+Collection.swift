@@ -34,57 +34,12 @@ extension FileBrowserViewController: NSCollectionViewDataSource {
 extension FileBrowserViewController: NSCollectionViewDelegate {
     func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
         notifyPaneBecameActive()
-        updateStatusBarForCollectionView()
-
-        let data = collectionItems()
-        let selectedItems = indexPaths.compactMap { idx -> FileItem? in
-            guard idx.item < data.count else { return nil }
-            return data[idx.item]
-        }
-        updatePreviewPane(with: selectedItems.count == 1 ? selectedItems.first : nil)
+        selectionCoordinator.handleCollectionSelectionDidChange()
     }
 
     func collectionView(_ collectionView: NSCollectionView, didDeselectItemsAt indexPaths: Set<IndexPath>) {
         notifyPaneBecameActive()
-        updateStatusBarForCollectionView()
-
-        if collectionView.selectionIndexPaths.count == 1,
-           let firstPath = collectionView.selectionIndexPaths.first {
-            let items = collectionItems()
-            let selectedItem = firstPath.item < items.count ? items[firstPath.item] : nil
-            updatePreviewPane(with: selectedItem)
-        } else {
-            updatePreviewPane(with: nil)
-        }
-    }
-
-    func updateStatusBarForCollectionView() {
-        let selectedIndexPaths = collectionView.selectionIndexPaths
-        let selectedCount = selectedIndexPaths.count
-        var totalSize: Int64 = 0
-        let items = collectionItems()
-
-        selectedIndexPaths.forEach { indexPath in
-            if indexPath.item < items.count {
-                totalSize += items[indexPath.item].size
-            }
-        }
-
-        updateStatusBarDisplay(selectedCount: selectedCount, totalSize: totalSize)
-    }
-
-    func updateStatusBarForOutline() {
-        let selectedRows = outlineView.selectedRowIndexes
-        let selectedCount = selectedRows.count
-        var totalSize: Int64 = 0
-
-        selectedRows.forEach { row in
-            if let item = outlineView.item(atRow: row) as? FileItem {
-                totalSize += item.size
-            }
-        }
-
-        updateStatusBarDisplay(selectedCount: selectedCount, totalSize: totalSize)
+        selectionCoordinator.handleCollectionSelectionDidChange()
     }
 
 
@@ -139,4 +94,3 @@ extension FileBrowserViewController: NSCollectionViewDelegate {
         return true
     }
 }
-

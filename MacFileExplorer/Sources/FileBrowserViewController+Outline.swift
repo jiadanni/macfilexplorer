@@ -59,16 +59,16 @@ extension FileBrowserViewController {
 
         let value: String
         switch tableColumn.identifier.rawValue {
-        case "NameColumn":
+        case AppConfig.ColumnID.name:
             value = fileItem.displayName
             cell.imageView?.image = fileItem.icon
-        case "DateModifiedColumn":
+        case AppConfig.ColumnID.dateModified:
             value = fileItem.modificationDate.map { shortDateFormatter.string(from: $0) } ?? ""
-        case "TypeColumn":
+        case AppConfig.ColumnID.type:
             value = fileItem.kind
-        case "SizeColumn":
+        case AppConfig.ColumnID.size:
             value = ByteCountFormatter.string(fromByteCount: fileItem.size, countStyle: .file)
-        case "DateCreatedColumn":
+        case AppConfig.ColumnID.dateCreated:
             value = fileItem.creationDate.map { shortDateFormatter.string(from: $0) } ?? ""
         case "TagsColumn":
             value = fileItem.tags.joined(separator: ", ")
@@ -91,14 +91,8 @@ extension FileBrowserViewController {
 
     func outlineViewSelectionDidChange(_ notification: Notification) {
         notifyPaneBecameActive()
-        updateStatusBarForOutline()
-        if let item = outlineView.item(atRow: outlineView.selectedRow) as? FileItem {
-            updatePreviewPane(with: item)
-            delegate?.fileBrowser(self, didSelectFile: item)
-        } else {
-            updatePreviewPane(with: nil)
-            delegate?.fileBrowser(self, didSelectFile: nil)
-        }
+        let selectedItem = selectionCoordinator.handleOutlineSelectionDidChange()
+        delegate?.fileBrowser(self, didSelectFile: selectedItem)
     }
     
     // MARK: - Row Height (macOS 15+ Compatibility)

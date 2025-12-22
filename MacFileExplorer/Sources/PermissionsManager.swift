@@ -168,7 +168,7 @@ final class PermissionsManager {
                 let data = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
                 bookmarkDatas.append(data)
             } catch {
-                NSLog("[PermissionsManager] Failed to create bookmark for migration: \(path) error: \(error)")
+                debugLog("[PermissionsManager] Failed to create bookmark for migration: \(path) error: \(error)")
             }
         }
         if !bookmarkDatas.isEmpty {
@@ -221,7 +221,7 @@ final class PermissionsManager {
                 insertActiveURL(resolvedURL)
             }
         } catch {
-            NSLog("[PermissionsManager] Bookmark creation failed in sandbox for \(url.path): \(error)")
+            debugLog("[PermissionsManager] Bookmark creation failed in sandbox for \(url.path): \(error)")
         }
     }
 
@@ -353,7 +353,7 @@ final class PermissionsManager {
                         updated.append(newData)
                         continue
                     } catch {
-                        NSLog("[PermissionsManager] Failed to refresh stale bookmark for \(url.path): \(error)")
+                        debugLog("[PermissionsManager] Failed to refresh stale bookmark for \(url.path): \(error)")
                     }
                 }
             }

@@ -170,17 +170,17 @@ class StorageAnalyzerTabViewController: NSViewController, SplitPaneViewControlle
         
         let scopeVC = StorageScopeSelectionViewController()
         scopeVC.completionHandler = { [weak self] url, options in
-            NSLog("StorageAnalyzerTab: completionHandler called with url: \(url.path)")
+            debugLog("StorageAnalyzerTab: completionHandler called with url: \(url.path)")
             // Dismiss the scope selection panel first on the main queue
             DispatchQueue.main.async {
-                NSLog("StorageAnalyzerTab: In async block, about to dismiss panel")
+                debugLog("StorageAnalyzerTab: In async block, about to dismiss panel")
                 if let sheet = self?.scopeSheet {
                     sheet.close()
                     self?.scopeSheet = nil
-                    NSLog("StorageAnalyzerTab: Panel dismissed")
+                    debugLog("StorageAnalyzerTab: Panel dismissed")
                 }
                 // Then start the scan
-                NSLog("StorageAnalyzerTab: About to start scan")
+                debugLog("StorageAnalyzerTab: About to start scan")
                 self?.startScan(url: url, options: options)
             }
         }
@@ -453,7 +453,7 @@ extension StorageAnalyzerTabViewController: StorageListViewDelegate {
                         do {
                             try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
                         } catch {
-                            NSLog("Failed to trash item: \(error)")
+                            debugLog("Failed to trash item: \(error)")
                         }
                     }
 

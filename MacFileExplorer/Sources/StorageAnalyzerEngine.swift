@@ -48,7 +48,7 @@ class StorageAnalyzerEngine {
         var followSymlinks: Bool = false
         var skipPackages: Bool = false
         var minimumSize: Int64 = 0 // Skip items smaller than this
-        var maxDepth: Int = 100 // Prevent unbounded recursion
+        var maxDepth: Int = AppConfig.Storage.maxRecursionDepth // Prevent unbounded recursion
 
         static let `default` = ScanOptions()
     }
@@ -307,7 +307,7 @@ class StorageAnalyzerEngine {
                 childItems.append(childStorageItem)
 
                 // Report progress every 100 items
-                if itemsScanned % 100 == 0 {
+                if itemsScanned % AppConfig.Storage.progressBatchSize == 0 {
                     reportProgress(path: fileURL.path, itemsScanned: itemsScanned, totalSize: totalSize)
                 }
 

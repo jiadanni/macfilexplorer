@@ -18,7 +18,7 @@ class FileBrowserDataSource {
         didSet { if oldValue != showsHiddenFiles { reload() } }
     }
     
-    var sortColumn: String = "NameColumn" {
+    var sortColumn: String = AppConfig.ColumnID.name {
         didSet { if oldValue != sortColumn { sortItems() } }
     }
     
@@ -122,38 +122,31 @@ class FileBrowserDataSource {
         SettingsStore.shared.folderSortPreferences = prefs
     }
 
+    private func compareItems(_ item1: FileItem, _ item2: FileItem) -> Bool {
+        switch sortColumn {
+        case AppConfig.ColumnID.name:
+            let result = item1.name.localizedStandardCompare(item2.name)
+            return sortAscending ? (result == .orderedAscending) : (result == .orderedDescending)
+        case AppConfig.ColumnID.size:
+            if item1.isDirectory != item2.isDirectory { return item1.isDirectory }
+            return sortAscending ? item1.size < item2.size : item1.size > item2.size
+        case AppConfig.ColumnID.dateModified:
+            guard let date1 = item1.modificationDate, let date2 = item2.modificationDate else { return false }
+            return sortAscending ? date1 < date2 : date1 > date2
+        case AppConfig.ColumnID.dateCreated:
+            guard let date1 = item1.creationDate, let date2 = item2.creationDate else { return false }
+            return sortAscending ? date1 < date2 : date1 > date2
+        case AppConfig.ColumnID.type:
+            return sortAscending ? item1.kind < item2.kind : item1.kind > item2.kind
+        default:
+            return false
+        }
+    }
+
     private func sortItems() {
         guard let rootItem = rootItem, var children = rootItem.children else { return }
         
-        switch sortColumn {
-        case "NameColumn":
-            children.sort { item1, item2 in
-                let result = item1.name.localizedStandardCompare(item2.name)
-                return sortAscending ? (result == .orderedAscending) : (result == .orderedDescending)
-            }
-        case "SizeColumn":
-            children.sort { item1, item2 in
-                if item1.isDirectory != item2.isDirectory { return item1.isDirectory } // Folders on top usually, or stick to size
-                return sortAscending ? item1.size < item2.size : item1.size > item2.size
-            }
-        case "DateModifiedColumn":
-            children.sort { item1, item2 in
-                guard let date1 = item1.modificationDate, let date2 = item2.modificationDate else { return false }
-                return sortAscending ? date1 < date2 : date1 > date2
-            }
-        case "DateCreatedColumn":
-            children.sort { item1, item2 in
-                guard let date1 = item1.creationDate, let date2 = item2.creationDate else { return false }
-                return sortAscending ? date1 < date2 : date1 > date2
-            }
-        case "TypeColumn":
-            children.sort { item1, item2 in
-                 // Using a safe compare helper if available, or standard compare
-                 return sortAscending ? item1.kind < item2.kind : item1.kind > item2.kind
-            }
-        default:
-            break
-        }
+        children.sort { compareItems($0, $1) }
         
         rootItem.children = children
         
@@ -172,16 +165,14 @@ class FileBrowserDataSource {
     }
     
     private func sortChildren(_ children: inout [FileItem]) {
-        // Recursive sort logic duplicate of above - potentially refactor to shared helper or just reuse Logic
-         switch sortColumn {
-         case "NameColumn":
-             children.sort { item1, item2 in
-                 let result = item1.name.localizedStandardCompare(item2.name)
-                 return sortAscending ? (result == .orderedAscending) : (result == .orderedDescending)
-             }
-         // ... (Other cases simplified for brevity in this initial implementation, should match main sort)
-         default: break
-         }
+        children.sort { compareItems($0, $1) }
+
+        children.forEach {
+            if $0.isDirectory, var subChildren = $0.children {
+                sortChildren(&subChildren)
+                $0.children = subChildren
+            }
+        }
     }
     
     private func applySearchFilter() {
@@ -208,7 +199,7 @@ class FileBrowserDataSource {
                     if !item.name.localizedCaseInsensitiveContains(searchText) { return false }
                 }
                 
-                if hasFilterCriteria && !item.isDirectory {
+                if hasFilterCriteria {
                     if !filterCriteria.matches(item) { return false }
                 }
                 return true
@@ -230,15 +221,15 @@ class FileBrowserDataSource {
 
             if lastComponent == "My Drive" { continue }
 
-            let libraryGroupContainers = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.google.drive.fs")
+            let libraryGroupContainers = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppConfig.GoogleDrive.groupIdentifier)
             if let googleDriveRoot = libraryGroupContainers?.appendingPathComponent("File Provider Storage/My Drive"),
                fileManager.fileExists(atPath: googleDriveRoot.path) {
                  // Simplified check for now
             }
             
             // Legacy volume mount (/Volumes/GoogleDrive) or aliases named Google Drive
-            if path == "/Volumes/GoogleDrive" || lastComponent == "GoogleDrive" || lastComponent == "Google Drive" {
-                let myDrive = candidate.appendingPathComponent("My Drive")
+            if path == AppConfig.GoogleDrive.legacyVolumePath || AppConfig.GoogleDrive.volumeNames.contains(lastComponent) {
+                let myDrive = candidate.appendingPathComponent(AppConfig.GoogleDrive.myDriveComponent)
                 if fileManager.fileExists(atPath: myDrive.path) { return myDrive }
             }
         }

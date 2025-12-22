@@ -331,7 +331,7 @@ extension StorageAnalyzerWindowController: StorageListViewDelegate {
                     do {
                         try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
                     } catch {
-                        NSLog("Failed to trash item: \(error)")
+                        debugLog("Failed to trash item: \(error)")
                     }
                 }
 

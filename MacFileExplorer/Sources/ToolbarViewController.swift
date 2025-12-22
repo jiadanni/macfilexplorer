@@ -1,12 +1,5 @@
 import Cocoa
 
-enum ViewMode: String, CaseIterable {
-    case list = "List"
-    case icons = "Icons"
-    case columns = "Columns"
-    case windowsList = "List (Win)"
-}
-
 protocol ToolbarDelegate: AnyObject {
     func toolbarDidRequestBack()
     func toolbarDidRequestForward()
@@ -620,15 +613,15 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         var image: NSImage?
 
         switch column {
-        case "NameColumn":
+        case AppConfig.ColumnID.name:
             title = "Name"
-        case "DateModifiedColumn":
+        case AppConfig.ColumnID.dateModified:
             title = "Date Modified"
-        case "SizeColumn":
+        case AppConfig.ColumnID.size:
             title = "Size"
-        case "TypeColumn":
+        case AppConfig.ColumnID.type:
             title = "Type"
-        case "DateCreatedColumn":
+        case AppConfig.ColumnID.dateCreated:
             title = "Date Created"
         default:
             title = "Sort"
@@ -994,35 +987,35 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
     }
 
     @objc private func sortByNameAscending(_ sender: Any) {
-        delegate?.toolbarDidChangeSortColumn("NameColumn", ascending: true)
+        delegate?.toolbarDidChangeSortColumn(AppConfig.ColumnID.name, ascending: true)
     }
 
     @objc private func sortByNameDescending(_ sender: Any) {
-        delegate?.toolbarDidChangeSortColumn("NameColumn", ascending: false)
+        delegate?.toolbarDidChangeSortColumn(AppConfig.ColumnID.name, ascending: false)
     }
 
     @objc private func sortByDateAscending(_ sender: Any) {
-        delegate?.toolbarDidChangeSortColumn("DateModifiedColumn", ascending: true)
+        delegate?.toolbarDidChangeSortColumn(AppConfig.ColumnID.dateModified, ascending: true)
     }
 
     @objc private func sortByDateDescending(_ sender: Any) {
-        delegate?.toolbarDidChangeSortColumn("DateModifiedColumn", ascending: false)
+        delegate?.toolbarDidChangeSortColumn(AppConfig.ColumnID.dateModified, ascending: false)
     }
 
     @objc private func sortBySizeAscending(_ sender: Any) {
-        delegate?.toolbarDidChangeSortColumn("SizeColumn", ascending: true)
+        delegate?.toolbarDidChangeSortColumn(AppConfig.ColumnID.size, ascending: true)
     }
 
     @objc private func sortBySizeDescending(_ sender: Any) {
-        delegate?.toolbarDidChangeSortColumn("SizeColumn", ascending: false)
+        delegate?.toolbarDidChangeSortColumn(AppConfig.ColumnID.size, ascending: false)
     }
 
     @objc private func sortByTypeAscending(_ sender: Any) {
-        delegate?.toolbarDidChangeSortColumn("TypeColumn", ascending: true)
+        delegate?.toolbarDidChangeSortColumn(AppConfig.ColumnID.type, ascending: true)
     }
 
     @objc private func sortByTypeDescending(_ sender: Any) {
-        delegate?.toolbarDidChangeSortColumn("TypeColumn", ascending: false)
+        delegate?.toolbarDidChangeSortColumn(AppConfig.ColumnID.type, ascending: false)
     }
 
     @objc private func newFolderButtonClicked(_ sender: NSButton) {

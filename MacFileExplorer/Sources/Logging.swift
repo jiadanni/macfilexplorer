@@ -4,8 +4,17 @@ import Foundation
 func debugLog(_ items: Any..., separator: String = " ", terminator: String = "\n") {
 #if DEBUG
     let message = items.map { "\($0)" }.joined(separator: separator)
-    NSLog("%@", message)
+    NSLog("%@", sanitizeLogMessage(message))
 #endif
+}
+
+func sanitizePath(_ path: String) -> String {
+    let home = NSHomeDirectory()
+    return path.replacingOccurrences(of: home, with: "~")
+}
+
+private func sanitizeLogMessage(_ message: String) -> String {
+    sanitizePath(message)
 }
 
 /// Safe localized comparison helper.

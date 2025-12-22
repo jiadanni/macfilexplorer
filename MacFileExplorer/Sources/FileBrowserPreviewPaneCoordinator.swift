@@ -17,7 +17,7 @@ protocol FileBrowserPreviewPaneDelegate: AnyObject {
 class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
     weak var delegate: FileBrowserPreviewPaneDelegate?
     
-    private let settings: SettingsStoreProtocol
+    private var settings: SettingsStoreProtocol
     private weak var parentSplitView: NSSplitView?
     private(set) var previewPaneViewController: PreviewPaneViewController?
     private(set) var isVisible: Bool = false
@@ -51,7 +51,7 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
         if let file {
             previewVC.previewFile(file)
         } else {
-            previewVC.clear()
+            previewVC.resetPreview()
         }
     }
     
@@ -64,7 +64,7 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
         previewPaneViewController = previewVC
         
         let previewItem = NSSplitViewItem(viewController: previewVC)
-        previewItem.collapseBehavior = .preferResizingOtherSubviews
+        previewItem.collapseBehavior = .preferResizingSiblingsWithFixedSplitView
         
         if let width = settings.previewPaneWidth as CGFloat?, width > 100 {
             previewItem.minimumThickness = 100

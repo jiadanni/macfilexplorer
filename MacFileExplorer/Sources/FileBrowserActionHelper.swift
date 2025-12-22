@@ -47,10 +47,8 @@ class FileBrowserActionHelper {
     /// Gets the display name for a URL.
     static func displayName(for url: URL) -> String {
         let fileManager = FileManager.default
-        if let name = try? fileManager.displayName(atPath: url.path) {
-            return name
-        }
-        return url.lastPathComponent
+        let name = fileManager.displayName(atPath: url.path)
+        return name.isEmpty ? url.lastPathComponent : name
     }
     
     /// Opens a file with the default application.
@@ -60,10 +58,12 @@ class FileBrowserActionHelper {
     
     /// Opens a file with a specific application.
     static func openFile(_ url: URL, withApplication appURL: URL) {
-        do {
-            try NSWorkspace.shared.open([url], withApplicationAt: appURL, options: [], configuration: [:])
-        } catch {
-            print("Error opening file with application: \(error)")
+        NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: [:]) { _, error in
+            if let error = error {
+                debugLog("Failed to open file with app: \(error)")
+            }
+        }
+    }
         }
     }
     
@@ -85,7 +85,7 @@ class FileBrowserActionHelper {
         if let scriptObject = NSAppleScript(source: script) {
             scriptObject.executeAndReturnError(&error)
             if let error = error {
-                print("AppleScript error: \(error)")
+                debugLog("AppleScript error: \(error)")
             }
         }
     }

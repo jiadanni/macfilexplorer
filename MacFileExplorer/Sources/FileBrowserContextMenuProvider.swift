@@ -29,7 +29,7 @@ protocol FileBrowserContextMenuDelegate: AnyObject {
 
 class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
     weak var delegate: FileBrowserContextMenuDelegate?
-    private let settings: SettingsStoreProtocol
+    private var settings: SettingsStoreProtocol
     
     init(settings: SettingsStoreProtocol = SettingsStore.shared) {
         self.settings = settings
@@ -122,7 +122,7 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
             let isVisible = visibility[identifier] ?? true
             item.state = isVisible ? .on : .off
             // Prevent hiding the NameColumn entirely
-            if identifier == "NameColumn" { item.isEnabled = false }
+            if identifier == AppConfig.ColumnID.name { item.isEnabled = false }
             menu.addItem(item)
         }
         
@@ -205,7 +205,7 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
     }
     
     @objc private func handleToggleColumn(_ sender: NSMenuItem) {
-        guard let identifier = sender.representedObject as? String, identifier != "NameColumn" else { return }
+        guard let identifier = sender.representedObject as? String, identifier != AppConfig.ColumnID.name else { return }
         var visibility = settings.columnVisibility
         let current = visibility[identifier] ?? true
         visibility[identifier] = !current
@@ -214,11 +214,11 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
     
     @objc private func handleResetColumns(_ sender: NSMenuItem) {
         let defaults: [String: Bool] = [
-            "NameColumn": true,
-            "DateModifiedColumn": true,
-            "TypeColumn": true,
-            "SizeColumn": true,
-            "DateCreatedColumn": false,
+            AppConfig.ColumnID.name: true,
+            AppConfig.ColumnID.dateModified: true,
+            AppConfig.ColumnID.type: true,
+            AppConfig.ColumnID.size: true,
+            AppConfig.ColumnID.dateCreated: false,
             "TagsColumn": false
         ]
         settings.columnVisibility = defaults

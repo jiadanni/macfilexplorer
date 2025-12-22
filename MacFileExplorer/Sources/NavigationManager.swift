@@ -34,6 +34,7 @@ final class NavigationManager {
     
     private var navigationHistory: [URL] = []
     private var currentHistoryIndex: Int = -1
+    private let maxHistorySize = AppConfig.Limits.maxHistorySize
     
     // MARK: - Public API
     
@@ -83,6 +84,12 @@ final class NavigationManager {
             }
             navigationHistory.append(url)
             currentHistoryIndex = navigationHistory.count - 1
+
+            if navigationHistory.count > maxHistorySize {
+                let excess = navigationHistory.count - maxHistorySize
+                navigationHistory.removeFirst(excess)
+                currentHistoryIndex = max(0, currentHistoryIndex - excess)
+            }
         }
         
         notifyDelegate(url: url)

@@ -64,17 +64,18 @@ final class FileSystemMonitor {
         }
 
         // Create dispatch source
-        source = DispatchSource.makeFileSystemObjectSource(
+        let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fileDescriptor,
             eventMask: [.write, .delete, .rename, .link],
             queue: queue
         )
+        self.source = source
 
-        source?.setEventHandler { [weak self] in
+        source.setEventHandler { [weak self] in
             self?.callback()
         }
 
-        source?.setCancelHandler { [weak self] in
+        source.setCancelHandler { [weak self] in
             guard let self = self, self.fileDescriptor >= 0 else { return }
             let fd = self.fileDescriptor
             // Ensure file descriptor is marked invalid before closing
@@ -82,7 +83,7 @@ final class FileSystemMonitor {
             close(fd)
         }
 
-        source?.resume()
+        source.resume()
     }
 
     private func stopMonitoring() {

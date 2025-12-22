@@ -98,8 +98,8 @@ class StorageScopeSelectionViewController: NSViewController {
         buttonStack.addArrangedSubview(chooseFolderButton)
         buttonStack.addArrangedSubview(chooseFolderLabel)
 
-        NSLog("StorageScopeSelection: All buttons added to stack, checking button states...")
-        NSLog("StorageScopeSelection: thisMacButton.isEnabled=\(thisMacButton.isEnabled)")
+        debugLog("StorageScopeSelection: All buttons added to stack, checking button states...")
+        debugLog("StorageScopeSelection: thisMacButton.isEnabled=\(thisMacButton.isEnabled)")
 
         // Options section
         setupOptionsSection()
@@ -144,7 +144,7 @@ class StorageScopeSelectionViewController: NSViewController {
             button.heightAnchor.constraint(equalToConstant: 32)
         ])
 
-        NSLog("StorageScopeSelection: Created button '\(title)' with action: \(action)")
+        debugLog("StorageScopeSelection: Created button '\(title)' with action: \(action)")
         return button
     }
 
@@ -228,21 +228,21 @@ class StorageScopeSelectionViewController: NSViewController {
     }
 
     @objc private func scanThisMac(_ sender: Any) {
-        NSLog("StorageScopeSelection: scanThisMac action called")
+        debugLog("StorageScopeSelection: scanThisMac action called")
         let url = URL(fileURLWithPath: "/")
         startScan(url: url)
     }
 
     @objc private func scanHomeFolder(_ sender: Any) {
-        NSLog("StorageScopeSelection: scanHomeFolder action called")
+        debugLog("StorageScopeSelection: scanHomeFolder action called")
         let url = FileManager.default.homeDirectoryForCurrentUser
         startScan(url: url)
     }
 
     @objc private func scanDownloads(_ sender: Any) {
-        NSLog("StorageScopeSelection: scanDownloads action called")
+        debugLog("StorageScopeSelection: scanDownloads action called")
         guard let url = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else {
-            NSLog("StorageScopeSelection: Failed to get downloads directory")
+            debugLog("StorageScopeSelection: Failed to get downloads directory")
             return
         }
         startScan(url: url)
@@ -267,8 +267,8 @@ class StorageScopeSelectionViewController: NSViewController {
     }
 
     private func startScan(url: URL) {
-        NSLog("StorageScopeSelection: startScan called for \(url.path)")
-        NSLog("StorageScopeSelection: completionHandler is \(completionHandler == nil ? "nil" : "set")")
+        debugLog("StorageScopeSelection: startScan called for \(url.path)")
+        debugLog("StorageScopeSelection: completionHandler is \(completionHandler == nil ? "nil" : "set")")
 
         // Build options
         var options = StorageAnalyzerEngine.ScanOptions()
@@ -283,8 +283,8 @@ class StorageScopeSelectionViewController: NSViewController {
         UserDefaults.standard.set(url.path, forKey: "StorageAnalyzerLastScanPath")
 
         // Call completion handler - this will trigger the sheet dismissal in the parent
-        NSLog("StorageScopeSelection: About to call completionHandler")
+        debugLog("StorageScopeSelection: About to call completionHandler")
         completionHandler?(url, options)
-        NSLog("StorageScopeSelection: completionHandler called")
+        debugLog("StorageScopeSelection: completionHandler called")
     }
 }

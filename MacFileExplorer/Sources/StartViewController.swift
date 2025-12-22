@@ -207,19 +207,19 @@ class StartViewController: NSViewController {
     }
 
     private func handleAddFavorite() {
-        NSLog("StartViewController: handleAddFavorite called")
-        NSLog("StartViewController: favoritesWidget is \(favoritesWidget == nil ? "nil" : "set")")
+        debugLog("StartViewController: handleAddFavorite called")
+        debugLog("StartViewController: favoritesWidget is \(favoritesWidget == nil ? "nil" : "set")")
         ContextualPermissionManager.shared.requestCustomFolder { [weak self] url in
-            NSLog("StartViewController: requestCustomFolder completion handler called")
+            debugLog("StartViewController: requestCustomFolder completion handler called")
             if let url = url {
-                NSLog("StartViewController: Got URL: \(url.path)")
-                NSLog("StartViewController: favoritesWidget in completion is \(self?.favoritesWidget == nil ? "nil" : "set")")
+                debugLog("StartViewController: Got URL: \(url.path)")
+                debugLog("StartViewController: favoritesWidget in completion is \(self?.favoritesWidget == nil ? "nil" : "set")")
                 // Add to the Favorites widget on the Start page
                 self?.favoritesWidget?.addFolder(url: url)
 
                 self?.gettingStartedWidget?.markTaskCompleted(id: "pinFolder")
             } else {
-                NSLog("StartViewController: URL is nil - user cancelled")
+                debugLog("StartViewController: URL is nil - user cancelled")
             }
         }
     }
@@ -272,7 +272,7 @@ class StartViewController: NSViewController {
                 try workspace.unmountAndEjectDevice(at: volume)
                 ejected += 1
             } catch {
-                NSLog("Failed to eject \(volume): \(error)")
+                debugLog("Failed to eject \(volume): \(error)")
             }
         }
 
@@ -315,7 +315,7 @@ extension StartViewController: StartWidgetDelegate {
             handleNewFolder()
 
         case .taskCompleted(let taskId):
-            NSLog("Task completed: \(taskId)")
+            debugLog("Task completed: \(taskId)")
         }
     }
 

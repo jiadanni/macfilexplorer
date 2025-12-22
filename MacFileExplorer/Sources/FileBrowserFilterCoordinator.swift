@@ -12,7 +12,7 @@ import Cocoa
 
 protocol FileBrowserFilterDelegate: AnyObject {
     var filterPanel: FilterPanelViewController! { get }
-    var settingsStore: SettingsStore! { get }
+    var settingsStore: SettingsStoreProtocol! { get set }
     func reloadBrowserData()
     func setFilterCriteria(_ criteria: FilterCriteria)
 }
@@ -22,7 +22,7 @@ class FileBrowserFilterCoordinator: NSObject {
     
     private var currentFilterCriteria = FilterCriteria()
     private var searchHistory: [String] = []
-    private let maxSearchHistorySize = 50
+    private let maxSearchHistorySize = AppConfig.Limits.maxSearchHistorySize
     
     /// Initializes filter coordinator and loads persisted filters.
     func initialize() {
@@ -34,8 +34,9 @@ class FileBrowserFilterCoordinator: NSObject {
     /// Loads persisted filter criteria from settings.
     private func loadFilterCriteria() {
         guard let delegate = delegate else { return }
+        guard let settingsStore = delegate.settingsStore else { return }
         
-        if let savedCriteria = delegate.settingsStore.data(forKey: "filterCriteria") {
+        if let savedCriteria = settingsStore.filterCriteriaData {
             if let decoded = try? JSONDecoder().decode(FilterCriteria.self, from: savedCriteria) {
                 currentFilterCriteria = decoded
             }
@@ -45,33 +46,36 @@ class FileBrowserFilterCoordinator: NSObject {
     /// Saves current filter criteria to settings.
     private func saveFilterCriteria() {
         guard let delegate = delegate else { return }
+        guard var settingsStore = delegate.settingsStore else { return }
         
         if let encoded = try? JSONEncoder().encode(currentFilterCriteria) {
-            delegate.settingsStore.setValue(encoded, forKey: "filterCriteria")
+            settingsStore.filterCriteriaData = encoded
         }
     }
     
     /// Loads search history from settings.
     private func loadSearchHistory() {
         guard let delegate = delegate else { return }
+        guard let settingsStore = delegate.settingsStore else { return }
         
-        if let history = delegate.settingsStore.value(forKey: "searchHistory") as? [String] {
-            searchHistory = history
-        }
+        searchHistory = settingsStore.searchHistory
     }
     
     /// Saves search history to settings.
     private func saveSearchHistory() {
         guard let delegate = delegate else { return }
-        delegate.settingsStore.setValue(searchHistory, forKey: "searchHistory")
+        guard var settingsStore = delegate.settingsStore else { return }
+        settingsStore.searchHistory = searchHistory
     }
     
     /// Configures the filter panel with current criteria.
     private func setupFilterPanel() {
         guard let delegate = delegate else { return }
+        guard let filterPanel = delegate.filterPanel else { return }
         
-        // Configure filter panel with current criteria
-        delegate.filterPanel.filterCriteria = currentFilterCriteria
+        // Note: FilterPanelViewController is initialized with currentFilter in its init,
+        // so this setup method is primarily for future runtime updates if needed.
+        // The panel is created fresh each time via getFilterPanel() in the delegate.
     }
     
     /// Applies a search filter with the given text.
@@ -80,6 +84,16 @@ class FileBrowserFilterCoordinator: NSObject {
         saveFilterCriteria()
         addToSearchHistory(text)
         
+        guard let delegate = delegate else { return }
+        delegate.setFilterCriteria(currentFilterCriteria)
+        delegate.reloadBrowserData()
+    }
+
+    /// Applies a full filter criteria update and persists it.
+    func applyFilterCriteria(_ criteria: FilterCriteria) {
+        currentFilterCriteria = criteria
+        saveFilterCriteria()
+
         guard let delegate = delegate else { return }
         delegate.setFilterCriteria(currentFilterCriteria)
         delegate.reloadBrowserData()
@@ -97,7 +111,7 @@ class FileBrowserFilterCoordinator: NSObject {
     
     /// Sets file type filter.
     func setFileTypeFilter(_ fileTypes: [String]) {
-        currentFilterCriteria.fileTypes = fileTypes
+        currentFilterCriteria.fileTypes = Set(fileTypes)
         saveFilterCriteria()
         
         guard let delegate = delegate else { return }
@@ -107,8 +121,8 @@ class FileBrowserFilterCoordinator: NSObject {
     
     /// Sets date range filter.
     func setDateRangeFilter(from: Date?, to: Date?) {
-        currentFilterCriteria.dateFrom = from
-        currentFilterCriteria.dateTo = to
+        currentFilterCriteria.dateMin = from
+        currentFilterCriteria.dateMax = to
         saveFilterCriteria()
         
         guard let delegate = delegate else { return }
@@ -118,8 +132,8 @@ class FileBrowserFilterCoordinator: NSObject {
     
     /// Sets file size range filter.
     func setSizeRangeFilter(minSize: UInt64?, maxSize: UInt64?) {
-        currentFilterCriteria.minSize = minSize
-        currentFilterCriteria.maxSize = maxSize
+        currentFilterCriteria.sizeMin = minSize.map { Int64($0) }
+        currentFilterCriteria.sizeMax = maxSize.map { Int64($0) }
         saveFilterCriteria()
         
         guard let delegate = delegate else { return }
@@ -134,12 +148,7 @@ class FileBrowserFilterCoordinator: NSObject {
     
     /// Returns whether any filters are currently active.
     func hasActiveFilters() -> Bool {
-        return !currentFilterCriteria.searchText.isEmpty ||
-               !currentFilterCriteria.fileTypes.isEmpty ||
-               currentFilterCriteria.dateFrom != nil ||
-               currentFilterCriteria.dateTo != nil ||
-               currentFilterCriteria.minSize != nil ||
-               currentFilterCriteria.maxSize != nil
+        return currentFilterCriteria.isActive
     }
     
     /// Adds search term to history.
@@ -167,54 +176,3 @@ class FileBrowserFilterCoordinator: NSObject {
 }
 
 /// Represents search and filter criteria.
-struct FilterCriteria: Codable {
-    var searchText: String = ""
-    var fileTypes: [String] = []
-    var dateFrom: Date?
-    var dateTo: Date?
-    var minSize: UInt64?
-    var maxSize: UInt64?
-    var includeHidden: Bool = false
-    
-    /// Checks if a file matches the filter criteria.
-    func matches(_ item: FileItem) -> Bool {
-        // Check search text
-        if !searchText.isEmpty {
-            if !item.name.localizedCaseInsensitiveContains(searchText) &&
-               !item.path.localizedCaseInsensitiveContains(searchText) {
-                return false
-            }
-        }
-        
-        // Check file types
-        if !fileTypes.isEmpty {
-            let ext = (item.path as NSString).pathExtension.lowercased()
-            if !ext.isEmpty && !fileTypes.contains(ext) {
-                return false
-            }
-        }
-        
-        // Check date range
-        if let dateFrom = dateFrom, item.modificationDate < dateFrom {
-            return false
-        }
-        if let dateTo = dateTo, item.modificationDate > dateTo {
-            return false
-        }
-        
-        // Check size range
-        if let minSize = minSize, item.size < minSize {
-            return false
-        }
-        if let maxSize = maxSize, item.size > maxSize {
-            return false
-        }
-        
-        // Check hidden files
-        if !includeHidden && item.isHidden {
-            return false
-        }
-        
-        return true
-    }
-}

@@ -265,7 +265,7 @@ class FileItem: Hashable {
             var safeRootItems: [URL] = []
             
             // Always add /Volumes (mounted drives)
-            let volumesURL = URL(fileURLWithPath: "/Volumes")
+            let volumesURL = URL(fileURLWithPath: AppConfig.Paths.volumes)
             if fileManager.fileExists(atPath: volumesURL.path) {
                 safeRootItems.append(volumesURL)
             }
@@ -277,14 +277,14 @@ class FileItem: Hashable {
             }
             
             // Add /Applications if accessible
-            let applicationsURL = URL(fileURLWithPath: "/Applications")
+            let applicationsURL = URL(fileURLWithPath: AppConfig.Paths.applications)
             if fileManager.fileExists(atPath: applicationsURL.path) {
                 safeRootItems.append(applicationsURL)
             }
             
             // Only add other root folders if they're already granted permission
             // This prevents triggering permission dialogs
-            let potentialRootFolders = ["/System", "/Library", "/Users", "/private", "/bin", "/sbin", "/usr", "/var", "/tmp", "/cores", "/dev", "/etc"]
+            let potentialRootFolders = AppConfig.Paths.rootCandidates
             for folderPath in potentialRootFolders {
                 let folderURL = URL(fileURLWithPath: folderPath)
                 // Only add if we can read it without triggering permission dialog

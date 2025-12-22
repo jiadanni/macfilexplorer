@@ -28,7 +28,7 @@ class StorageOverviewWidgetView: StartWidgetView {
     private func checkPermissions() {
         // Check Full Disk Access by attempting to read a protected directory
         // This avoids triggering permission dialogs unless actually needed
-        let protectedPath = "/Library/Application Support"
+        let protectedPath = AppConfig.Paths.applicationSupport
         hasFullDiskAccess = FileManager.default.isReadableFile(atPath: protectedPath)
     }
 
@@ -274,8 +274,8 @@ class StorageOverviewWidgetView: StartWidgetView {
         categories.append(StorageCategory(name: "System Data", size: librarySize, color: NSColor.systemGray))
 
         // macOS System
-        let systemSize = calculateDirectorySize(URL(fileURLWithPath: "/System")) +
-                        calculateDirectorySize(URL(fileURLWithPath: "/Library"))
+        let systemSize = calculateDirectorySize(URL(fileURLWithPath: AppConfig.Paths.system)) +
+                        calculateDirectorySize(URL(fileURLWithPath: AppConfig.Paths.library))
         categories.append(StorageCategory(name: "macOS", size: systemSize, color: NSColor.darkGray))
 
         // Filter out zero-size categories

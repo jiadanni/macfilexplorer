@@ -39,7 +39,7 @@ class FileBrowserZoomCoordinator: NSObject {
         guard let delegate = delegate else { return }
         
         let key = getZoomLevelKey()
-        if let saved = delegate.settingsStore.doubleValue(forKey: key) {
+        if let saved = UserDefaults.standard.object(forKey: key) as? Double {
             currentZoomLevel = saved
         } else {
             currentZoomLevel = defaultZoomLevel

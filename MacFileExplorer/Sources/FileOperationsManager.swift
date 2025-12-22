@@ -123,7 +123,7 @@ final class FileOperationsManager {
                     // Prevent TOCTOU race: let FileManager report the error, then auto-rename if enabled
                     var finalURL = targetURL
                     var attemptCount = 0
-                    let maxAttempts = 1000
+                    let maxAttempts = AppConfig.Limits.maxAutoRenameAttempts
                     var operationSucceeded = false
                     var lastError: Error? = nil
                     

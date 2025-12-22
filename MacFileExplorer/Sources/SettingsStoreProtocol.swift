@@ -25,7 +25,7 @@ import Foundation
 ///     }
 /// }
 /// ```
-protocol SettingsStoreProtocol {
+protocol SettingsStoreProtocol: AnyObject {
     // MARK: - General Settings
     
     var showFileExtensions: Bool { get set }
@@ -74,6 +74,11 @@ protocol SettingsStoreProtocol {
     var deleteWithBackspaceOnly: Bool { get set }
     var confirmFileOperations: Bool { get set }
     var showOperationProgress: Bool { get set }
+
+    // MARK: - Filter Settings
+
+    var filterCriteriaData: Data? { get set }
+    var searchHistory: [String] { get set }
 
     // MARK: - Toolbar Settings
     

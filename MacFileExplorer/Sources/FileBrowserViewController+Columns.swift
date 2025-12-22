@@ -80,43 +80,7 @@ extension FileBrowserViewController: NSBrowserDelegate {
 
     func browser(_ browser: NSBrowser, selectionDidChangeInColumn column: Int) {
         notifyPaneBecameActive()
-        updateStatusBarForBrowser()
-
-        let selectedRows = browser.selectedRowIndexes(inColumn: column)
-        guard let selectedRow = selectedRows?.first else {
-            updatePreviewPane(with: nil)
-            return
-        }
-
-        if let parentItem = fileItemForColumn(column),
-           let children = parentItem.children,
-           selectedRow < children.count {
-            updatePreviewPane(with: children[selectedRow])
-        } else {
-            updatePreviewPane(with: nil)
-        }
-    }
-
-    func updateStatusBarForBrowser() {
-        let selectedColumn = browserView.selectedColumn
-        guard selectedColumn >= 0 else {
-            updateStatusBarDisplay(selectedCount: 0, totalSize: 0)
-            return
-        }
-
-        let selectedRows = browserView.selectedRowIndexes(inColumn: selectedColumn)
-        let selectedCount = selectedRows?.count ?? 0
-        var totalSize: Int64 = 0
-
-        selectedRows?.forEach { row in
-            if let parentItem = fileItemForColumn(selectedColumn),
-               let children = parentItem.children,
-               row < children.count {
-                totalSize += children[row].size
-            }
-        }
-
-        updateStatusBarDisplay(selectedCount: selectedCount, totalSize: totalSize)
+        selectionCoordinator.handleBrowserSelectionDidChange(column: column)
     }
 
     // MARK: - Drag and Drop for Browser View
@@ -192,4 +156,3 @@ extension FileBrowserViewController: RootFileBrowserDropDelegate {
         performFileOperation(operation, items: urls, destination: currentDirectory, sourcePane: dragSourceFileBrowser(from: info))
     }
 }
-

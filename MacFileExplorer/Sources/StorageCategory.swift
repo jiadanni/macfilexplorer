@@ -79,7 +79,7 @@ enum StorageCategory: String, CaseIterable {
         }
 
         // System directories
-        if path.hasPrefix("/System/") || path.hasPrefix("/Library/") || path.hasPrefix("/usr/") || path.hasPrefix("/var/") {
+        if AppConfig.Paths.systemPrefixes.contains(where: { path.hasPrefix($0) }) {
             return .system
         }
 
@@ -89,7 +89,7 @@ enum StorageCategory: String, CaseIterable {
         }
 
         // User library cache
-        if path.contains("/Library/Caches/") || path.contains("/Library/Logs/") {
+        if AppConfig.Paths.cachePrefixes.contains(where: { path.contains($0) }) {
             return .cache
         }
 

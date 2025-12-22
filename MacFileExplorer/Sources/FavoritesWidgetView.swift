@@ -49,22 +49,22 @@ class FavoritesWidgetView: StartWidgetView {
     }
 
     func addFolder(url: URL) {
-        NSLog("FavoritesWidget: addFolder called with url: \(url.path)")
+        debugLog("FavoritesWidget: addFolder called with url: \(url.path)")
         // Add to the folders array
         let name = url.lastPathComponent.isEmpty ? "/" : url.lastPathComponent
         let newFolder = (name, StartDesignSystem.Icons.folder, url as URL?)
         defaultFolders.append(newFolder)
-        NSLog("FavoritesWidget: defaultFolders count after append: \(defaultFolders.count)")
+        debugLog("FavoritesWidget: defaultFolders count after append: \(defaultFolders.count)")
 
         // Save to UserDefaults
         let paths = defaultFolders.compactMap { $0.url?.path }
         UserDefaults.standard.set(paths, forKey: "FavoriteWidgetFolders")
-        NSLog("FavoritesWidget: Saved paths to UserDefaults: \(paths)")
+        debugLog("FavoritesWidget: Saved paths to UserDefaults: \(paths)")
 
         // Rebuild the widget UI
-        NSLog("FavoritesWidget: About to rebuild content")
+        debugLog("FavoritesWidget: About to rebuild content")
         rebuildContent()
-        NSLog("FavoritesWidget: Rebuild complete")
+        debugLog("FavoritesWidget: Rebuild complete")
     }
 
     private func rebuildContent() {
@@ -257,8 +257,8 @@ class FavoritesWidgetView: StartWidgetView {
     }
 
     @objc private func addFavoriteTapped() {
-        NSLog("FavoritesWidget: addFavoriteTapped called")
-        NSLog("FavoritesWidget: delegate is \(delegate == nil ? "nil" : "set")")
+        debugLog("FavoritesWidget: addFavoriteTapped called")
+        debugLog("FavoritesWidget: delegate is \(delegate == nil ? "nil" : "set")")
         delegate?.widgetDidRequestAction(.addFavorite, widget: self)
     }
 }

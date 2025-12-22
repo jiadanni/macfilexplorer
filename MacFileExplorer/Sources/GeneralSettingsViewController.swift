@@ -564,12 +564,12 @@ final class GeneralSettingsViewController: NSViewController {
         let sortPopup = AccentPopUpButton()
         sortPopup.translatesAutoresizingMaskIntoConstraints = false
         sortPopup.addItems(withTitles: ["Name", "Size", "Date Modified", "Date Created", "Type"])
-        let storedSortCol = UserDefaults.standard.string(forKey: UserDefaults.Keys.defaultSortColumn.rawValue) ?? "NameColumn"
+        let storedSortCol = UserDefaults.standard.string(forKey: UserDefaults.Keys.defaultSortColumn.rawValue) ?? AppConfig.ColumnID.name
         switch storedSortCol {
-        case "SizeColumn": sortPopup.selectItem(withTitle: "Size")
-        case "DateModifiedColumn": sortPopup.selectItem(withTitle: "Date Modified")
-        case "DateCreatedColumn": sortPopup.selectItem(withTitle: "Date Created")
-        case "TypeColumn": sortPopup.selectItem(withTitle: "Type")
+        case AppConfig.ColumnID.size: sortPopup.selectItem(withTitle: "Size")
+        case AppConfig.ColumnID.dateModified: sortPopup.selectItem(withTitle: "Date Modified")
+        case AppConfig.ColumnID.dateCreated: sortPopup.selectItem(withTitle: "Date Created")
+        case AppConfig.ColumnID.type: sortPopup.selectItem(withTitle: "Type")
         default: sortPopup.selectItem(withTitle: "Name")
         }
         sortPopup.target = self
@@ -601,11 +601,11 @@ final class GeneralSettingsViewController: NSViewController {
         let title = sender.titleOfSelectedItem ?? "Name"
         let column: String
         switch title {
-        case "Size": column = "SizeColumn"
-        case "Date Modified": column = "DateModifiedColumn"
-        case "Date Created": column = "DateCreatedColumn"
-        case "Type": column = "TypeColumn"
-        default: column = "NameColumn"
+        case "Size": column = AppConfig.ColumnID.size
+        case "Date Modified": column = AppConfig.ColumnID.dateModified
+        case "Date Created": column = AppConfig.ColumnID.dateCreated
+        case "Type": column = AppConfig.ColumnID.type
+        default: column = AppConfig.ColumnID.name
         }
         PendingSettings.shared.setValue(column, forKey: UserDefaults.Keys.defaultSortColumn.rawValue)
     }
@@ -614,4 +614,3 @@ final class GeneralSettingsViewController: NSViewController {
         PendingSettings.shared.setValue(sender.state == .on, forKey: UserDefaults.Keys.defaultSortAscending.rawValue)
     }
 }
-

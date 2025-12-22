@@ -1,159 +1,5 @@
 import Foundation
 
-/// Protocol defining type-safe access to application settings.
-///
-/// Provides a testable interface for all user preferences,
-/// eliminating scattered `UserDefaults` access throughout the codebase.
-///
-/// **Benefits:**
-/// - Dependency injection for testing
-/// - Type safety for all settings
-/// - Single source of truth
-/// - Easier to mock in tests
-/// 
-/// **Usage:**
-/// ```swift
-/// class MyViewController {
-///     private let settings: SettingsStoreProtocol
-///     
-///     init(settings: SettingsStoreProtocol = SettingsStore.shared) {
-///         self.settings = settings
-///     }
-///     
-///     func loadSettings() {
-///         let showHidden = settings.hiddenFilesState
-///     }
-/// }
-/// ```
-protocol SettingsStoreProtocol {
-    // MARK: - General Settings
-    
-    var showFileExtensions: Bool { get set }
-    var useGrayscaleIcons: Bool { get set }
-    var useGrayscaleWindowControls: Bool { get set }
-    var warnOnExtensionChange: Bool { get set }
-    var enableEasySelect: Bool { get set }
-    var startupFolder: String? { get set }
-
-    // MARK: - Preview Pane Settings
-    
-    var previewPaneVisible: Bool { get set }
-    var previewPanePosition: String { get set }
-    var previewPaneWidth: CGFloat { get set }
-
-    // MARK: - View Settings
-    
-    var defaultViewMode: ViewMode { get set }
-    var defaultSortColumn: String { get set }
-    var defaultSortAscending: Bool { get set }
-    var showFolderSizes: Bool { get set }
-
-    // MARK: - Tabs Settings
-    
-    var restoreTabsOnReopen: Bool { get set }
-
-    // MARK: - Sidebar Settings
-    
-    var showFavorites: Bool { get set }
-    var showRecents: Bool { get set }
-    var showLocations: Bool { get set }
-    var sidebarOrder: Int { get set }
-    var expandSidebarToCurrentDirectory: Bool { get set }
-
-    // MARK: - Terminal Settings
-    
-    var openTerminalByDefault: Bool { get set }
-
-    // MARK: - Status Bar Settings
-    
-    var showStatusBar: Bool { get set }
-
-    // MARK: - File Operations Settings
-    
-    var autoRenameOnConflict: Bool { get set }
-    var deleteWithBackspaceOnly: Bool { get set }
-    var confirmFileOperations: Bool { get set }
-    var showOperationProgress: Bool { get set }
-
-    // MARK: - Toolbar Settings
-    
-    var showBackForwardButtons: Bool { get set }
-    var showViewModeButton: Bool { get set }
-    var showHiddenFilesButton: Bool { get set }
-    var showSplitButtons: Bool { get set }
-    var showPreviewPaneButton: Bool { get set }
-    var showNewFolderButton: Bool { get set }
-    var showSortButton: Bool { get set }
-    var showStorageAnalyzerButton: Bool { get set }
-    var showOpenTerminalButton: Bool { get set }
-
-    // MARK: - Start Page Settings
-    
-    var hasLaunchedBefore: Bool { get set }
-    var showStartOnLaunch: Bool { get set }
-
-    // MARK: - Split Panes Settings
-    
-    var maximumPanes: Int { get set }
-
-    // MARK: - Context Menu Settings
-    
-    var showContextMenuHotkeys: Bool { get set }
-    var hideOpenWith: Bool { get set }
-    var hideGetInfo: Bool { get set }
-    var hideCopy: Bool { get set }
-    var hideCut: Bool { get set }
-    var hidePaste: Bool { get set }
-    var hideRename: Bool { get set }
-    var hideMoveToTrash: Bool { get set }
-    var hideNewFolder: Bool { get set }
-    var hideShowInFinder: Bool { get set }
-    
-    // MARK: - Column Visibility
-    
-    var columnVisibility: [String: Bool] { get set }
-    
-    // MARK: - Hidden Files State
-    
-    var hiddenFilesState: Bool { get set }
-
-    // MARK: - Settings Placement
-    
-    var openSettingsInTab: Bool { get set }
-
-    // MARK: - Data Source Settings
-
-    var folderSortPreferences: [String: String] { get set }
-
-    // MARK: - Sidebar Favorites
-    
-    var sidebarFavorites: [String] { get set }
-    
-    // MARK: - Permissions Management
-    
-    var permissionsMigrationFlag: Bool { get set }
-    var grantedDirectories: [String] { get set }
-    var grantedDirectoryBookmarks: [Data] { get set }
-    
-    func lastContextualPermissionDate(for key: String) -> Date?
-    func setLastContextualPermissionDate(_ date: Date, for key: String)
-    
-    // MARK: - Color Manager Settings
-    
-    var globalFolderColor: Data? { get set }
-    var globalFolderColorHex: String? { get set }
-    var folderColors: [String: String] { get set }
-
-    // MARK: - Observability
-
-    func addDelegate(_ delegate: SettingsStoreDelegate)
-    func removeDelegate(_ delegate: SettingsStoreDelegate)
-
-    // MARK: - Utility Methods
-    
-    func resetToDefaults()
-}
-
 /// Delegate for receiving notifications about settings changes.
 ///
 /// Use this protocol to be notified when critical settings change without relying on NotificationCenter.
@@ -346,7 +192,7 @@ final class SettingsStore: SettingsStoreProtocol {
     /// Default sort column.
     /// Default: `"NameColumn"`
     var defaultSortColumn: String {
-        get { defaults.string(forKey: UserDefaults.Keys.defaultSortColumn.rawValue) ?? "NameColumn" }
+        get { defaults.string(forKey: UserDefaults.Keys.defaultSortColumn.rawValue) ?? AppConfig.ColumnID.name }
         set { defaults.set(newValue, forKey: UserDefaults.Keys.defaultSortColumn.rawValue) }
     }
     
@@ -456,6 +302,22 @@ final class SettingsStore: SettingsStoreProtocol {
     var showOperationProgress: Bool {
         get { defaults.object(forKey: UserDefaults.Keys.showOperationProgress.rawValue) as? Bool ?? true }
         set { defaults.set(newValue, forKey: UserDefaults.Keys.showOperationProgress.rawValue) }
+    }
+
+    // MARK: - Filter Settings
+
+    /// Persisted filter criteria data.
+    /// Key: AppConfig.SettingsKeys.filterCriteria
+    var filterCriteriaData: Data? {
+        get { defaults.data(forKey: AppConfig.SettingsKeys.filterCriteria) }
+        set { defaults.set(newValue, forKey: AppConfig.SettingsKeys.filterCriteria) }
+    }
+
+    /// Search history entries.
+    /// Key: AppConfig.SettingsKeys.searchHistory
+    var searchHistory: [String] {
+        get { defaults.array(forKey: AppConfig.SettingsKeys.searchHistory) as? [String] ?? [] }
+        set { defaults.set(newValue, forKey: AppConfig.SettingsKeys.searchHistory) }
     }
 
     // MARK: - Toolbar Settings
@@ -694,8 +556,31 @@ final class SettingsStore: SettingsStoreProtocol {
     /// Array of security-scoped bookmarks for granted directories.
     /// Key: "grantedDirectoryBookmarks"
     var grantedDirectoryBookmarks: [Data] {
-        get { defaults.array(forKey: "grantedDirectoryBookmarks") as? [Data] ?? [] }
-        set { defaults.set(newValue, forKey: "grantedDirectoryBookmarks") }
+        get {
+            if let data = KeychainStore.loadData(forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey),
+               let decoded = try? JSONDecoder().decode([Data].self, from: data) {
+                return decoded
+            }
+
+            let legacy = defaults.array(forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey) as? [Data] ?? []
+            if !legacy.isEmpty, let encoded = try? JSONEncoder().encode(legacy) {
+                _ = KeychainStore.saveData(encoded, forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
+                defaults.removeObject(forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
+            }
+            return legacy
+        }
+        set {
+            if newValue.isEmpty {
+                KeychainStore.deleteData(forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
+                defaults.removeObject(forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
+                return
+            }
+
+            if let encoded = try? JSONEncoder().encode(newValue) {
+                _ = KeychainStore.saveData(encoded, forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
+                defaults.removeObject(forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
+            }
+        }
     }
     
     /// Helper to get the last time a contextual permission was asked for a specific key.
@@ -750,6 +635,20 @@ final class SettingsStore: SettingsStoreProtocol {
             defaults.removeObject(forKey: key.rawValue)
         }
         postSettingsChangeNotification()
+    }
+
+    // MARK: - Compatibility Helpers
+
+    func data(forKey key: String) -> Data? {
+        defaults.data(forKey: key)
+    }
+
+    func value(forKey key: String) -> Any? {
+        defaults.object(forKey: key)
+    }
+
+    func setValue(_ value: Any?, forKey key: String) {
+        defaults.setValue(value, forKey: key)
     }
     
     /// Posts a notification that settings have changed.
