@@ -10,8 +10,11 @@ import Cocoa
 class ContextualPermissionManager {
 
     static let shared = ContextualPermissionManager()
+    private let settingsStore: SettingsStoreProtocol
 
-    private init() {}
+    private init(settingsStore: SettingsStoreProtocol = SettingsStore.shared) {
+        self.settingsStore = settingsStore
+    }
 
     /// Request access to a specific folder with contextual explanation
     func requestFolderAccess(folder: URL, reason: String, completion: @escaping (Bool) -> Void) {
@@ -107,7 +110,7 @@ class ContextualPermissionManager {
     /// Check if we should ask for permission (not too frequently)
     func shouldAskForPermission(type: String) -> Bool {
         let key = "LastAsked_\(type)"
-        if let lastAsked = UserDefaults.standard.object(forKey: key) as? Date {
+        if let lastAsked = settingsStore.lastContextualPermissionDate(for: key) {
             // Don't ask more than once per day
             return Date().timeIntervalSince(lastAsked) > 86400
         }
@@ -117,6 +120,6 @@ class ContextualPermissionManager {
     /// Mark that we asked for permission
     func markAskedForPermission(type: String) {
         let key = "LastAsked_\(type)"
-        UserDefaults.standard.set(Date(), forKey: key)
+        settingsStore.setLastContextualPermissionDate(Date(), for: key)
     }
 }

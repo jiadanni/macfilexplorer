@@ -68,6 +68,7 @@ extension UserDefaults {
         case showPreviewPaneButton = "showPreviewPaneButton"
         case showNewFolderButton = "showNewFolderButton"
         case showSortButton = "showSortButton"
+        case showStorageAnalyzerButton = "showStorageAnalyzerButton"
         case showOpenTerminalButton = "showOpenTerminalButton"
 
         // Column Visibility (List View)
@@ -120,7 +121,7 @@ extension UserDefaults {
                 .hideShowInFinder, .expandSidebarToCurrentDirectory, .showStatusBar, .autoRenameOnConflict,
                 .deleteWithBackspaceOnly, .confirmFileOperations, .showOperationProgress, .showBackForwardButtons,
                 .showViewModeButton, .showHiddenFilesButton, .showSplitButtons, .showPreviewPaneButton,
-                .showNewFolderButton, .showSortButton, .showOpenTerminalButton, .columnVisibility, .openSettingsInTab,
+                .showNewFolderButton, .showSortButton, .showStorageAnalyzerButton, .showOpenTerminalButton, .columnVisibility, .openSettingsInTab,
                 .folderSortPreferences, .hiddenFilesState, .defaultViewMode, .defaultSortColumn, .defaultSortAscending,
                 .maximumPanes, .showFolderSizes, .showGoHome, .showGoDesktop, .showGoDocuments, .showGoDownloads,
                 .showGoApplications, .showGoUtilities, .showGoLibrary, .showGoComputer, .showGoAirDrop, .showGoNetwork,
@@ -131,4 +132,3 @@ extension UserDefaults {
         }
     }
 }
-

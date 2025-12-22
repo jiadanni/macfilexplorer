@@ -34,6 +34,7 @@ protocol SettingsStoreProtocol: AnyObject {
     var warnOnExtensionChange: Bool { get set }
     var enableEasySelect: Bool { get set }
     var startupFolder: String? { get set }
+    var accentColor: Data? { get set }
 
     // MARK: - Preview Pane Settings
     
@@ -96,10 +97,41 @@ protocol SettingsStoreProtocol: AnyObject {
     
     var hasLaunchedBefore: Bool { get set }
     var showStartOnLaunch: Bool { get set }
+    var hasCompletedOnboarding: Bool { get set }
+    var dismissedWelcome: Bool { get set }
+
+    // MARK: - Go Menu Settings
+
+    var showGoHome: Bool { get set }
+    var showGoDesktop: Bool { get set }
+    var showGoDocuments: Bool { get set }
+    var showGoDownloads: Bool { get set }
+    var showGoApplications: Bool { get set }
+    var showGoUtilities: Bool { get set }
+    var showGoLibrary: Bool { get set }
+    var showGoComputer: Bool { get set }
+    var showGoAirDrop: Bool { get set }
+    var showGoNetwork: Bool { get set }
+    var showGoiCloudDrive: Bool { get set }
+    var showGoRecent: Bool { get set }
+    var showGoConnectToServer: Bool { get set }
 
     // MARK: - Split Panes Settings
     
     var maximumPanes: Int { get set }
+
+    // MARK: - Window Layout Settings
+
+    var sidebarFixedWidth: Double { get set }
+    var terminalIsVisible: Bool { get set }
+
+    // MARK: - Favorites Widget Settings
+
+    var favoriteWidgetFolders: [String] { get set }
+
+    // MARK: - Storage Analyzer Settings
+
+    var storageAnalyzerLastScanPath: String? { get set }
 
     // MARK: - Context Menu Settings
     
@@ -149,6 +181,15 @@ protocol SettingsStoreProtocol: AnyObject {
     var globalFolderColorHex: String? { get set }
     var folderColors: [String: String] { get set }
 
+    // MARK: - View Options Settings
+
+    func loadViewOptions() -> ViewOptions
+    func saveViewOptions(_ options: ViewOptions)
+
+    // MARK: - Operation Metrics
+
+    var operationMetricsLogData: Data? { get set }
+
     // MARK: - Observability
 
     func addDelegate(_ delegate: SettingsStoreDelegate)
@@ -157,4 +198,9 @@ protocol SettingsStoreProtocol: AnyObject {
     // MARK: - Utility Methods
     
     func resetToDefaults()
+
+    func data(forKey key: String) -> Data?
+    func value(forKey key: String) -> Any?
+    func setValue(_ value: Any?, forKey key: String)
+    func removeValue(forKey key: String)
 }

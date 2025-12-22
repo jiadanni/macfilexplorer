@@ -261,7 +261,7 @@ struct StartDesignSystem {
 
         let icon = NSImageView()
         if let sysImage = NSImage(systemSymbolName: granted ? Icons.checkmark : Icons.lock, accessibilityDescription: nil) {
-            let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+            let useGrayscale = SettingsStore.shared.useGrayscaleIcons
             icon.image = useGrayscale ? sysImage.grayscale() : sysImage
         }
         icon.contentTintColor = .white

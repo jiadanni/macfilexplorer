@@ -18,6 +18,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     private var hasInitializedTabs = false
     private let minimumContentWidth: CGFloat = 320 // keep room for file panes
     private var isAdjustingSplitPosition = false // prevent recursive position updates
+    private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -36,7 +37,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         sidebarViewController?.delegate = self
         let sidebarItem = NSSplitViewItem(viewController: sidebarViewController!)
         // Determine fixed width (load saved or default)
-        let savedWidth = UserDefaults.standard.double(forKey: "sidebarFixedWidth")
+        let savedWidth = settingsStore.sidebarFixedWidth
         // Clamp to a compact range so the sidebar never forces a wide window
         let clampedWidth: CGFloat
         if savedWidth > 0 {
@@ -81,7 +82,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         addSplitViewItem(contentItem)
 
         // Apply initial divider position to honor fixed width
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             let safeWidth = self.adjustedSidebarWidth(proposed: initialWidth)
             self.splitView.setPosition(safeWidth, ofDividerAt: 0)
@@ -97,9 +98,9 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
             // Check if we should show Start tab
             // Default to Start Page if no startup folder is explicitly set
-            let hasLaunchedBefore = UserDefaults.standard.bool(forKey: UserDefaults.Keys.hasLaunchedBefore.rawValue)
-            let showStartOnLaunch = UserDefaults.standard.bool(forKey: UserDefaults.Keys.showStartOnLaunch.rawValue)
-            let hasStartupFolder = UserDefaults.standard.string(forKey: UserDefaults.Keys.startupFolder.rawValue) != nil
+            let hasLaunchedBefore = settingsStore.hasLaunchedBefore
+            let showStartOnLaunch = settingsStore.showStartOnLaunch
+            let hasStartupFolder = settingsStore.startupFolder != nil
 
             // Show Start Page if: first launch, preference is set, OR no startup folder configured
             if !hasLaunchedBefore || showStartOnLaunch || !hasStartupFolder {
@@ -109,10 +110,10 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
             }
 
             // Restore terminal visibility state
-            let wasVisible = UserDefaults.standard.bool(forKey: "terminalIsVisible")
+            let wasVisible = settingsStore.terminalIsVisible
             if wasVisible {
                 // Restore state without animation to avoid crashes during initial setup
-                DispatchQueue.main.async { [weak self] in
+                Task { @MainActor [weak self] in
                     self?.setTerminalVisibility(true, animated: false)
                 }
             }
@@ -171,7 +172,8 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
             if animated {
                 terminalViewController?.focusInput()
             } else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(nanoseconds: 100_000_000)
                     self?.terminalViewController?.focusInput()
                 }
             }
@@ -180,7 +182,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
             view.window?.makeFirstResponder(tabBarController?.view)
         }
 
-        UserDefaults.standard.set(visible, forKey: "terminalIsVisible")
+        settingsStore.terminalIsVisible = visible
     }
 
     func cutSelection() {
@@ -237,8 +239,8 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         if abs(currentWidth - adjustedWidth) > 1.0 {
             isAdjustingSplitPosition = true
             // Defer to avoid constraint conflicts during active layout
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
                 self.splitView.setPosition(adjustedWidth, ofDividerAt: 0)
                 self.isAdjustingSplitPosition = false
             }
@@ -247,7 +249,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         // Persist width for next launch
         if currentWidth > 120 {
             let clampedWidth = max(140.0, min(currentWidth, 240.0))
-            UserDefaults.standard.set(clampedWidth, forKey: "sidebarFixedWidth")
+            settingsStore.sidebarFixedWidth = Double(clampedWidth)
         }
     }
 

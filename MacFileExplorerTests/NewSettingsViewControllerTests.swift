@@ -3,44 +3,53 @@ import XCTest
 
 class NewSettingsViewControllerTests: XCTestCase {
 
+    override func tearDown() {
+        PendingSettings.shared.cancelChanges()
+        super.tearDown()
+    }
+
     func testGeneralSettings() {
         let generalVC = GeneralSettingsViewController()
         let button = NSButton()
-        button.tag = UserDefaults.Keys.warnOnExtensionChange.rawValue.hashValue
+        let key = UserDefaults.Keys.warnOnExtensionChange.rawValue
+        button.tag = key.hashValue
         button.state = .on
         generalVC.checkboxChanged(button)
-        XCTAssertTrue(UserDefaults.standard.bool(forKey: UserDefaults.Keys.warnOnExtensionChange.rawValue))
+        XCTAssertEqual(PendingSettings.shared.getValue(forKey: key) as? Bool, true)
     }
 
     func testTabsSettings() {
         let tabsVC = TabsSettingsViewController()
         let button = NSButton()
-        button.tag = UserDefaults.Keys.restoreTabsOnReopen.rawValue.hashValue
+        let key = UserDefaults.Keys.restoreTabsOnReopen.rawValue
+        button.tag = key.hashValue
         button.state = .on
         tabsVC.checkboxChanged(button)
-        XCTAssertTrue(UserDefaults.standard.bool(forKey: UserDefaults.Keys.restoreTabsOnReopen.rawValue))
+        XCTAssertEqual(PendingSettings.shared.getValue(forKey: key) as? Bool, true)
     }
 
     func testSidebarSettings() {
         let sidebarVC = SidebarSettingsViewController()
         let button = NSButton()
-        button.tag = UserDefaults.Keys.showFavorites.rawValue.hashValue
+        let favoritesKey = UserDefaults.Keys.showFavorites.rawValue
+        button.tag = favoritesKey.hashValue
         button.state = .off
         sidebarVC.checkboxChanged(button)
-        XCTAssertFalse(UserDefaults.standard.bool(forKey: UserDefaults.Keys.showFavorites.rawValue))
+        XCTAssertEqual(PendingSettings.shared.getValue(forKey: favoritesKey) as? Bool, false)
 
         let segmentedControl = NSSegmentedControl()
         segmentedControl.selectedSegment = 1
         sidebarVC.sidebarOrderChanged(segmentedControl)
-        XCTAssertEqual(UserDefaults.standard.integer(forKey: UserDefaults.Keys.sidebarOrder.rawValue), 1)
+        XCTAssertEqual(PendingSettings.shared.getValue(forKey: UserDefaults.Keys.sidebarOrder.rawValue) as? Int, 1)
     }
 
     func testTerminalSettings() {
         let terminalVC = TerminalSettingsViewController()
         let button = NSButton()
-        button.tag = UserDefaults.Keys.openTerminalByDefault.rawValue.hashValue
+        let key = UserDefaults.Keys.openTerminalByDefault.rawValue
+        button.tag = key.hashValue
         button.state = .on
         terminalVC.checkboxChanged(button)
-        XCTAssertTrue(UserDefaults.standard.bool(forKey: UserDefaults.Keys.openTerminalByDefault.rawValue))
+        XCTAssertEqual(PendingSettings.shared.getValue(forKey: key) as? Bool, true)
     }
 }

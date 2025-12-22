@@ -44,7 +44,7 @@ class StorageAnalyzerTabViewController: NSViewController, SplitPaneViewControlle
         // Show scope selection dialog on first appearance if no scan has been performed
         if rootURL == nil {
             // Defer to ensure window is fully set up
-            DispatchQueue.main.async { [weak self] in
+            Task { @MainActor [weak self] in
                 self?.showScopeSelectionDialog()
             }
         }
@@ -172,7 +172,7 @@ class StorageAnalyzerTabViewController: NSViewController, SplitPaneViewControlle
         scopeVC.completionHandler = { [weak self] url, options in
             debugLog("StorageAnalyzerTab: completionHandler called with url: \(url.path)")
             // Dismiss the scope selection panel first on the main queue
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 debugLog("StorageAnalyzerTab: In async block, about to dismiss panel")
                 if let sheet = self?.scopeSheet {
                     sheet.close()
@@ -357,7 +357,7 @@ extension StorageAnalyzerTabViewController: StorageAnalyzerDelegate {
     }
 
     func analyzerDidComplete(rootItem: StorageItem, duration: TimeInterval) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.rootItem = rootItem
             self?.listViewController.setRootItem(rootItem)
             self?.summaryViewController.setRootItem(rootItem)
@@ -378,17 +378,16 @@ extension StorageAnalyzerTabViewController: StorageAnalyzerDelegate {
     }
 
     func analyzerDidFail(error: String) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.progressViewController?.setScanFailed(error: error)
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                self?.hideProgressSheet()
-            }
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            self?.hideProgressSheet()
         }
     }
 
     func analyzerWasCancelled() {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.hideProgressSheet()
         }
     }

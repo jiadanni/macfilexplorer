@@ -101,8 +101,8 @@ final class FileOperationsManager {
             delegate?.fileOperationsManager(self, didRequestPresentSheet: progressVC)
         }
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
             let fileManager = FileManager.default
             var totalSize: Int64 = 0
             let startTime = Date()
@@ -114,7 +114,7 @@ final class FileOperationsManager {
                     do {
                         try fileManager.trashItem(at: sourceURL, resultingItemURL: nil)
                     } catch {
-                        DispatchQueue.main.async {
+                        await MainActor.run {
                             self.delegate?.fileOperationsManager(self, didRequestPresentError: "Failed to move '\(sourceURL.lastPathComponent)' to Trash: \(error.localizedDescription)")
                         }
                     }
@@ -159,21 +159,21 @@ final class FileOperationsManager {
                     
                     if !operationSucceeded {
                         let displayError = lastError ?? NSError(domain: NSCocoaErrorDomain, code: NSFileWriteUnknownError, userInfo: [NSLocalizedDescriptionKey: "Failed after \(attemptCount) rename attempts"])
-                        DispatchQueue.main.async {
+                        await MainActor.run {
                             self.delegate?.fileOperationsManager(self, didRequestPresentError: "Failed to \(operation.rawValue) '\(sourceURL.lastPathComponent)': \(displayError.localizedDescription)")
                         }
                     }
                 }
                 
                 // Update progress
-                DispatchQueue.main.async {
+                await MainActor.run {
                     progressVC?.updateProgress(percent: Double(index + 1) / Double(items.count), status: "Processing: \(sourceURL.lastPathComponent)")
                 }
             }
             
             // Finalize
             OperationMetricsManager.append(type: operation.rawValue, bytes: totalSize, files: items.count, start: startTime, end: Date())
-            DispatchQueue.main.async {
+            await MainActor.run {
                 progressVC?.dismiss(nil)
                 self.delegate?.fileOperationsManagerDidRequestRefresh(self)
                 if operation == .move, let sourcePane = sourcePane {

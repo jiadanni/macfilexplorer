@@ -198,7 +198,7 @@ class FileCopyMoveDialog: NSWindowController {
 
 extension FileCopyMoveDialog: FileOperationDelegate {
     func fileOperationDidStart(totalBytes: Int64, fileCount: Int) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             self.totalBytesToProcess = totalBytes
             self.statusLabel.stringValue = "\(fileCount) file(s) to process"
@@ -206,7 +206,7 @@ extension FileCopyMoveDialog: FileOperationDelegate {
     }
 
     func fileOperationDidProgress(currentFile: String, bytesProcessed: Int64, totalBytes: Int64) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
 
             self.totalBytesProcessed = bytesProcessed
@@ -222,7 +222,7 @@ extension FileCopyMoveDialog: FileOperationDelegate {
     }
 
     func fileOperationDidComplete() {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
 
             self.titleLabel.stringValue = L10n.text("Complete!")
@@ -237,14 +237,13 @@ extension FileCopyMoveDialog: FileOperationDelegate {
             }
 
             // Auto-close after 2 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                self.close()
-            }
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            self.close()
         }
     }
 
     func fileOperationDidFail(error: String) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
 
             let alert = NSAlert()
@@ -259,7 +258,7 @@ extension FileCopyMoveDialog: FileOperationDelegate {
     }
 
     func fileOperationDidUpdateQueue(files: [String]) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
 
             var queueText = ""
@@ -281,6 +280,45 @@ protocol FileOperationDelegate: AnyObject {
     func fileOperationDidUpdateQueue(files: [String])
 }
 
+private actor FileOperationControl {
+    private var isPaused = false
+    private var isCancelled = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func pause() {
+        isPaused = true
+    }
+
+    func resume() {
+        isPaused = false
+        resumeAll()
+    }
+
+    func cancel() {
+        isCancelled = true
+        resumeAll()
+    }
+
+    func shouldCancel() -> Bool {
+        isCancelled
+    }
+
+    func waitIfPaused() async {
+        if isCancelled || !isPaused {
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    private func resumeAll() {
+        let pending = waiters
+        waiters.removeAll()
+        pending.forEach { $0.resume() }
+    }
+}
+
 class FileOperation {
 
     let type: FileCopyMoveDialog.OperationType
@@ -288,49 +326,36 @@ class FileOperation {
     private let destination: URL
     private weak var delegate: FileOperationDelegate?
 
-    private let stateQueue = DispatchQueue(label: "com.macfileexplorer.fileoperation.state", attributes: .concurrent)
-    private let pauseCondition = NSCondition()
-    private var _isPaused = false
-    private var _isCancelled = false
-    private var operationQueue: DispatchQueue
-
-    private var isPaused: Bool {
-        stateQueue.sync { _isPaused }
-    }
-
-    private var isCancelled: Bool {
-        stateQueue.sync { _isCancelled }
-    }
+    private let control = FileOperationControl()
+    private var operationTask: Task<Void, Never>?
 
     init(type: FileCopyMoveDialog.OperationType, sourceFiles: [URL], destination: URL, delegate: FileOperationDelegate?) {
         self.type = type
         self.sourceFiles = sourceFiles
         self.destination = destination
         self.delegate = delegate
-        self.operationQueue = DispatchQueue(label: "com.macfileexplorer.fileoperation", qos: .userInitiated)
     }
 
     func start() {
-        operationQueue.async { [weak self] in
-            self?.performOperation()
+        operationTask = Task.detached(priority: .userInitiated) { [weak self] in
+            await self?.performOperation()
         }
     }
 
     func pause() {
-        setPaused(true)
+        Task { await control.pause() }
     }
 
     func resume() {
-        setPaused(false)
-        wakeWaitingThreads()
+        Task { await control.resume() }
     }
 
     func cancel() {
-        setCancelled(true)
-        wakeWaitingThreads()
+        operationTask?.cancel()
+        Task { await control.cancel() }
     }
 
-    private func performOperation() {
+    private func performOperation() async {
         let fileManager = FileManager.default
 
         // Calculate total size
@@ -340,13 +365,13 @@ class FileOperation {
         for sourceURL in sourceFiles {
             if let enumerator = fileManager.enumerator(at: sourceURL, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
                 for case let fileURL as URL in enumerator {
-                    if isCancelled { return }
+                    if Task.isCancelled || await control.shouldCancel() { return }
 
                     filesToProcess.append(fileURL)
 
                     // Get file size
-                    waitIfPaused()
-                    if isCancelled { return }
+                    await control.waitIfPaused()
+                    if Task.isCancelled || await control.shouldCancel() { return }
                     do {
                         let resourceValues = try fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
                         if let isDirectory = resourceValues.isDirectory, !isDirectory {
@@ -366,10 +391,10 @@ class FileOperation {
         var bytesProcessed: Int64 = 0
 
         for sourceURL in sourceFiles {
-            if isCancelled { return }
+            if Task.isCancelled || await control.shouldCancel() { return }
 
-            waitIfPaused()
-            if isCancelled { return }
+            await control.waitIfPaused()
+            if Task.isCancelled || await control.shouldCancel() { return }
 
             let fileName = sourceURL.lastPathComponent
             let destinationURL = destination.appendingPathComponent(fileName)
@@ -431,29 +456,4 @@ class FileOperation {
         return newURL
     }
 
-    private func setPaused(_ value: Bool) {
-        stateQueue.sync(flags: .barrier) {
-            _isPaused = value
-        }
-    }
-
-    private func setCancelled(_ value: Bool) {
-        stateQueue.sync(flags: .barrier) {
-            _isCancelled = value
-        }
-    }
-
-    private func waitIfPaused() {
-        pauseCondition.lock()
-        while isPaused && !isCancelled {
-            pauseCondition.wait()
-        }
-        pauseCondition.unlock()
-    }
-
-    private func wakeWaitingThreads() {
-        pauseCondition.lock()
-        pauseCondition.broadcast()
-        pauseCondition.unlock()
-    }
 }

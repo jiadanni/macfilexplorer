@@ -69,15 +69,15 @@ class FileBrowserDataSource {
         let url = currentDirectory
         let showsHidden = showsHiddenFiles
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
             
             let item = FileItem(url: url)
             // Note: recursive=isSearch logic from VC
             let success = item.loadChildren(showsHiddenFiles: showsHidden, recursive: isSearch) { errorMsg in
                 // We'll treat the string error as an NSError for the protocol
                 let error = NSError(domain: "FileBrowserDataSource", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMsg])
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self.delegate?.dataSource(self, didFailToLoad: error)
                 }
             }
@@ -86,7 +86,7 @@ class FileBrowserDataSource {
                 debugLog("Warning: Failed to load children for \(url.path)")
             }
             
-            DispatchQueue.main.async {
+            await MainActor.run {
                 self.rootItem = item
                 
                 // Load stored sort preference for this folder

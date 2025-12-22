@@ -70,9 +70,9 @@ NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:...")!)
 Network location mounting has no result handling (AppDelegate.swift:434-441)
 Concurrency: Solid with Minor Risk
 Well-Implemented:
-StorageAnalyzerEngine uses proper DispatchQueue with barriers
-NSCondition for pause/resume operations
-Main thread dispatch for all UI updates
+StorageAnalyzerEngine uses actors for cache/control synchronization
+Pause/resume operations use async continuations
+Main thread updates use MainActor
 Potential Race Condition:
 FileCopyMoveDialog.swift:14-20: isPaused, isCancelled flags accessed from multiple threads without synchronization
 4. API Surface Consistency

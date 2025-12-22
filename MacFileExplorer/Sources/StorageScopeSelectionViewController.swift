@@ -280,7 +280,7 @@ class StorageScopeSelectionViewController: NSViewController {
         }
 
         // Save last scan path
-        UserDefaults.standard.set(url.path, forKey: "StorageAnalyzerLastScanPath")
+        SettingsStore.shared.storageAnalyzerLastScanPath = url.path
 
         // Call completion handler - this will trigger the sheet dismissal in the parent
         debugLog("StorageScopeSelection: About to call completionHandler")

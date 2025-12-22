@@ -9,6 +9,7 @@ class ViewOptionsViewController: NSViewController {
 
     weak var delegate: ViewOptionsDelegate?
     private var viewOptions: ViewOptions
+    private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
     // View mode checkboxes
     private var alwaysOpenInIconViewCheckbox: NSButton!
@@ -37,12 +38,12 @@ class ViewOptionsViewController: NSViewController {
     private var backgroundPictureRadio: NSButton!
 
     init() {
-        self.viewOptions = UserDefaults.standard.loadViewOptions()
+        self.viewOptions = SettingsStore.shared.loadViewOptions()
         super.init(nibName: nil, bundle: nil)
     }
 
     required init?(coder: NSCoder) {
-        self.viewOptions = UserDefaults.standard.loadViewOptions()
+        self.viewOptions = SettingsStore.shared.loadViewOptions()
         super.init(coder: coder)
     }
 
@@ -293,7 +294,7 @@ class ViewOptionsViewController: NSViewController {
     }
 
     private func saveAndNotify() {
-        UserDefaults.standard.saveViewOptions(viewOptions)
+        settingsStore.saveViewOptions(viewOptions)
         delegate?.viewOptionsDidChange(viewOptions)
     }
 }

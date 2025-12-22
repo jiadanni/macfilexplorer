@@ -20,14 +20,14 @@ class WindowTrafficLightManager {
     }
 
     func applyToAllWindows() {
-        let useGray = UserDefaults.standard.bool(forKey: "useGrayscaleWindowControls")
+        let useGray = SettingsStore.shared.useGrayscaleWindowControls
         for win in NSApp.windows {
             apply(to: win, grayscale: useGray)
         }
     }
 
     func apply(to window: NSWindow, grayscale: Bool) {
-        DispatchQueue.main.async {
+        Task { @MainActor in
             guard
                 let contentView = window.contentView,
                 let titlebarView = contentView.superview,

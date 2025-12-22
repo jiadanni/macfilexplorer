@@ -5,8 +5,11 @@ import Foundation
 final class PendingSettings {
     static let shared = PendingSettings()
     private var pendingChanges: [String: Any] = [:]
+    private let settingsStore: SettingsStoreProtocol
 
-    private init() {}
+    private init(settingsStore: SettingsStoreProtocol = SettingsStore.shared) {
+        self.settingsStore = settingsStore
+    }
 
     func setValue(_ value: Any?, forKey key: String) {
         pendingChanges[key] = value
@@ -22,21 +25,21 @@ final class PendingSettings {
         if let pending = pendingChanges[key] as? Bool {
             return pending
         }
-        return UserDefaults.standard.bool(forKey: key)
+        return settingsStore.value(forKey: key) as? Bool ?? false
     }
 
     func string(forKey key: String) -> String? {
         if let pending = pendingChanges[key] as? String {
             return pending
         }
-        return UserDefaults.standard.string(forKey: key)
+        return settingsStore.value(forKey: key) as? String
     }
 
     func applyChanges() {
         let changedKeys = Set(pendingChanges.keys)
 
         for (key, value) in pendingChanges {
-            UserDefaults.standard.set(value, forKey: key)
+            settingsStore.setValue(value, forKey: key)
         }
         pendingChanges.removeAll()
 
@@ -77,4 +80,3 @@ final class PendingSettings {
         !pendingChanges.isEmpty
     }
 }
-

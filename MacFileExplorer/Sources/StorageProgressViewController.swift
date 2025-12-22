@@ -113,7 +113,7 @@ class StorageProgressViewController: NSViewController {
     // MARK: - Public Methods
 
     func updateProgress(currentPath: String, itemsScanned: Int, totalSize: Int64) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.pathLabel.stringValue = currentPath
             self?.itemsScannedLabel.stringValue = "Items scanned: \(self?.formatNumber(itemsScanned) ?? "0")"
             self?.totalSizeLabel.stringValue = "Total size: \(ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file))"
@@ -121,7 +121,7 @@ class StorageProgressViewController: NSViewController {
     }
 
     func setScanComplete() {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.statusLabel.stringValue = "Scan Complete!"
             self?.progressIndicator.stopAnimation(nil)
             self?.cancelButton.title = "Close"
@@ -129,7 +129,7 @@ class StorageProgressViewController: NSViewController {
     }
 
     func setScanFailed(error: String) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.statusLabel.stringValue = "Scan Failed"
             self?.pathLabel.stringValue = error
             self?.progressIndicator.stopAnimation(nil)

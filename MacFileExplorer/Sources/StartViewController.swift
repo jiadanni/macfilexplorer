@@ -27,6 +27,7 @@ class StartViewController: NSViewController {
     private var quickActionsWidget: QuickActionsWidgetView!
     private var gettingStartedWidget: GettingStartedWidgetView?
     private var storageWidget: StorageOverviewWidgetView?
+    private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
     // MARK: - Lifecycle
 
@@ -147,7 +148,9 @@ class StartViewController: NSViewController {
 
     private func checkAllTasksComplete() -> Bool {
         let tasks = ["pinFolder", "grantAccess", "tryStorage", "customize"]
-        return tasks.allSatisfy { UserDefaults.standard.bool(forKey: "GettingStarted_\($0)") }
+        return tasks.allSatisfy { task in
+            settingsStore.value(forKey: "GettingStarted_\(task)") as? Bool ?? false
+        }
     }
 
     private func observePermissions() {
@@ -325,7 +328,7 @@ extension StartViewController: StartWidgetDelegate {
 
     func widgetDidRequestDismiss(_ widget: StartWidgetView) {
         if widget === welcomeWidget {
-            UserDefaults.standard.set(true, forKey: "dismissedWelcome")
+            settingsStore.dismissedWelcome = true
         }
 
         widget.animateOut { [weak self] in

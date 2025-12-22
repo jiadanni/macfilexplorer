@@ -71,7 +71,7 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
             previewItem.maximumThickness = CGFloat.greatestFiniteMagnitude
             let preferredWidth = width
             
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 previewVC.view.frame.size.width = preferredWidth
             }
         }

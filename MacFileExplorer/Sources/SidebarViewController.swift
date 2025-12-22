@@ -113,13 +113,13 @@ class SidebarViewController: NSViewController {
     }
 
     @objc private func volumeDidMount(_ notification: Notification) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.loadSidebarItems()
         }
     }
 
     @objc private func volumeDidUnmount(_ notification: Notification) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.loadSidebarItems()
         }
     }
@@ -615,7 +615,8 @@ class SidebarViewController: NSViewController {
         do {
             try NSWorkspace.shared.unmountAndEjectDevice(at: item.url)
             // Refresh the drives list after successful ejection
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 500_000_000)
                 self?.loadSidebarItems()
             }
         } catch {
@@ -690,7 +691,7 @@ class SidebarViewController: NSViewController {
         // Load children if not loaded, but skip user home folder to avoid TCC dialogs
         if item.needsChildLoading && !isUserHomeFolder {
             item.loadChildren(showsHiddenFiles: false) { _ in
-                DispatchQueue.main.async { [weak self] in
+                Task { @MainActor [weak self] in
                     self?.folderExplorerOutlineView.reloadItem(item, reloadChildren: true)
                     // Expand again after loading
                     self?.folderExplorerOutlineView.expandItem(item)
@@ -1043,7 +1044,8 @@ extension SidebarViewController: NSTableViewDelegate {
         do {
             try NSWorkspace.shared.unmountAndEjectDevice(at: driveItem.url)
             // Refresh the drives list after successful ejection
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 500_000_000)
                 self?.loadSidebarItems()
             }
         } catch {
@@ -1137,7 +1139,7 @@ extension SidebarViewController: NSOutlineViewDataSource {
         // Reload the folder explorer to show changes
         if allSucceeded {
             targetItem.loadChildren(showsHiddenFiles: false) { _ in
-                DispatchQueue.main.async { [weak self] in
+                Task { @MainActor [weak self] in
                     self?.folderExplorerOutlineView.reloadItem(targetItem, reloadChildren: true)
                 }
             }

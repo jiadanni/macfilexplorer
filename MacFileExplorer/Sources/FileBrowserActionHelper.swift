@@ -64,8 +64,6 @@ class FileBrowserActionHelper {
             }
         }
     }
-        }
-    }
     
     /// Reveals a file in Finder.
     static func revealInFinder(_ url: URL) {

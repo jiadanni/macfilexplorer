@@ -33,6 +33,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
 
     private var panes: [FileBrowserViewController] = []
     private var activePaneIndex: Int = 0
+    private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
     // Per-pane preview now managed inside each FileBrowserViewController
 
     var currentPath: String {
@@ -60,8 +61,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
 
     func addPane(url: URL? = nil) {
         // Check if we've reached the maximum panes limit
-        let maxPanes = UserDefaults.standard.integer(forKey: UserDefaults.Keys.maximumPanes.rawValue)
-        let limit = maxPanes > 0 ? maxPanes : 2 // Default to 2 if not set
+        let limit = settingsStore.maximumPanes
 
         if panes.count >= limit {
             // Show alert that maximum panes reached
@@ -121,16 +121,13 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
     }
 
     func canAddMorePanes() -> Bool {
-        let maxPanes = UserDefaults.standard.integer(forKey: UserDefaults.Keys.maximumPanes.rawValue)
-        let limit = maxPanes > 0 ? maxPanes : 2 // Default to 2 if not set
-        return panes.count < limit
+        return panes.count < settingsStore.maximumPanes
     }
 
     func splitVertically() {
         // Check if we can add more panes
         guard canAddMorePanes() else {
-            let maxPanes = UserDefaults.standard.integer(forKey: UserDefaults.Keys.maximumPanes.rawValue)
-            let limit = maxPanes > 0 ? maxPanes : 2
+            let limit = settingsStore.maximumPanes
             let alert = NSAlert()
             alert.messageText = "Maximum Panes Reached"
             alert.informativeText = "You have reached the maximum of \(limit) panes. Close a pane or increase the limit in Settings > Advanced."
@@ -153,8 +150,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
     func splitHorizontally() {
         // Check if we can add more panes
         guard canAddMorePanes() else {
-            let maxPanes = UserDefaults.standard.integer(forKey: UserDefaults.Keys.maximumPanes.rawValue)
-            let limit = maxPanes > 0 ? maxPanes : 2
+            let limit = settingsStore.maximumPanes
             let alert = NSAlert()
             alert.messageText = "Maximum Panes Reached"
             alert.informativeText = "You have reached the maximum of \(limit) panes. Close a pane or increase the limit in Settings > Advanced."

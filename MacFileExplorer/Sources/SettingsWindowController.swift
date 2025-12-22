@@ -10,6 +10,7 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
 
     weak var settingsDelegate: SettingsWindowDelegate?
     private var settingsViewController: SettingsViewController?
+    private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
     // Button container
     private var buttonContainerView: NSView?
@@ -269,17 +270,17 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
 
     private func exportSettings(to url: URL) {
         var settingsDict: [String: Any] = [:]
-        let defaults = UserDefaults.standard
 
         // Export all settings keys
         for key in UserDefaults.Keys.allCases {
-            if let value = defaults.object(forKey: key.rawValue) {
+            if let value = settingsStore.value(forKey: key.rawValue) {
                 settingsDict[key.rawValue] = value
             }
         }
 
         // Also export favorites
-        if let favorites = defaults.array(forKey: "SidebarFavorites") {
+        let favorites = settingsStore.sidebarFavorites
+        if !favorites.isEmpty {
             settingsDict["SidebarFavorites"] = favorites
         }
 
@@ -312,15 +313,10 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
                 throw NSError(domain: "SettingsImport", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid settings file format"])
             }
 
-            let defaults = UserDefaults.standard
-
             // Import all settings
             for (key, value) in settingsDict {
-                defaults.set(value, forKey: key)
+                settingsStore.setValue(value, forKey: key)
             }
-
-            // Synchronize to ensure changes are saved
-            defaults.synchronize()
 
             // Show success alert and offer to restart
             let alert = NSAlert()
@@ -349,4 +345,3 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
 }
 
 // Notification names moved to NotificationNames.swift
-

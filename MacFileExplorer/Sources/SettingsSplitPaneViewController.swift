@@ -198,9 +198,7 @@ class SettingsSplitPaneViewController: SplitPaneViewController, SettingsChangeDe
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
             // Reset all settings to defaults
-            for key in UserDefaults.Keys.allCases {
-                UserDefaults.standard.removeObject(forKey: key.rawValue)
-            }
+            SettingsStore.shared.resetToDefaults()
             // Post notification to refresh all UI
             NotificationCenter.default.post(name: .settingsDidChange, object: nil)
             applyButton?.isEnabled = false

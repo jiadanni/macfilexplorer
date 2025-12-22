@@ -8,6 +8,8 @@ class PreviewViewController: NSViewController {
         }
     }
 
+    private var imageLoadTask: Task<Void, Never>?
+
     private let nameLabel: NSTextField = {
         let label = NSTextField(labelWithString: "")
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -90,6 +92,9 @@ class PreviewViewController: NSViewController {
     private func updatePreview() {
         guard isViewLoaded else { return }
 
+        imageLoadTask?.cancel()
+        imageLoadTask = nil
+
         if let item = fileItem {
             nameLabel.stringValue = item.name
             pathLabel.stringValue = item.url.path
@@ -99,10 +104,12 @@ class PreviewViewController: NSViewController {
             // Handle image preview
             if item.isImage {
                 imageView.isHidden = false
-                DispatchQueue.global().async {
-                    let image = NSImage(contentsOf: item.url)
-                    DispatchQueue.main.async {
-                        self.imageView.image = image
+                let targetURL = item.url
+                imageLoadTask = Task.detached(priority: .userInitiated) { [weak self] in
+                    let image = NSImage(contentsOf: targetURL)
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run {
+                        self?.imageView.image = image
                     }
                 }
             } else {

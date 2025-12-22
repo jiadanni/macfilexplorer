@@ -10,6 +10,7 @@ import Cocoa
 class FavoritesWidgetView: StartWidgetView {
 
     private var addButton: NSView!
+    private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
     private var defaultFolders: [(name: String, icon: String, url: URL?)] = []
 
@@ -31,8 +32,9 @@ class FavoritesWidgetView: StartWidgetView {
     }
 
     private func setupDefaultFolders() {
-        // Load saved favorite folders from UserDefaults
-        if let savedPaths = UserDefaults.standard.array(forKey: "FavoriteWidgetFolders") as? [String] {
+        // Load saved favorite folders from settings store
+        let savedPaths = settingsStore.favoriteWidgetFolders
+        if !savedPaths.isEmpty {
             defaultFolders = savedPaths.compactMap { path in
                 let url = URL(fileURLWithPath: path)
                 let name = url.lastPathComponent.isEmpty ? "/" : url.lastPathComponent
@@ -56,10 +58,10 @@ class FavoritesWidgetView: StartWidgetView {
         defaultFolders.append(newFolder)
         debugLog("FavoritesWidget: defaultFolders count after append: \(defaultFolders.count)")
 
-        // Save to UserDefaults
+        // Save to settings store
         let paths = defaultFolders.compactMap { $0.url?.path }
-        UserDefaults.standard.set(paths, forKey: "FavoriteWidgetFolders")
-        debugLog("FavoritesWidget: Saved paths to UserDefaults: \(paths)")
+        settingsStore.favoriteWidgetFolders = paths
+        debugLog("FavoritesWidget: Saved paths to settings store: \(paths)")
 
         // Rebuild the widget UI
         debugLog("FavoritesWidget: About to rebuild content")
@@ -111,7 +113,7 @@ class FavoritesWidgetView: StartWidgetView {
         // Icon
         let iconView = NSImageView()
         if let sysImage = NSImage(systemSymbolName: icon, accessibilityDescription: name) {
-            let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+            let useGrayscale = settingsStore.useGrayscaleIcons
             iconView.image = useGrayscale ? sysImage.grayscale() : sysImage
             iconView.contentTintColor = useGrayscale ? NSColor.secondaryLabelColor : StartDesignSystem.Colors.accent
         }
@@ -183,7 +185,7 @@ class FavoritesWidgetView: StartWidgetView {
         // Plus icon
         let iconView = NSImageView()
         if let sysImage = NSImage(systemSymbolName: StartDesignSystem.Icons.addFolder, accessibilityDescription: "Add Folder") {
-            let useGrayscale = UserDefaults.standard.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
+            let useGrayscale = settingsStore.useGrayscaleIcons
             iconView.image = useGrayscale ? sysImage.grayscale() : sysImage
         }
         iconView.contentTintColor = StartDesignSystem.Colors.accent

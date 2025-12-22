@@ -16,25 +16,79 @@ protocol StorageAnalyzerDelegate: AnyObject {
     func analyzerWasCancelled()
 }
 
+private actor StorageAnalyzerCache {
+    private var cache: [URL: (item: StorageItem, timestamp: Date)] = [:]
+
+    func cachedResult(for url: URL) -> (item: StorageItem, timestamp: Date)? {
+        cache[url]
+    }
+
+    func store(item: StorageItem, for url: URL) {
+        cache[url] = (item, Date())
+    }
+
+    func clear() {
+        cache.removeAll()
+    }
+
+    func invalidate(for url: URL) {
+        cache.removeValue(forKey: url)
+    }
+}
+
+private actor ScanControl {
+    private var isCancelled = false
+    private var isPaused = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func reset() {
+        isCancelled = false
+        isPaused = false
+        resumeAll()
+    }
+
+    func cancel() {
+        isCancelled = true
+        resumeAll()
+    }
+
+    func pause() {
+        isPaused = true
+    }
+
+    func resume() {
+        isPaused = false
+        resumeAll()
+    }
+
+    func shouldCancel() -> Bool {
+        isCancelled
+    }
+
+    func waitIfPaused() async {
+        if isCancelled || !isPaused {
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    private func resumeAll() {
+        let pending = waiters
+        waiters.removeAll()
+        pending.forEach { $0.resume() }
+    }
+}
+
 /// Engine for scanning and analyzing disk storage
 class StorageAnalyzerEngine {
     // MARK: - Properties
 
     weak var delegate: StorageAnalyzerDelegate?
 
-    private let scanQueue = DispatchQueue(label: "com.macfileexplorer.storageanalyzer", qos: .userInitiated)
-    private let stateQueue = DispatchQueue(label: "com.macfileexplorer.storageanalyzer.state", attributes: .concurrent)
-    private let pauseCondition = NSCondition()
-    private var _isCancelled = false
-    private var _isPaused = false
-
-    private var isCancelled: Bool {
-        stateQueue.sync { _isCancelled }
-    }
-
-    private var isPaused: Bool {
-        stateQueue.sync { _isPaused }
-    }
+    private let control = ScanControl()
+    private var scanTask: Task<Void, Never>?
 
     /// Root URL being scanned
     private(set) var rootURL: URL?
@@ -56,8 +110,7 @@ class StorageAnalyzerEngine {
     private var options: ScanOptions = .default
 
     /// Cache for repeated scans
-    private static var cache: [URL: (item: StorageItem, timestamp: Date)] = [:]
-    private static let cacheQueue = DispatchQueue(label: "com.macfileexplorer.storageanalyzer.cache", attributes: .concurrent)
+    private static let cacheStore = StorageAnalyzerCache()
     private static let cacheValidityDuration: TimeInterval = 300 // 5 minutes
 
     // MARK: - Public Methods
@@ -67,98 +120,70 @@ class StorageAnalyzerEngine {
         self.rootURL = url
         self.options = options
         self.delegate = delegate
-        setCancelled(false)
-        setPaused(false)
+        scanTask?.cancel()
 
-        // Check cache first
-        if let cached = Self.cachedResult(for: url), Date().timeIntervalSince(cached.timestamp) < Self.cacheValidityDuration {
-            DispatchQueue.main.async { [weak self] in
-                self?.delegate?.analyzerDidComplete(rootItem: cached.item, duration: 0)
+        scanTask = Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            await self.control.reset()
+
+            // Check cache first
+            if let cached = await Self.cachedResult(for: url),
+               Date().timeIntervalSince(cached.timestamp) < Self.cacheValidityDuration {
+                await MainActor.run {
+                    self.delegate?.analyzerDidComplete(rootItem: cached.item, duration: 0)
+                }
+                return
             }
-            return
-        }
 
-        scanQueue.async { [weak self] in
-            self?.performScan(url: url)
+            await self.performScan(url: url)
         }
     }
 
     /// Cancels the current scan
     func cancel() {
-        setCancelled(true)
-        resumeIfNeeded()
+        scanTask?.cancel()
+        Task { await control.cancel() }
     }
 
     /// Pauses the current scan
     func pause() {
-        setPaused(true)
+        Task { await control.pause() }
     }
 
     /// Resumes a paused scan
     func resume() {
-        setPaused(false)
-        resumeIfNeeded()
+        Task { await control.resume() }
     }
 
     /// Clears the cache
     static func clearCache() {
-        cacheQueue.async(flags: .barrier) {
-            cache.removeAll()
+        Task {
+            await cacheStore.clear()
         }
     }
 
     /// Invalidates cache for a specific URL
     static func invalidateCache(for url: URL) {
-        cacheQueue.async(flags: .barrier) {
-            cache.removeValue(forKey: url)
+        Task {
+            await cacheStore.invalidate(for: url)
         }
     }
 
     // MARK: - Private Methods
 
-    private static func cachedResult(for url: URL) -> (item: StorageItem, timestamp: Date)? {
-        cacheQueue.sync {
-            cache[url]
-        }
+    private static func cachedResult(for url: URL) async -> (item: StorageItem, timestamp: Date)? {
+        await cacheStore.cachedResult(for: url)
     }
 
-    private static func storeCache(item: StorageItem, for url: URL) {
-        cacheQueue.async(flags: .barrier) {
-            cache[url] = (item, Date())
-        }
+    private static func storeCache(item: StorageItem, for url: URL) async {
+        await cacheStore.store(item: item, for: url)
     }
 
-    private func setCancelled(_ value: Bool) {
-        stateQueue.sync(flags: .barrier) {
-            _isCancelled = value
-        }
-    }
-
-    private func setPaused(_ value: Bool) {
-        stateQueue.sync(flags: .barrier) {
-            _isPaused = value
-        }
-    }
-
-    private func resumeIfNeeded() {
-        pauseCondition.lock()
-        pauseCondition.broadcast()
-        pauseCondition.unlock()
-    }
-
-    private func waitIfPaused() {
-        pauseCondition.lock()
-        while isPaused && !isCancelled {
-            pauseCondition.wait()
-        }
-        pauseCondition.unlock()
-    }
-
-    private func performScan(url: URL) {
+    private func performScan(url: URL) async {
         let startTime = Date()
 
-        DispatchQueue.main.async { [weak self] in
-            self?.delegate?.analyzerDidStart(totalItems: 0)
+        await MainActor.run {
+            self.delegate?.analyzerDidStart(totalItems: 0)
         }
 
         do {
@@ -171,12 +196,12 @@ class StorageAnalyzerEngine {
             var visitedPaths = Set<String>()
 
             // Scan recursively with cycle detection
-            try scanDirectory(item: root, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: 0, visitedPaths: &visitedPaths)
+            try await scanDirectory(item: root, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: 0, visitedPaths: &visitedPaths)
 
             // Check if cancelled
-            if isCancelled {
-                DispatchQueue.main.async { [weak self] in
-                    self?.delegate?.analyzerWasCancelled()
+            if await control.shouldCancel() {
+                await MainActor.run {
+                    self.delegate?.analyzerWasCancelled()
                 }
                 return
             }
@@ -188,28 +213,28 @@ class StorageAnalyzerEngine {
             self.rootItem = root
 
             // Cache the result
-            Self.storeCache(item: root, for: url)
+            await Self.storeCache(item: root, for: url)
 
             let duration = Date().timeIntervalSince(startTime)
 
-            DispatchQueue.main.async { [weak self] in
-                self?.delegate?.analyzerDidComplete(rootItem: root, duration: duration)
+            await MainActor.run {
+                self.delegate?.analyzerDidComplete(rootItem: root, duration: duration)
             }
 
         } catch {
-            DispatchQueue.main.async { [weak self] in
-                self?.delegate?.analyzerDidFail(error: error.localizedDescription)
+            await MainActor.run {
+                self.delegate?.analyzerDidFail(error: error.localizedDescription)
             }
         }
     }
 
-    private func scanDirectory(item: StorageItem, itemsScanned: inout Int, totalSize: inout Int64, currentDepth: Int = 0, visitedPaths: inout Set<String>) throws {
+    private func scanDirectory(item: StorageItem, itemsScanned: inout Int, totalSize: inout Int64, currentDepth: Int = 0, visitedPaths: inout Set<String>) async throws {
         // Check for cancellation
-        if isCancelled { return }
+        if await control.shouldCancel() { return }
 
         // Handle pause
-        waitIfPaused()
-        if isCancelled { return }
+        await control.waitIfPaused()
+        if await control.shouldCancel() { return }
 
         // Depth limit to prevent unbounded recursion
         guard currentDepth < options.maxDepth else {
@@ -221,7 +246,7 @@ class StorageAnalyzerEngine {
             // File - just count it
             itemsScanned += 1
             totalSize += item.totalSize
-            reportProgress(path: item.url.path, itemsScanned: itemsScanned, totalSize: totalSize)
+            await reportProgress(path: item.url.path, itemsScanned: itemsScanned, totalSize: totalSize)
             return
         }
 
@@ -263,11 +288,11 @@ class StorageAnalyzerEngine {
 
         for case let fileURL as URL in enumerator {
             // Check for cancellation
-            if isCancelled { return }
+            if await control.shouldCancel() { return }
 
             // Handle pause
-            waitIfPaused()
-            if isCancelled { return }
+            await control.waitIfPaused()
+            if await control.shouldCancel() { return }
 
             do {
                 let resourceValues = try fileURL.resourceValues(forKeys: Set(keys))
@@ -293,7 +318,7 @@ class StorageAnalyzerEngine {
 
                 // Recurse if directory (with depth check and cycle detection)
                 if childStorageItem.isDirectory {
-                    try scanDirectory(item: childStorageItem, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: currentDepth + 1, visitedPaths: &visitedPaths)
+                    try await scanDirectory(item: childStorageItem, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: currentDepth + 1, visitedPaths: &visitedPaths)
                 } else {
                     itemsScanned += 1
                     totalSize += childStorageItem.totalSize
@@ -308,7 +333,7 @@ class StorageAnalyzerEngine {
 
                 // Report progress every 100 items
                 if itemsScanned % AppConfig.Storage.progressBatchSize == 0 {
-                    reportProgress(path: fileURL.path, itemsScanned: itemsScanned, totalSize: totalSize)
+                    await reportProgress(path: fileURL.path, itemsScanned: itemsScanned, totalSize: totalSize)
                 }
 
             } catch {
@@ -325,9 +350,9 @@ class StorageAnalyzerEngine {
         item.isScanned = true
     }
 
-    private func reportProgress(path: String, itemsScanned: Int, totalSize: Int64) {
-        DispatchQueue.main.async { [weak self] in
-            self?.delegate?.analyzerDidProgress(
+    private func reportProgress(path: String, itemsScanned: Int, totalSize: Int64) async {
+        await MainActor.run {
+            self.delegate?.analyzerDidProgress(
                 currentPath: path,
                 itemsScanned: itemsScanned,
                 totalSize: totalSize

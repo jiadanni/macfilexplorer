@@ -51,6 +51,13 @@ final class SettingsStore: SettingsStoreProtocol {
 
     private let defaults: UserDefaults
     private let delegates = NSHashTable<AnyObject>.weakObjects()
+    private enum AdditionalKeys {
+        static let sidebarFixedWidth = "sidebarFixedWidth"
+        static let terminalIsVisible = "terminalIsVisible"
+        static let favoriteWidgetFolders = "FavoriteWidgetFolders"
+        static let storageAnalyzerLastScanPath = "StorageAnalyzerLastScanPath"
+        static let operationMetricsLog = "operationMetricsLog"
+    }
 
     /// Initialize with a specific UserDefaults instance.
     ///
@@ -84,7 +91,9 @@ final class SettingsStore: SettingsStoreProtocol {
         if Thread.isMainThread {
             notifyBlock()
         } else {
-            DispatchQueue.main.async(execute: notifyBlock)
+            Task { @MainActor in
+                notifyBlock()
+            }
         }
     }
 
@@ -141,6 +150,13 @@ final class SettingsStore: SettingsStoreProtocol {
         set { defaults.set(newValue, forKey: UserDefaults.Keys.startupFolder.rawValue) }
     }
 
+    /// Accent color for UI elements.
+    /// Key: UserDefaults.Keys.accentColor
+    var accentColor: Data? {
+        get { defaults.data(forKey: UserDefaults.Keys.accentColor.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.accentColor.rawValue) }
+    }
+
     // MARK: - Preview Pane Settings
     
     /// Whether the preview pane is visible.
@@ -180,9 +196,22 @@ final class SettingsStore: SettingsStoreProtocol {
     /// Default: `.list`
     var defaultViewMode: ViewMode {
         get {
-            if let raw = defaults.string(forKey: UserDefaults.Keys.defaultViewMode.rawValue),
-               let mode = ViewMode(rawValue: raw) {
-                return mode
+            if let raw = defaults.string(forKey: UserDefaults.Keys.defaultViewMode.rawValue) {
+                if let mode = ViewMode(rawValue: raw) {
+                    return mode
+                }
+                switch raw.lowercased() {
+                case "list":
+                    return .list
+                case "icons":
+                    return .icons
+                case "columns":
+                    return .columns
+                case "windowslist":
+                    return .windowsList
+                default:
+                    break
+                }
             }
             return .list
         }
@@ -374,8 +403,8 @@ final class SettingsStore: SettingsStoreProtocol {
     /// Whether to show storage analyzer button in toolbar.
     /// Default: `true`
     var showStorageAnalyzerButton: Bool {
-        get { defaults.object(forKey: "showStorageAnalyzerButton") as? Bool ?? true }
-        set { defaults.set(newValue, forKey: "showStorageAnalyzerButton") }
+        get { defaults.object(forKey: UserDefaults.Keys.showStorageAnalyzerButton.rawValue) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showStorageAnalyzerButton.rawValue) }
     }
     
     /// Whether to show open terminal button in toolbar.
@@ -401,6 +430,20 @@ final class SettingsStore: SettingsStoreProtocol {
         set { defaults.set(newValue, forKey: UserDefaults.Keys.showStartOnLaunch.rawValue) }
     }
 
+    /// Whether onboarding is complete.
+    /// Default: `false`
+    var hasCompletedOnboarding: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.hasCompletedOnboarding.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.hasCompletedOnboarding.rawValue) }
+    }
+
+    /// Whether the welcome widget was dismissed.
+    /// Default: `false`
+    var dismissedWelcome: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.dismissedWelcome.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.dismissedWelcome.rawValue) }
+    }
+
     // MARK: - Split Panes Settings
     
     /// Maximum number of split panes.
@@ -411,6 +454,131 @@ final class SettingsStore: SettingsStoreProtocol {
             return value > 0 ? min(value, 8) : 2
         }
         set { defaults.set(min(max(newValue, 1), 8), forKey: UserDefaults.Keys.maximumPanes.rawValue) }
+    }
+
+    // MARK: - Go Menu Settings
+
+    /// Whether to show Home in the Go menu.
+    /// Default: `true`
+    var showGoHome: Bool {
+        get { defaults.object(forKey: UserDefaults.Keys.showGoHome.rawValue) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoHome.rawValue) }
+    }
+
+    /// Whether to show Desktop in the Go menu.
+    /// Default: `false`
+    var showGoDesktop: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoDesktop.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoDesktop.rawValue) }
+    }
+
+    /// Whether to show Documents in the Go menu.
+    /// Default: `false`
+    var showGoDocuments: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoDocuments.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoDocuments.rawValue) }
+    }
+
+    /// Whether to show Downloads in the Go menu.
+    /// Default: `true`
+    var showGoDownloads: Bool {
+        get { defaults.object(forKey: UserDefaults.Keys.showGoDownloads.rawValue) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoDownloads.rawValue) }
+    }
+
+    /// Whether to show Applications in the Go menu.
+    /// Default: `false`
+    var showGoApplications: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoApplications.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoApplications.rawValue) }
+    }
+
+    /// Whether to show Utilities in the Go menu.
+    /// Default: `false`
+    var showGoUtilities: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoUtilities.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoUtilities.rawValue) }
+    }
+
+    /// Whether to show Library in the Go menu.
+    /// Default: `false`
+    var showGoLibrary: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoLibrary.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoLibrary.rawValue) }
+    }
+
+    /// Whether to show Computer in the Go menu.
+    /// Default: `false`
+    var showGoComputer: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoComputer.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoComputer.rawValue) }
+    }
+
+    /// Whether to show AirDrop in the Go menu.
+    /// Default: `false`
+    var showGoAirDrop: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoAirDrop.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoAirDrop.rawValue) }
+    }
+
+    /// Whether to show Network in the Go menu.
+    /// Default: `false`
+    var showGoNetwork: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoNetwork.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoNetwork.rawValue) }
+    }
+
+    /// Whether to show iCloud Drive in the Go menu.
+    /// Default: `false`
+    var showGoiCloudDrive: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoiCloudDrive.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoiCloudDrive.rawValue) }
+    }
+
+    /// Whether to show Recent Items in the Go menu.
+    /// Default: `false`
+    var showGoRecent: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoRecent.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoRecent.rawValue) }
+    }
+
+    /// Whether to show Connect to Server in the Go menu.
+    /// Default: `false`
+    var showGoConnectToServer: Bool {
+        get { defaults.bool(forKey: UserDefaults.Keys.showGoConnectToServer.rawValue) }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.showGoConnectToServer.rawValue) }
+    }
+
+    // MARK: - Window Layout Settings
+
+    /// Fixed sidebar width in points.
+    /// Default: `0` (use UI fallback)
+    var sidebarFixedWidth: Double {
+        get { defaults.double(forKey: AdditionalKeys.sidebarFixedWidth) }
+        set { defaults.set(newValue, forKey: AdditionalKeys.sidebarFixedWidth) }
+    }
+
+    /// Whether the terminal panel was visible.
+    /// Default: `false`
+    var terminalIsVisible: Bool {
+        get { defaults.bool(forKey: AdditionalKeys.terminalIsVisible) }
+        set { defaults.set(newValue, forKey: AdditionalKeys.terminalIsVisible) }
+    }
+
+    // MARK: - Favorites Widget Settings
+
+    /// Saved favorite folders for the Start page widget.
+    var favoriteWidgetFolders: [String] {
+        get { defaults.array(forKey: AdditionalKeys.favoriteWidgetFolders) as? [String] ?? [] }
+        set { defaults.set(newValue, forKey: AdditionalKeys.favoriteWidgetFolders) }
+    }
+
+    // MARK: - Storage Analyzer Settings
+
+    /// Last scan path for the Storage Analyzer.
+    var storageAnalyzerLastScanPath: String? {
+        get { defaults.string(forKey: AdditionalKeys.storageAnalyzerLastScanPath) }
+        set { defaults.set(newValue, forKey: AdditionalKeys.storageAnalyzerLastScanPath) }
     }
 
     // MARK: - Context Menu Settings
@@ -625,6 +793,23 @@ final class SettingsStore: SettingsStoreProtocol {
         }
     }
 
+    // MARK: - View Options Settings
+
+    func loadViewOptions() -> ViewOptions {
+        defaults.loadViewOptions()
+    }
+
+    func saveViewOptions(_ options: ViewOptions) {
+        defaults.saveViewOptions(options)
+    }
+
+    // MARK: - Operation Metrics
+
+    var operationMetricsLogData: Data? {
+        get { defaults.data(forKey: AdditionalKeys.operationMetricsLog) }
+        set { defaults.set(newValue, forKey: AdditionalKeys.operationMetricsLog) }
+    }
+
     // MARK: - Utility Methods
     
     /// Resets all settings to their default values.
@@ -648,7 +833,11 @@ final class SettingsStore: SettingsStoreProtocol {
     }
 
     func setValue(_ value: Any?, forKey key: String) {
-        defaults.setValue(value, forKey: key)
+        defaults.set(value, forKey: key)
+    }
+
+    func removeValue(forKey key: String) {
+        defaults.removeObject(forKey: key)
     }
     
     /// Posts a notification that settings have changed.

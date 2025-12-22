@@ -3,6 +3,7 @@ import Cocoa
 final class AdvancedSettingsViewController: NSViewController {
 
     private var stackView: NSStackView!
+    private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
     override func loadView() {
         let view = NSView()
@@ -67,8 +68,7 @@ final class AdvancedSettingsViewController: NSViewController {
         maxPanesLabel.backgroundColor = .clear
         maxPanesRow.addArrangedSubview(maxPanesLabel)
 
-        let currentMaxPanes = UserDefaults.standard.integer(forKey: UserDefaults.Keys.maximumPanes.rawValue)
-        let initialValue = currentMaxPanes > 0 ? currentMaxPanes : 2
+        let initialValue = settingsStore.maximumPanes
 
         let maxPanesValueLabel = NSTextField(labelWithString: "\(initialValue)")
         maxPanesValueLabel.isEditable = false
@@ -164,10 +164,10 @@ final class AdvancedSettingsViewController: NSViewController {
         let checkbox = AccentCheckbox(title: title, target: self, action: #selector(checkboxChanged(_:)))
         checkbox.translatesAutoresizingMaskIntoConstraints = false
         checkbox.tag = key.rawValue.hashValue
-        checkbox.state = UserDefaults.standard.bool(forKey: key.rawValue) ? .on : .off
-        if UserDefaults.standard.object(forKey: key.rawValue) == nil {
-            UserDefaults.standard.set(defaultValue, forKey: key.rawValue)
-            checkbox.state = defaultValue ? .on : .off
+        let storedValue = settingsStore.value(forKey: key.rawValue) as? Bool
+        checkbox.state = (storedValue ?? defaultValue) ? .on : .off
+        if storedValue == nil {
+            settingsStore.setValue(defaultValue, forKey: key.rawValue)
         }
         stackView.addArrangedSubview(checkbox)
     }
@@ -235,7 +235,7 @@ final class AdvancedSettingsViewController: NSViewController {
         // Collect all settings
         var settings: [String: Any] = [:]
         for key in UserDefaults.Keys.allCases {
-            if let value = UserDefaults.standard.object(forKey: key.rawValue) {
+            if let value = settingsStore.value(forKey: key.rawValue) {
                 settings[key.rawValue] = value
             }
         }
@@ -269,7 +269,7 @@ final class AdvancedSettingsViewController: NSViewController {
 
             // Import settings
             for (key, value) in settings {
-                UserDefaults.standard.set(value, forKey: key)
+                settingsStore.setValue(value, forKey: key)
             }
 
             let alert = NSAlert()
@@ -290,9 +290,7 @@ final class AdvancedSettingsViewController: NSViewController {
 
     private func performReset() {
         // Reset all settings to defaults
-        for key in UserDefaults.Keys.allCases {
-            UserDefaults.standard.removeObject(forKey: key.rawValue)
-        }
+        settingsStore.resetToDefaults()
 
         let alert = NSAlert()
         alert.messageText = "Settings Reset"
@@ -302,4 +300,3 @@ final class AdvancedSettingsViewController: NSViewController {
         alert.runModal()
     }
 }
-

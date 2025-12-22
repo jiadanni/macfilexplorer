@@ -820,10 +820,11 @@ class PreviewPaneViewController: NSViewController {
         storageAnalyzerView.isHidden = false
 
         // Calculate folder size asynchronously
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        Task.detached(priority: .userInitiated) { [weak self] in
             let (totalSize, itemCount) = self?.calculateFolderSize(url: fileItem.url) ?? (0, 0)
+            guard !Task.isCancelled else { return }
 
-            DispatchQueue.main.async {
+            await MainActor.run {
                 let formattedSize = ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
                 self?.storageSizeLabel.stringValue = "Total Size: \(formattedSize)"
                 self?.storageItemsLabel.stringValue = "\(itemCount) items"

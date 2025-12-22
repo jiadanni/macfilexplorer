@@ -14,7 +14,7 @@ extension FileBrowserViewController {
     }
 
     private func showBanner(message: String, style: BannerStyle) {
-        bannerDismissWorkItem?.cancel()
+        bannerDismissTask?.cancel()
 
         if bannerContainer == nil {
             let container = NSView()
@@ -50,11 +50,10 @@ extension FileBrowserViewController {
             label.bottomAnchor.constraint(equalTo: bannerContainer.bottomAnchor, constant: -5)
         ])
 
-        let workItem = DispatchWorkItem { [weak self] in
+        bannerDismissTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
             self?.bannerContainer?.isHidden = true
         }
-        bannerDismissWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: workItem)
     }
 }
 
@@ -156,7 +155,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
     // Banner notification handling
     private var bannerContainer: NSView?
-    private var bannerDismissWorkItem: DispatchWorkItem?
+    private var bannerDismissTask: Task<Void, Never>?
 
     // Click tracking for delayed rename
     private var lastClickedRow: Int = -1
@@ -534,8 +533,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         // Apply saved width if available
         let savedWidth = Double(settings.previewPaneWidth)
         let widthToApply = savedWidth > 100 ? savedWidth : 300.0 // Default to 300 if no saved width
-        DispatchQueue.main.async { [weak split] in
-            guard let split = split else { return }
+        Task { @MainActor [weak split] in
+            guard let split else { return }
             let total = split.bounds.width
             let position = max(0, total - CGFloat(widthToApply))
             split.setPosition(position, ofDividerAt: 0)
@@ -866,7 +865,7 @@ extension FileBrowserViewController: FileBrowserDataSourceDelegate {
         
         // Wait, dataSource.rootItem.children are now ready.
         // We just need to reload views.
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self else { return }
             self.outlineView.reloadData()
             if self.currentViewMode == .icons || self.currentViewMode == .windowsList {
@@ -883,7 +882,7 @@ extension FileBrowserViewController: FileBrowserDataSourceDelegate {
     }
     
     func dataSource(_ dataSource: FileBrowserDataSource, didFailToLoad error: Error) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.showError(error.localizedDescription)
         }
     }

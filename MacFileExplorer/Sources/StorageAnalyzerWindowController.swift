@@ -226,7 +226,7 @@ extension StorageAnalyzerWindowController: StorageAnalyzerDelegate {
     }
 
     func analyzerDidComplete(rootItem: StorageItem, duration: TimeInterval) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.rootItem = rootItem
             self?.listViewController.setRootItem(rootItem)
             self?.summaryViewController.setRootItem(rootItem)
@@ -252,17 +252,16 @@ extension StorageAnalyzerWindowController: StorageAnalyzerDelegate {
     }
 
     func analyzerDidFail(error: String) {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.progressViewController?.setScanFailed(error: error)
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                self?.hideProgressSheet()
-            }
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            self?.hideProgressSheet()
         }
     }
 
     func analyzerWasCancelled() {
-        DispatchQueue.main.async { [weak self] in
+        Task { @MainActor [weak self] in
             self?.hideProgressSheet()
         }
     }

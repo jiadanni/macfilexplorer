@@ -178,6 +178,86 @@ class SettingsStoreTests: XCTestCase {
         settingsStore.maximumPanes = 0
         XCTAssertEqual(settingsStore.maximumPanes, 1, "maximumPanes should be clamped to 1")
     }
+
+    // MARK: - Appearance Settings Tests
+
+    func testAccentColorSetAndGet() throws {
+        let sampleData = Data([0x01, 0x02, 0x03])
+        settingsStore.accentColor = sampleData
+        XCTAssertEqual(settingsStore.accentColor, sampleData, "accentColor should round-trip")
+    }
+
+    // MARK: - Start Page Settings Tests
+
+    func testDismissedWelcomeDefaultAndSet() throws {
+        XCTAssertFalse(settingsStore.dismissedWelcome, "dismissedWelcome should default to false")
+        settingsStore.dismissedWelcome = true
+        XCTAssertTrue(settingsStore.dismissedWelcome, "dismissedWelcome should be true after setting")
+    }
+
+    func testHasCompletedOnboardingDefaultAndSet() throws {
+        XCTAssertFalse(settingsStore.hasCompletedOnboarding, "hasCompletedOnboarding should default to false")
+        settingsStore.hasCompletedOnboarding = true
+        XCTAssertTrue(settingsStore.hasCompletedOnboarding, "hasCompletedOnboarding should be true after setting")
+    }
+
+    // MARK: - Go Menu Settings Tests
+
+    func testGoMenuDefaults() throws {
+        XCTAssertTrue(settingsStore.showGoHome, "showGoHome should default to true")
+        XCTAssertTrue(settingsStore.showGoDownloads, "showGoDownloads should default to true")
+        XCTAssertFalse(settingsStore.showGoDesktop, "showGoDesktop should default to false")
+    }
+
+    // MARK: - Window Layout Settings Tests
+
+    func testSidebarFixedWidthSetAndGet() throws {
+        settingsStore.sidebarFixedWidth = 220.0
+        XCTAssertEqual(settingsStore.sidebarFixedWidth, 220.0, "sidebarFixedWidth should match set value")
+    }
+
+    func testTerminalVisibilitySetAndGet() throws {
+        settingsStore.terminalIsVisible = true
+        XCTAssertTrue(settingsStore.terminalIsVisible, "terminalIsVisible should be true after setting")
+    }
+
+    // MARK: - Favorites Widget Settings Tests
+
+    func testFavoriteWidgetFoldersSetAndGet() throws {
+        let paths = ["/", "/Users/test"]
+        settingsStore.favoriteWidgetFolders = paths
+        XCTAssertEqual(settingsStore.favoriteWidgetFolders, paths, "favoriteWidgetFolders should match set value")
+    }
+
+    // MARK: - Storage Analyzer Settings Tests
+
+    func testStorageAnalyzerLastScanPathSetAndGet() throws {
+        settingsStore.storageAnalyzerLastScanPath = "/Users/test"
+        XCTAssertEqual(settingsStore.storageAnalyzerLastScanPath, "/Users/test", "storageAnalyzerLastScanPath should match set value")
+    }
+
+    // MARK: - View Options Tests
+
+    func testViewOptionsRoundTrip() throws {
+        var options = ViewOptions()
+        options.iconSize = 128.0
+        options.sortAscending = false
+        options.groupBy = .kind
+        settingsStore.saveViewOptions(options)
+
+        let loaded = settingsStore.loadViewOptions()
+        XCTAssertEqual(loaded.iconSize, 128.0, "viewOptions.iconSize should round-trip")
+        XCTAssertEqual(loaded.sortAscending, false, "viewOptions.sortAscending should round-trip")
+        XCTAssertEqual(loaded.groupBy, .kind, "viewOptions.groupBy should round-trip")
+    }
+
+    // MARK: - Operation Metrics Tests
+
+    func testOperationMetricsLogDataSetAndGet() throws {
+        let data = Data([0x0A, 0x0B])
+        settingsStore.operationMetricsLogData = data
+        XCTAssertEqual(settingsStore.operationMetricsLogData, data, "operationMetricsLogData should round-trip")
+    }
     
     // MARK: - Reset Tests
     

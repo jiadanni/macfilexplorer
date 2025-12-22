@@ -96,7 +96,7 @@ final class RootFileBrowserView: NSView {
         wantsLayer = true
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
-        setAccessibilityLabel(L10n.text("File browser area"))
+        setAccessibilityLabel(NSLocalizedString("File browser area", comment: "Accessibility label"))
     }
 
     required init?(coder: NSCoder) {
@@ -105,7 +105,7 @@ final class RootFileBrowserView: NSView {
         wantsLayer = true
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
-        setAccessibilityLabel(L10n.text("File browser area"))
+        setAccessibilityLabel(NSLocalizedString("File browser area", comment: "Accessibility label"))
     }
 
     private func setHighlighted(_ highlighted: Bool) {
@@ -169,7 +169,6 @@ struct OperationMetric: Codable {
 }
 
 final class OperationMetricsManager {
-    private static let key = "operationMetricsLog"
     private static let maxRecords = 200
 
     static func append(type: String, bytes: Int64, files: Int, start: Date, end: Date) {
@@ -178,12 +177,12 @@ final class OperationMetricsManager {
         existing.append(OperationMetric(type: type, bytes: bytes, files: files, duration: duration, timestamp: Date()))
         if existing.count > maxRecords { existing.removeFirst(existing.count - maxRecords) }
         if let data = try? JSONEncoder().encode(existing) {
-            UserDefaults.standard.set(data, forKey: key)
+            SettingsStore.shared.operationMetricsLogData = data
         }
     }
 
     static func load() -> [OperationMetric] {
-        guard let data = UserDefaults.standard.data(forKey: key),
+        guard let data = SettingsStore.shared.operationMetricsLogData,
               let decoded = try? JSONDecoder().decode([OperationMetric].self, from: data)
         else { return [] }
         return decoded

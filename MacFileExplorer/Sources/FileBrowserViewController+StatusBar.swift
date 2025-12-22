@@ -77,7 +77,7 @@ extension FileBrowserViewController {
 
             collectionView.reloadData()
 
-            DispatchQueue.main.async { [weak self] in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.view.window?.makeFirstResponder(self.view)
             }

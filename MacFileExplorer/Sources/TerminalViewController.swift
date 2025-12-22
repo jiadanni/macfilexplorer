@@ -23,10 +23,11 @@ class TerminalViewController: NSViewController {
     private var shellTask: Process?
     private var masterFD: Int32 = -1
     private var slaveFD: Int32 = -1
-    private var masterSource: DispatchSourceRead?
+    private var masterHandle: FileHandle?
+    private var outputTask: Task<Void, Never>?
+    private var outputContinuation: AsyncStream<Data>.Continuation?
     private let sentinelEcho = "MFE_SENTINEL_12345"
     private var lastSyncedDirectory: String?
-    private var outputQueue = DispatchQueue(label: "com.macfileexplorer.terminal.output")
     private var inputBuffer = ""
     private var suppressOutputUntilSentinel = false
 
@@ -46,7 +47,7 @@ class TerminalViewController: NSViewController {
         super.viewDidAppear()
         // Only focus if the window is fully loaded and ready
         if view.window != nil {
-            DispatchQueue.main.async { [weak self] in
+            Task { @MainActor [weak self] in
                 self?.focusInput()
             }
         }
@@ -184,7 +185,7 @@ class TerminalViewController: NSViewController {
         task.standardError = slaveHandle
 
         task.terminationHandler = { [weak self] proc in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 self?.appendOutput("\nShell exited (\(proc.terminationStatus))\n", color: .gray)
             }
         }
@@ -199,7 +200,8 @@ class TerminalViewController: NSViewController {
             suppressOutputUntilSentinel = true
             writeToShell("stty -echo; printf \"\(sentinelEcho)\\n\"\n")
             // Trigger prompt display without altering user prompt or shell rc behavior
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 50_000_000)
                 self?.writeToShell("\n")
             }
         } catch {
@@ -223,31 +225,37 @@ class TerminalViewController: NSViewController {
         let flags = fcntl(masterFD, F_GETFL)
         _ = fcntl(masterFD, F_SETFL, flags | O_NONBLOCK)
 
-        let source = DispatchSource.makeReadSource(fileDescriptor: masterFD, queue: outputQueue)
-        source.setEventHandler { [weak self] in
-            guard let self else { return }
-            var buffer = [UInt8](repeating: 0, count: 4096)
-            while true {
-                let bytes = read(self.masterFD, &buffer, buffer.count)
-                if bytes > 0 {
-                    if let output = String(bytes: buffer.prefix(bytes), encoding: .utf8) {
-                        DispatchQueue.main.async {
-                            self.processOutput(output)
-                        }
-                    }
+        let handle = FileHandle(fileDescriptor: masterFD, closeOnDealloc: false)
+        masterHandle = handle
+
+        let stream = AsyncStream<Data> { [weak self] continuation in
+            self?.outputContinuation = continuation
+            continuation.onTermination = { [weak self] _ in
+                self?.outputContinuation = nil
+            }
+            handle.readabilityHandler = { handle in
+                let data = handle.availableData
+                if data.isEmpty {
+                    continuation.finish()
+                    handle.readabilityHandler = nil
                 } else {
-                    break
+                    continuation.yield(data)
                 }
             }
         }
-        source.setCancelHandler { [weak self] in
-            if let fd = self?.masterFD, fd >= 0 {
-                close(fd)
-                self?.masterFD = -1
+
+        outputTask?.cancel()
+        outputTask = Task.detached { [weak self] in
+            guard let self else { return }
+            for await data in stream {
+                if Task.isCancelled { break }
+                if let output = String(data: data, encoding: .utf8) {
+                    await MainActor.run {
+                        self.processOutput(output)
+                    }
+                }
             }
         }
-        masterSource = source
-        source.resume()
     }
 
     private func processOutput(_ output: String) {
@@ -432,8 +440,12 @@ class TerminalViewController: NSViewController {
     }
 
     private func terminateShellSession() {
-        masterSource?.cancel()
-        masterSource = nil
+        outputTask?.cancel()
+        outputTask = nil
+        outputContinuation?.finish()
+        outputContinuation = nil
+        masterHandle?.readabilityHandler = nil
+        masterHandle = nil
 
         shellTask?.terminate()
         shellTask = nil

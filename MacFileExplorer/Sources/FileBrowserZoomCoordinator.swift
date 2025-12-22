@@ -15,7 +15,7 @@ protocol FileBrowserZoomDelegate: AnyObject {
     var outlineView: NSOutlineView! { get }
     var collectionView: NSCollectionView! { get }
     var zoomSlider: NSSlider! { get }
-    var settingsStore: SettingsStore! { get }
+    var settingsStore: SettingsStoreProtocol { get }
     func updateViewForZoomLevel()
 }
 
@@ -37,9 +37,9 @@ class FileBrowserZoomCoordinator: NSObject {
     /// Loads the persisted zoom level for the current view mode.
     private func loadZoomLevel() {
         guard let delegate = delegate else { return }
-        
+
         let key = getZoomLevelKey()
-        if let saved = UserDefaults.standard.object(forKey: key) as? Double {
+        if let saved = delegate.settingsStore.value(forKey: key) as? Double {
             currentZoomLevel = saved
         } else {
             currentZoomLevel = defaultZoomLevel

@@ -3,6 +3,7 @@ import Cocoa
 final class TabsSettingsViewController: NSViewController {
 
     private var stackView: NSStackView!
+    private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
     override func loadView() {
         let view = NSView()
@@ -45,10 +46,10 @@ final class TabsSettingsViewController: NSViewController {
         let checkbox = AccentCheckbox(title: title, target: self, action: #selector(checkboxChanged(_:)))
         checkbox.translatesAutoresizingMaskIntoConstraints = false
         checkbox.tag = key.rawValue.hashValue
-        checkbox.state = UserDefaults.standard.bool(forKey: key.rawValue) ? .on : .off
-        if UserDefaults.standard.object(forKey: key.rawValue) == nil {
-            UserDefaults.standard.set(defaultValue, forKey: key.rawValue)
-            checkbox.state = defaultValue ? .on : .off
+        let storedValue = settingsStore.value(forKey: key.rawValue) as? Bool
+        checkbox.state = (storedValue ?? defaultValue) ? .on : .off
+        if storedValue == nil {
+            settingsStore.setValue(defaultValue, forKey: key.rawValue)
         }
         stackView.addArrangedSubview(checkbox)
     }
@@ -59,4 +60,3 @@ final class TabsSettingsViewController: NSViewController {
         }
     }
 }
-

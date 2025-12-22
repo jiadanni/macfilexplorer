@@ -14,11 +14,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, SettingsStoreDelegate {
         _ = NSLocale.current
         
         // Configure tooltip delay via UserDefaults (reduce from default ~1.0 seconds to 0.3 seconds)
-        UserDefaults.standard.set(0.3, forKey: "NSInitialToolTipDelay")
+        SettingsStore.shared.setValue(0.3, forKey: "NSInitialToolTipDelay")
 
         // Migration: remove obsolete per-folder color context menu setting key
-        if UserDefaults.standard.object(forKey: "hideChangeFolderColor") != nil {
-            UserDefaults.standard.removeObject(forKey: "hideChangeFolderColor")
+        if SettingsStore.shared.value(forKey: "hideChangeFolderColor") != nil {
+            SettingsStore.shared.removeValue(forKey: "hideChangeFolderColor")
         }
 
         // Check if this is first launch
@@ -49,7 +49,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SettingsStoreDelegate {
         configureViewMenuShortcuts()
 
         // Defer any sandbox-only bookmark migration to next run loop and guard sandbox check
-        DispatchQueue.main.async {
+        Task { @MainActor in
             PermissionsManager.shared.migratePathsToBookmarksIfNeeded()
             PermissionsManager.shared.startAccessingAllSecurityScoped()
         }
@@ -138,12 +138,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, SettingsStoreDelegate {
         goMenu.addItem(NSMenuItem.separator())
 
         // Helper to check if menu item should be shown
+        let settings = SettingsStore.shared
         func shouldShow(_ key: UserDefaults.Keys, defaultValue: Bool = false) -> Bool {
-            if UserDefaults.standard.object(forKey: key.rawValue) == nil {
-                UserDefaults.standard.set(defaultValue, forKey: key.rawValue)
-                return defaultValue
+            if let stored = settings.value(forKey: key.rawValue) as? Bool {
+                return stored
             }
-            return UserDefaults.standard.bool(forKey: key.rawValue)
+            settings.setValue(defaultValue, forKey: key.rawValue)
+            return defaultValue
         }
 
         // Add location shortcuts based on settings
@@ -468,7 +469,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SettingsStoreDelegate {
     // MARK: - Settings
 
     @IBAction func showPreferences(_ sender: Any?) {
-        let openInTab = UserDefaults.standard.object(forKey: UserDefaults.Keys.openSettingsInTab.rawValue) as? Bool ?? true
+        let openInTab = SettingsStore.shared.openSettingsInTab
         if openInTab {
             windowController?.addSettingsTab()
             NSApp.activate(ignoringOtherApps: true)

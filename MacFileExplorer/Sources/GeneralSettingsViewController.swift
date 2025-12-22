@@ -4,6 +4,7 @@ final class GeneralSettingsViewController: NSViewController {
 
     private var stackView: NSStackView!
     weak var changeDelegate: SettingsChangeDelegate?
+    private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
     override func loadView() {
         let scrollView = NSScrollView()
@@ -118,7 +119,7 @@ final class GeneralSettingsViewController: NSViewController {
     }
 
     private func getStartupFolderPath() -> String {
-        if let path = UserDefaults.standard.string(forKey: UserDefaults.Keys.startupFolder.rawValue) {
+        if let path = settingsStore.startupFolder {
             return path
         }
         return "Start Page (default)"
@@ -268,7 +269,7 @@ final class GeneralSettingsViewController: NSViewController {
 
         // Load currently selected color
         var currentColor = NSColor.controlAccentColor
-        if let colorData = UserDefaults.standard.data(forKey: UserDefaults.Keys.globalFolderColor.rawValue),
+        if let colorData = settingsStore.globalFolderColor,
            let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: colorData) {
             currentColor = color
         }
@@ -373,11 +374,11 @@ final class GeneralSettingsViewController: NSViewController {
         let checkbox = AccentCheckbox(title: title, target: self, action: #selector(checkboxChanged(_:)))
         checkbox.translatesAutoresizingMaskIntoConstraints = false
         checkbox.tag = key.rawValue.hashValue // Use hashValue as a unique identifier for the key
-        checkbox.state = UserDefaults.standard.bool(forKey: key.rawValue) ? .on : .off
+        let storedValue = settingsStore.value(forKey: key.rawValue) as? Bool
+        checkbox.state = (storedValue ?? defaultValue) ? .on : .off
         // Set default value if not already set
-        if UserDefaults.standard.object(forKey: key.rawValue) == nil {
-            UserDefaults.standard.set(defaultValue, forKey: key.rawValue)
-            checkbox.state = defaultValue ? .on : .off
+        if storedValue == nil {
+            settingsStore.setValue(defaultValue, forKey: key.rawValue)
         }
         stackView.addArrangedSubview(checkbox)
     }
@@ -437,7 +438,7 @@ final class GeneralSettingsViewController: NSViewController {
 
         // Load currently selected accent color
         var currentAccentColor = NSColor.controlAccentColor
-        if let colorData = UserDefaults.standard.data(forKey: UserDefaults.Keys.accentColor.rawValue),
+        if let colorData = settingsStore.accentColor,
            let color = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSColor.self, from: colorData) {
             currentAccentColor = color
         }
@@ -546,12 +547,15 @@ final class GeneralSettingsViewController: NSViewController {
         let viewPopup = AccentPopUpButton()
         viewPopup.translatesAutoresizingMaskIntoConstraints = false
         viewPopup.addItems(withTitles: ["List", "Icons", "Columns", "Windows List"])
-        let storedViewMode = UserDefaults.standard.string(forKey: UserDefaults.Keys.defaultViewMode.rawValue) ?? "list"
-        switch storedViewMode {
-        case "icons": viewPopup.selectItem(withTitle: "Icons")
-        case "columns": viewPopup.selectItem(withTitle: "Columns")
-        case "windowsList": viewPopup.selectItem(withTitle: "Windows List")
-        default: viewPopup.selectItem(withTitle: "List")
+        switch settingsStore.defaultViewMode {
+        case .icons:
+            viewPopup.selectItem(withTitle: "Icons")
+        case .columns:
+            viewPopup.selectItem(withTitle: "Columns")
+        case .windowsList:
+            viewPopup.selectItem(withTitle: "Windows List")
+        case .list:
+            viewPopup.selectItem(withTitle: "List")
         }
         viewPopup.target = self
         viewPopup.action = #selector(defaultViewModeChanged(_:))
@@ -564,7 +568,7 @@ final class GeneralSettingsViewController: NSViewController {
         let sortPopup = AccentPopUpButton()
         sortPopup.translatesAutoresizingMaskIntoConstraints = false
         sortPopup.addItems(withTitles: ["Name", "Size", "Date Modified", "Date Created", "Type"])
-        let storedSortCol = UserDefaults.standard.string(forKey: UserDefaults.Keys.defaultSortColumn.rawValue) ?? AppConfig.ColumnID.name
+        let storedSortCol = settingsStore.defaultSortColumn
         switch storedSortCol {
         case AppConfig.ColumnID.size: sortPopup.selectItem(withTitle: "Size")
         case AppConfig.ColumnID.dateModified: sortPopup.selectItem(withTitle: "Date Modified")
@@ -578,10 +582,7 @@ final class GeneralSettingsViewController: NSViewController {
 
         // Default Sort Direction
         let ascendingCheckbox = AccentCheckbox(title: "Sort Ascending by Default", target: self, action: #selector(defaultSortAscendingChanged(_:)))
-        if UserDefaults.standard.object(forKey: UserDefaults.Keys.defaultSortAscending.rawValue) == nil {
-            UserDefaults.standard.set(true, forKey: UserDefaults.Keys.defaultSortAscending.rawValue)
-        }
-        ascendingCheckbox.state = UserDefaults.standard.bool(forKey: UserDefaults.Keys.defaultSortAscending.rawValue) ? .on : .off
+        ascendingCheckbox.state = settingsStore.defaultSortAscending ? .on : .off
         stackView.addArrangedSubview(ascendingCheckbox)
     }
 

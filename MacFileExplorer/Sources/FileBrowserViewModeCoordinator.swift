@@ -14,7 +14,6 @@ final class FileBrowserViewModeCoordinator {
         }
     }
 
-    private let browserSerialQueue = DispatchQueue(label: "com.macfileexplorer.browserSetup")
     private var suppressedDisplayCalls = 0
 
     init(owner: FileBrowserViewController) {
@@ -72,7 +71,7 @@ final class FileBrowserViewModeCoordinator {
         }
         owner.outlineView.reloadData()
 
-        DispatchQueue.main.async { [weak owner] in
+        Task { @MainActor [weak owner] in
             guard let owner else { return }
             owner.view.window?.makeFirstResponder(owner.view)
         }
@@ -112,7 +111,7 @@ final class FileBrowserViewModeCoordinator {
 
         collectionView.reloadData()
 
-        DispatchQueue.main.async { [weak owner] in
+        Task { @MainActor [weak owner] in
             guard let owner else { return }
             owner.view.window?.makeFirstResponder(owner.view)
         }
@@ -302,10 +301,8 @@ final class FileBrowserViewModeCoordinator {
     private func enqueueBrowserSetupIfNeeded() {
         guard let owner = owner else { return }
         if owner.browserView == nil {
-            browserSerialQueue.async { [weak self] in
-                DispatchQueue.main.async {
-                    self?.setupBrowserView()
-                }
+            Task { @MainActor [weak self] in
+                self?.setupBrowserView()
             }
         }
     }
@@ -319,7 +316,8 @@ final class FileBrowserViewModeCoordinator {
 
         enqueueBrowserSetupIfNeeded()
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+        Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 50_000_000)
             guard let self, let owner = self.owner,
                   let browserView = owner.browserView, self.browserSetupState == .ready else { return }
             completion(browserView)

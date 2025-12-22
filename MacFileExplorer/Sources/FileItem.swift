@@ -466,23 +466,31 @@ class FileItem: Hashable {
 
     /// Asynchronously calculate the total size of a folder
     func calculateFolderSize(completion: @escaping (Int64) -> Void) {
-        guard isDirectory else {
-            completion(size)
-            return
-        }
-
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self = self else { return }
-            let totalSize = self.calculateDirectorySize(at: self.url)
-            
-            DispatchQueue.main.async {
-                self.size = totalSize
-                completion(totalSize)
-            }
+        Task {
+            let totalSize = await calculateFolderSize()
+            completion(totalSize)
         }
     }
 
-    private func calculateDirectorySize(at url: URL) -> Int64 {
+    /// Asynchronously calculate the total size of a folder.
+    func calculateFolderSize() async -> Int64 {
+        guard isDirectory else {
+            return size
+        }
+
+        let targetURL = url
+        let totalSize = await Task.detached(priority: .utility) {
+            FileItem.calculateDirectorySize(at: targetURL)
+        }.value
+
+        await MainActor.run {
+            self.size = totalSize
+        }
+
+        return totalSize
+    }
+
+    private static func calculateDirectorySize(at url: URL) -> Int64 {
         var totalSize: Int64 = 0
         let fileManager = FileManager.default
         

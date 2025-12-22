@@ -99,12 +99,13 @@ class StorageOverviewWidgetView: StartWidgetView {
         ])
 
         // Calculate storage in background
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self = self else { return }
-            let storageInfo = self.getDiskStorageInfo()
+        Task { [weak self] in
+            guard let self else { return }
+            let storageInfo = await Task.detached(priority: .utility) {
+                self.getDiskStorageInfo()
+            }.value
 
-            // Update UI on main thread
-            DispatchQueue.main.async {
+            await MainActor.run {
                 // Remove loading label
                 loadingLabel.removeFromSuperview()
 
