@@ -58,7 +58,8 @@ class FileBrowserActionHelper {
     
     /// Opens a file with a specific application.
     static func openFile(_ url: URL, withApplication appURL: URL) {
-        NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: [:]) { _, error in
+        let configuration = NSWorkspace.OpenConfiguration()
+        NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: configuration) { _, error in
             if let error = error {
                 debugLog("Failed to open file with app: \(error)")
             }

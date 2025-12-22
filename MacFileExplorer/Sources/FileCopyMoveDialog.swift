@@ -365,13 +365,15 @@ class FileOperation {
         for sourceURL in sourceFiles {
             if let enumerator = fileManager.enumerator(at: sourceURL, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
                 for case let fileURL as URL in enumerator {
-                    if Task.isCancelled || await control.shouldCancel() { return }
+                    let shouldCancel = await control.shouldCancel()
+                    if Task.isCancelled || shouldCancel { return }
 
                     filesToProcess.append(fileURL)
 
                     // Get file size
                     await control.waitIfPaused()
-                    if Task.isCancelled || await control.shouldCancel() { return }
+                    let shouldCancelAfterPause = await control.shouldCancel()
+                    if Task.isCancelled || shouldCancelAfterPause { return }
                     do {
                         let resourceValues = try fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
                         if let isDirectory = resourceValues.isDirectory, !isDirectory {
@@ -391,10 +393,12 @@ class FileOperation {
         var bytesProcessed: Int64 = 0
 
         for sourceURL in sourceFiles {
-            if Task.isCancelled || await control.shouldCancel() { return }
+            let shouldCancel = await control.shouldCancel()
+            if Task.isCancelled || shouldCancel { return }
 
             await control.waitIfPaused()
-            if Task.isCancelled || await control.shouldCancel() { return }
+            let shouldCancelAfterPause = await control.shouldCancel()
+            if Task.isCancelled || shouldCancelAfterPause { return }
 
             let fileName = sourceURL.lastPathComponent
             let destinationURL = destination.appendingPathComponent(fileName)

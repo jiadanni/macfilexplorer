@@ -397,7 +397,7 @@ extension FileBrowserViewController {
         }
     }
 
-    @objc private func contextMenuCut(_ sender: Any) {
+    @objc func contextMenuCut(_ sender: Any) {
         let items = getSelectedItems()
         guard !items.isEmpty else { return }
 
@@ -435,7 +435,7 @@ extension FileBrowserViewController {
         }
     }
 
-    @objc private func contextMenuPaste(_ sender: Any) {
+    @objc func contextMenuPaste(_ sender: Any) {
         let pasteboard = NSPasteboard.general
         guard let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], !fileURLs.isEmpty else { return }
 
@@ -450,7 +450,7 @@ extension FileBrowserViewController {
         }
     }
 
-    @objc private func contextMenuRename(_ sender: Any) {
+    @objc func contextMenuRename(_ sender: Any) {
         let selectedItems = getSelectedItems()
         guard let item = selectedItems.first, selectedItems.count == 1 else { return }
 
