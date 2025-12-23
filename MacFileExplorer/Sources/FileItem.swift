@@ -135,33 +135,31 @@ class FileItem: Hashable {
             
             // If it's a symbolic link (Google Drive File Stream uses symlinks), resolve it
             if let isSymlink = resourceValues.isSymbolicLink, isSymlink {
-                do {
-                    let destination = try FileManager.default.destinationOfSymbolicLink(atPath: url.path)
+                // Try safe symlink resolution with cycle detection and max depth
+                if let safeResolved = resolveSymlinkSafe(startingAt: url.path, maxDepth: 10) {
                     var symlinkIsDir: ObjCBool = false
-
-                    // Resolve symlink target safely using resolvingSymlinksInPath
-                    let symlinksResolved = URL(fileURLWithPath: destination, isDirectory: false)
-                        .resolvingSymlinksInPath()
-
-                    // If relative symlink, resolve relative to the parent of the symlink
-                    let resolvedPath: String
-                    if destination.hasPrefix("/") {
-                        // Absolute path - use as-is
-                        resolvedPath = destination
-                    } else {
-                        // Relative path - resolve relative to symlink's parent directory
-                        // Use URL path operations to avoid string concatenation vulnerabilities
-                        let parentURL = url.deletingLastPathComponent()
-                        let resolvedURL = parentURL.appendingPathComponent(destination).standardizedFileURL
-                        resolvedPath = resolvedURL.path
-                    }
-
-                    FileManager.default.fileExists(atPath: resolvedPath, isDirectory: &symlinkIsDir)
+                    FileManager.default.fileExists(atPath: safeResolved, isDirectory: &symlinkIsDir)
                     detectedAsDirectory = symlinkIsDir.boolValue
-                } catch {
-                    // If we can't resolve the symlink, trust the resource values instead
-                    // This is safer than guessing or failing silently
-                    debugLog("Warning: Failed to resolve symlink at \(url.path): \(error)")
+                } else {
+                    // Fall back to best-effort resolution (previous behavior)
+                    do {
+                        let destination = try FileManager.default.destinationOfSymbolicLink(atPath: url.path)
+                        var symlinkIsDir: ObjCBool = false
+
+                        let resolvedPath: String
+                        if destination.hasPrefix("/") {
+                            resolvedPath = destination
+                        } else {
+                            let parentURL = url.deletingLastPathComponent()
+                            let resolvedURL = parentURL.appendingPathComponent(destination).standardizedFileURL
+                            resolvedPath = resolvedURL.path
+                        }
+
+                        FileManager.default.fileExists(atPath: resolvedPath, isDirectory: &symlinkIsDir)
+                        detectedAsDirectory = symlinkIsDir.boolValue
+                    } catch {
+                        debugLog("Warning: Failed to resolve symlink at \(url.path): \(error)")
+                    }
                 }
             }
             

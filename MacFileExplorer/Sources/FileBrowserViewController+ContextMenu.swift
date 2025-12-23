@@ -288,7 +288,7 @@ extension FileBrowserViewController {
     @objc func contextMenuOpen(_ sender: Any) {
         let items = getSelectedItems()
         if items.count == 1 {
-            let item = items[0]
+            guard let item = items.safe(at: 0) else { return }
             if item.isDirectory {
                 navigationCoordinator.loadDirectory(item.url)
             } else {
@@ -304,7 +304,7 @@ extension FileBrowserViewController {
     @objc func contextMenuOpenInNewTab(_ sender: Any) {
         let items = getSelectedItems()
         if items.count == 1 {
-            let item = items[0]
+            guard let item = items.safe(at: 0) else { return }
             if item.isDirectory {
                 delegate?.openInNewTab(url: item.url)
             }

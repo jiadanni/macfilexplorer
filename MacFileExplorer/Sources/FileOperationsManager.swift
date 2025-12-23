@@ -20,24 +20,21 @@ final class FileOperationsManager {
     // MARK: - Validation
 
     func isValidDestination(_ destination: URL, for urls: [URL]) -> Bool {
-        // Use canonical paths to prevent path traversal bypasses
+        // Use canonical paths and file-id ancestor checks to prevent path traversal bypasses
         let canonicalDest = destination.standardizedFileURL
-        
+
         for source in urls {
             let canonicalSource = source.standardizedFileURL
-            
+
             // Check for exact match
             if canonicalSource == canonicalDest { return false }
-            
-            // Check if destination is a child of source using path components
-            let sourceComponents = canonicalSource.pathComponents
-            let destComponents = canonicalDest.pathComponents
-            
-            if destComponents.count > sourceComponents.count {
-                let isChild = zip(sourceComponents, destComponents).allSatisfy { $0 == $1 }
-                if isChild { return false }
+
+            // Use file-ID based ancestor check to avoid symlink/.. tricks
+            if isAncestorByFileID(ancestorPath: canonicalSource.path, descendantPath: canonicalDest.path) {
+                return false
             }
         }
+
         return true
     }
     

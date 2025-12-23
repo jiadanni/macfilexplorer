@@ -235,10 +235,10 @@ class SidebarViewController: NSViewController {
         super.viewDidLayout()
 
         // Set equal heights for all three sections after initial layout
-        if let mainSplitView = view.subviews.first as? NSSplitView,
-           mainSplitView.arrangedSubviews.indices.contains(1),
-           let bottomSplitView = mainSplitView.arrangedSubviews[1] as? NSSplitView,
-           bottomSplitView.arrangedSubviews.indices.contains(1) {
+          if let mainSplitView = view.subviews.first as? NSSplitView,
+              let mainSecond = mainSplitView.arrangedSubviews.safe(at: 1) as? NSSplitView,
+              let bottomSplitView = mainSecond as? NSSplitView,
+              let bottomSecond = bottomSplitView.arrangedSubviews.safe(at: 1) {
 
             let totalHeight = mainSplitView.bounds.height
             let mainDividerThickness = mainSplitView.dividerThickness

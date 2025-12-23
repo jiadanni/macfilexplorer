@@ -72,8 +72,8 @@ class SettingsViewController: NSSplitViewController, SettingsSidebarDelegate {
             newContentVC = ContextMenuSettingsViewController()
         }
 
-        // Remove the old content item
-        let oldContentItem = splitViewItems[1]
+        // Remove the old content item safely
+        guard let oldContentItem = splitViewItems.safe(at: 1) else { return }
         removeSplitViewItem(oldContentItem)
 
         // Add new content item
