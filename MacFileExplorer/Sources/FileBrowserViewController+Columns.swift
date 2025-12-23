@@ -51,6 +51,8 @@ extension FileBrowserViewController: NSBrowserDelegate {
             return rootItem
         }
 
+        guard let browserView = browserView else { return nil }
+
         let path = browserView.path(toColumn: column)
         var currentItem = rootItem
 

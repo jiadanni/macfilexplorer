@@ -12,7 +12,8 @@
       "Bash(grep:*)",
       "Bash(xargs:*)",
       "Bash(osascript:*)",
-      "Bash(./build-and-test.sh:*)"
+      "Bash(./build-and-test.sh:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

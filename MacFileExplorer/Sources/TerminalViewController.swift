@@ -81,7 +81,7 @@ class TerminalViewController: NSViewController {
         closeButton = NSButton()
         closeButton.translatesAutoresizingMaskIntoConstraints = false
         closeButton.bezelStyle = .texturedRounded
-        closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close Terminal")
+        closeButton.image = NSImage.mfeSymbol(named: "xmark", accessibilityDescription: "Close Terminal")
         closeButton.target = self
         closeButton.action = #selector(closeButtonClicked(_:))
         closeButton.isBordered = false

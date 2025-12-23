@@ -128,7 +128,7 @@ class StorageAnalyzerTabViewController: NSViewController, SplitPaneViewControlle
 
         // Rescan button
         rescanButton = NSButton()
-        rescanButton.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Rescan")
+        rescanButton.image = NSImage.mfeSymbol(named: "arrow.clockwise", accessibilityDescription: "Rescan")
         rescanButton.bezelStyle = .texturedRounded
         rescanButton.target = self
         rescanButton.action = #selector(rescanAction(_:))

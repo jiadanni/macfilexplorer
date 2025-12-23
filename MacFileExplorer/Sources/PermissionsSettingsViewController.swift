@@ -89,7 +89,7 @@ final class PermissionsSettingsViewController: NSViewController {
         container.translatesAutoresizingMaskIntoConstraints = false
 
         // Icon
-        let iconImage = NSImage(systemSymbolName: type.icon, accessibilityDescription: type.rawValue)
+        let iconImage = NSImage.mfeSymbol(named: type.icon, accessibilityDescription: type.rawValue)
         let iconView = NSImageView(image: iconImage ?? NSImage())
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.contentTintColor = .labelColor

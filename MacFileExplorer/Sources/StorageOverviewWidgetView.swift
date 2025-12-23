@@ -43,7 +43,7 @@ class StorageOverviewWidgetView: StartWidgetView {
     private func setupPlaceholderView() {
         // Placeholder icon
         let iconView = NSImageView()
-        iconView.image = NSImage(systemSymbolName: StartDesignSystem.Icons.storage, accessibilityDescription: "Storage")
+        iconView.image = NSImage.mfeSymbol(named: StartDesignSystem.Icons.storage, accessibilityDescription: "Storage")
         iconView.contentTintColor = StartDesignSystem.Colors.inactive
         iconView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(iconView)

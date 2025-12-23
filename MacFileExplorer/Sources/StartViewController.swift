@@ -262,7 +262,12 @@ class StartViewController: NSViewController {
     private func handleOpenTerminal() {
         // Open terminal at home directory
         let homeURL = FileManager.default.homeDirectoryForCurrentUser
-        NSWorkspace.shared.open([homeURL], withApplicationAt: URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"), configuration: NSWorkspace.OpenConfiguration())
+        let terminalURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
+        if #available(macOS 11.0, *) {
+            NSWorkspace.shared.open([homeURL], withApplicationAt: terminalURL, configuration: NSWorkspace.OpenConfiguration())
+        } else {
+            _ = NSWorkspace.shared.openFile(homeURL.path, withApplication: terminalURL.path)
+        }
     }
 
     private func handleEjectAll() {

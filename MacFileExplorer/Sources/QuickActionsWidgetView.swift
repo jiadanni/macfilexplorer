@@ -57,7 +57,7 @@ class QuickActionsWidgetView: StartWidgetView {
         let button = NSButton()
         button.title = title
         button.bezelStyle = .texturedRounded
-        button.image = NSImage(systemSymbolName: icon, accessibilityDescription: title)
+        button.image = NSImage.mfeSymbol(named: icon, accessibilityDescription: title)
         button.imagePosition = .imageLeading
         button.target = self
         button.action = action

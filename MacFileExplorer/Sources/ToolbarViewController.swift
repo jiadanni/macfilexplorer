@@ -113,7 +113,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         backButton = NSButton()
         backButton.translatesAutoresizingMaskIntoConstraints = false
         backButton.bezelStyle = .texturedRounded
-        backButton.image = NSImage(systemSymbolName: "chevron.left", accessibilityDescription: "Back")
+        backButton.image = NSImage.mfeSymbol(named: "chevron.left", accessibilityDescription: "Back")
         backButton.target = self
         backButton.action = #selector(backButtonClicked(_:))
         backButton.isEnabled = false
@@ -128,7 +128,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         forwardButton = NSButton()
         forwardButton.translatesAutoresizingMaskIntoConstraints = false
         forwardButton.bezelStyle = .texturedRounded
-        forwardButton.image = NSImage(systemSymbolName: "chevron.right", accessibilityDescription: "Forward")
+        forwardButton.image = NSImage.mfeSymbol(named: "chevron.right", accessibilityDescription: "Forward")
         forwardButton.target = self
         forwardButton.action = #selector(forwardButtonClicked(_:))
         forwardButton.isEnabled = false
@@ -165,7 +165,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         listModeButton = NSButton()
         listModeButton.translatesAutoresizingMaskIntoConstraints = false
         listModeButton.bezelStyle = .texturedRounded
-        listModeButton.image = NSImage(systemSymbolName: "list.bullet", accessibilityDescription: "List View")
+        listModeButton.image = NSImage.mfeSymbol(named: "list.bullet", accessibilityDescription: "List View")
         listModeButton.target = self
         listModeButton.action = #selector(listViewModeClicked(_:))
         listModeButton.toolTip = L10n.text("List View (⌘1)")
@@ -178,7 +178,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         iconsModeButton = NSButton()
         iconsModeButton.translatesAutoresizingMaskIntoConstraints = false
         iconsModeButton.bezelStyle = .texturedRounded
-        iconsModeButton.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "Icons View")
+        iconsModeButton.image = NSImage.mfeSymbol(named: "square.grid.2x2", accessibilityDescription: "Icons View")
         iconsModeButton.target = self
         iconsModeButton.action = #selector(iconsViewModeClicked(_:))
         iconsModeButton.toolTip = L10n.text("Icons View (⌘2)")
@@ -191,7 +191,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         columnsModeButton = NSButton()
         columnsModeButton.translatesAutoresizingMaskIntoConstraints = false
         columnsModeButton.bezelStyle = .texturedRounded
-        columnsModeButton.image = NSImage(systemSymbolName: "sidebar.leading", accessibilityDescription: "Columns View")
+        columnsModeButton.image = NSImage.mfeSymbol(named: "sidebar.leading", accessibilityDescription: "Columns View")
         columnsModeButton.target = self
         columnsModeButton.action = #selector(columnsViewModeClicked(_:))
         columnsModeButton.toolTip = L10n.text("Columns View (⌘3)")
@@ -204,7 +204,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         windowsListModeButton = NSButton()
         windowsListModeButton.translatesAutoresizingMaskIntoConstraints = false
         windowsListModeButton.bezelStyle = .texturedRounded
-        windowsListModeButton.image = NSImage(systemSymbolName: "list.bullet.rectangle", accessibilityDescription: "Windows List View")
+        windowsListModeButton.image = NSImage.mfeSymbol(named: "list.bullet.rectangle", accessibilityDescription: "Windows List View")
         windowsListModeButton.target = self
         windowsListModeButton.action = #selector(windowsListViewModeClicked(_:))
         windowsListModeButton.toolTip = L10n.text("Windows List View (⌘4)")
@@ -218,7 +218,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         hiddenFilesButton = NSButton()
         hiddenFilesButton.translatesAutoresizingMaskIntoConstraints = false
         hiddenFilesButton.bezelStyle = .texturedRounded
-        hiddenFilesButton.image = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: "Show Hidden Files")
+        hiddenFilesButton.image = NSImage.mfeSymbol(named: "eye.slash", accessibilityDescription: "Show Hidden Files")
         hiddenFilesButton.target = self
         hiddenFilesButton.action = #selector(toggleHiddenFiles(_:))
         hiddenFilesButton.toolTip = L10n.text("Show Hidden Files (⇧⌘.)")
@@ -231,7 +231,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         splitVerticalButton = NSButton()
         splitVerticalButton.translatesAutoresizingMaskIntoConstraints = false
         splitVerticalButton.bezelStyle = .texturedRounded
-        splitVerticalButton.image = NSImage(systemSymbolName: "rectangle.split.2x1", accessibilityDescription: "Split Vertically")
+        splitVerticalButton.image = NSImage.mfeSymbol(named: "rectangle.split.2x1", accessibilityDescription: "Split Vertically")
         splitVerticalButton.target = self
         splitVerticalButton.action = #selector(splitVerticallyClicked(_:))
         splitVerticalButton.toolTip = L10n.text("Split View Vertically")
@@ -244,7 +244,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         splitHorizontalButton = NSButton()
         splitHorizontalButton.translatesAutoresizingMaskIntoConstraints = false
         splitHorizontalButton.bezelStyle = .texturedRounded
-        splitHorizontalButton.image = NSImage(systemSymbolName: "rectangle.split.1x2", accessibilityDescription: "Split Horizontally")
+        splitHorizontalButton.image = NSImage.mfeSymbol(named: "rectangle.split.1x2", accessibilityDescription: "Split Horizontally")
         splitHorizontalButton.target = self
         splitHorizontalButton.action = #selector(splitHorizontallyClicked(_:))
         splitHorizontalButton.toolTip = L10n.text("Split View Horizontally")
@@ -257,7 +257,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         previewPaneButton = NSButton()
         previewPaneButton.translatesAutoresizingMaskIntoConstraints = false
         previewPaneButton.bezelStyle = .texturedRounded
-        previewPaneButton.image = NSImage(systemSymbolName: "sidebar.right", accessibilityDescription: "Toggle Preview Pane")
+        previewPaneButton.image = NSImage.mfeSymbol(named: "sidebar.right", accessibilityDescription: "Toggle Preview Pane")
         previewPaneButton.target = self
         previewPaneButton.action = #selector(togglePreviewPaneClicked(_:))
         previewPaneButton.toolTip = L10n.text("Show Preview Pane")
@@ -270,7 +270,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         storageAnalyzerButton = NSButton()
         storageAnalyzerButton.translatesAutoresizingMaskIntoConstraints = false
         storageAnalyzerButton.bezelStyle = .texturedRounded
-        storageAnalyzerButton.image = NSImage(systemSymbolName: "chart.pie", accessibilityDescription: "Storage Analyzer")
+        storageAnalyzerButton.image = NSImage.mfeSymbol(named: "chart.pie", accessibilityDescription: "Storage Analyzer")
         storageAnalyzerButton.target = self
         storageAnalyzerButton.action = #selector(storageAnalyzerButtonClicked(_:))
         storageAnalyzerButton.toolTip = L10n.text("Storage Analyzer")
@@ -283,7 +283,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         openTerminalButton = NSButton()
         openTerminalButton.translatesAutoresizingMaskIntoConstraints = false
         openTerminalButton.bezelStyle = .texturedRounded
-        openTerminalButton.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: "Open in Terminal")
+        openTerminalButton.image = NSImage.mfeSymbol(named: "terminal", accessibilityDescription: "Open in Terminal")
         openTerminalButton.target = self
         openTerminalButton.action = #selector(openTerminalButtonClicked(_:))
         openTerminalButton.toolTip = L10n.text("Open in Terminal")
@@ -305,7 +305,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         newFolderButton = NSButton()
         newFolderButton.translatesAutoresizingMaskIntoConstraints = false
         newFolderButton.bezelStyle = .texturedRounded
-        newFolderButton.image = NSImage(systemSymbolName: "folder.badge.plus", accessibilityDescription: "New Folder")
+        newFolderButton.image = NSImage.mfeSymbol(named: "folder.badge.plus", accessibilityDescription: "New Folder")
         newFolderButton.target = self
         newFolderButton.action = #selector(newFolderButtonClicked(_:))
         newFolderButton.toolTip = L10n.text("New Folder (⇧⌘N)")
@@ -331,7 +331,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         overflowButton = NSButton()
         overflowButton.translatesAutoresizingMaskIntoConstraints = false
         overflowButton.bezelStyle = .texturedRounded
-        overflowButton.image = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: "More")
+        overflowButton.image = NSImage.mfeSymbol(named: "ellipsis", accessibilityDescription: "More")
         overflowButton.isBordered = false
         overflowButton.target = self
         overflowButton.action = #selector(overflowButtonClicked(_:))
@@ -350,7 +350,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         sortButton.bezelStyle = .texturedRounded
         sortButton.pullsDown = true
         sortButton.addItem(withTitle: L10n.text("Sort"))
-        (sortButton.item(at: 0) as NSMenuItem?)?.image = NSImage(systemSymbolName: "arrow.up.arrow.down", accessibilityDescription: "Sort")
+        (sortButton.item(at: 0) as NSMenuItem?)?.image = NSImage.mfeSymbol(named: "arrow.up.arrow.down", accessibilityDescription: "Sort")
 
         sortButton.menu?.addItem(withTitle: L10n.text("Name ↑"), action: #selector(sortByNameAscending(_:)), keyEquivalent: "")
         sortButton.menu?.addItem(withTitle: L10n.text("Name ↓"), action: #selector(sortByNameDescending(_:)), keyEquivalent: "")
@@ -375,7 +375,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         closePaneButton = NSButton()
         closePaneButton.translatesAutoresizingMaskIntoConstraints = false
         closePaneButton.bezelStyle = .texturedRounded
-        closePaneButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close Pane")
+        closePaneButton.image = NSImage.mfeSymbol(named: "xmark", accessibilityDescription: "Close Pane")
         closePaneButton.target = self
         closePaneButton.action = #selector(closePaneButtonClicked(_:))
         closePaneButton.toolTip = "Close Pane (⌘W)"
@@ -386,7 +386,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         searchButton = NSButton()
         searchButton.translatesAutoresizingMaskIntoConstraints = false
         searchButton.bezelStyle = .texturedRounded
-        searchButton.image = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: "Search")
+        searchButton.image = NSImage.mfeSymbol(named: "magnifyingglass", accessibilityDescription: "Search")
         searchButton.target = self
         searchButton.action = #selector(searchButtonClicked(_:))
         searchButton.toolTip = L10n.text("Search (⌘F)")
@@ -413,7 +413,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         filterButton = NSButton()
         filterButton.translatesAutoresizingMaskIntoConstraints = false
         filterButton.bezelStyle = .texturedRounded
-        filterButton.image = NSImage(systemSymbolName: "line.3.horizontal.decrease.circle", accessibilityDescription: "Filter")
+        filterButton.image = NSImage.mfeSymbol(named: "line.3.horizontal.decrease.circle", accessibilityDescription: "Filter")
         filterButton.target = self
         filterButton.action = #selector(filterButtonClicked(_:))
         filterButton.toolTip = L10n.text("Filter Files")
@@ -600,10 +600,10 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
     func updateHiddenFilesDisplay(showing: Bool) {
         showingHiddenFiles = showing
         if showing {
-            hiddenFilesButton.image = NSImage(systemSymbolName: "eye", accessibilityDescription: "Hide Hidden Files")
+            hiddenFilesButton.image = NSImage.mfeSymbol(named: "eye", accessibilityDescription: "Hide Hidden Files")
             hiddenFilesButton.toolTip = "Hide Hidden Files (⇧⌘.)"
         } else {
-            hiddenFilesButton.image = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: "Show Hidden Files")
+            hiddenFilesButton.image = NSImage.mfeSymbol(named: "eye.slash", accessibilityDescription: "Show Hidden Files")
             hiddenFilesButton.toolTip = "Show Hidden Files (⇧⌘.)"
         }
     }
@@ -629,10 +629,10 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
 
         if ascending {
             title += " ↑"
-            image = NSImage(systemSymbolName: "arrow.up", accessibilityDescription: "Ascending")
+            image = NSImage.mfeSymbol(named: "arrow.up", accessibilityDescription: "Ascending")
         } else {
             title += " ↓"
-            image = NSImage(systemSymbolName: "arrow.down", accessibilityDescription: "Descending")
+            image = NSImage.mfeSymbol(named: "arrow.down", accessibilityDescription: "Descending")
         }
 
         sortButton.title = title
@@ -661,11 +661,11 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         NSAnimationContext.runAnimationGroup { _ in
             NSAnimationContext.current.duration = 0.15
             if showing {
-                previewPaneButton.image = NSImage(systemSymbolName: "sidebar.right", accessibilityDescription: "Hide Preview Pane")
+                previewPaneButton.image = NSImage.mfeSymbol(named: "sidebar.right", accessibilityDescription: "Hide Preview Pane")
                 previewPaneButton.contentTintColor = NSColor.customAccentColor
                 previewPaneButton.toolTip = "Hide Preview Pane"
             } else {
-                previewPaneButton.image = NSImage(systemSymbolName: "sidebar.right", accessibilityDescription: "Show Preview Pane")
+                previewPaneButton.image = NSImage.mfeSymbol(named: "sidebar.right", accessibilityDescription: "Show Preview Pane")
                 previewPaneButton.contentTintColor = nil
                 previewPaneButton.toolTip = "Show Preview Pane"
             }
@@ -945,7 +945,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
             let menuItem = NSMenuItem(title: displayName, action: #selector(historyItemClicked(_:)), keyEquivalent: "")
             menuItem.target = self
             menuItem.tag = i
-            menuItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+            menuItem.image = NSImage.mfeSymbol(named: "folder", accessibilityDescription: nil)
             menu.addItem(menuItem)
         }
 
@@ -966,7 +966,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
             let menuItem = NSMenuItem(title: displayName, action: #selector(historyItemClicked(_:)), keyEquivalent: "")
             menuItem.target = self
             menuItem.tag = i
-            menuItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+            menuItem.image = NSImage.mfeSymbol(named: "folder", accessibilityDescription: nil)
             menu.addItem(menuItem)
         }
 

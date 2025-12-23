@@ -110,7 +110,7 @@ class ViewOptionsViewController: NSViewController {
         // Sort ascending/descending button
         sortAscendingButton = NSButton(frame: NSRect(x: 370, y: yOffset - 3, width: 40, height: 26))
         sortAscendingButton.bezelStyle = .rounded
-        sortAscendingButton.image = NSImage(systemSymbolName: viewOptions.sortAscending ? "arrow.up" : "arrow.down", accessibilityDescription: nil)
+        sortAscendingButton.image = NSImage.mfeSymbol(named: viewOptions.sortAscending ? "arrow.up" : "arrow.down", accessibilityDescription: nil)
         sortAscendingButton.target = self
         sortAscendingButton.action = #selector(toggleSortDirection(_:))
         view.addSubview(sortAscendingButton)
@@ -157,7 +157,7 @@ class ViewOptionsViewController: NSViewController {
         yOffset -= 30
 
         let gridIconSmall = NSImageView(frame: NSRect(x: 25, y: yOffset - 20, width: 30, height: 30))
-        gridIconSmall.image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: nil)
+        gridIconSmall.image = NSImage.mfeSymbol(named: "square.grid.2x2", accessibilityDescription: nil)
         gridIconSmall.toolTip = "Tight grid spacing"
         view.addSubview(gridIconSmall)
 
@@ -170,7 +170,7 @@ class ViewOptionsViewController: NSViewController {
         view.addSubview(gridSpacingSlider)
 
         let gridIconLarge = NSImageView(frame: NSRect(x: 360, y: yOffset - 20, width: 30, height: 30))
-        gridIconLarge.image = NSImage(systemSymbolName: "square.grid.3x3", accessibilityDescription: nil)
+        gridIconLarge.image = NSImage.mfeSymbol(named: "square.grid.3x3", accessibilityDescription: nil)
         gridIconLarge.toolTip = "Wide grid spacing"
         view.addSubview(gridIconLarge)
         yOffset -= 50
@@ -256,7 +256,7 @@ class ViewOptionsViewController: NSViewController {
 
     @objc private func toggleSortDirection(_ sender: NSButton) {
         viewOptions.sortAscending.toggle()
-        sender.image = NSImage(systemSymbolName: viewOptions.sortAscending ? "arrow.up" : "arrow.down", accessibilityDescription: nil)
+        sender.image = NSImage.mfeSymbol(named: viewOptions.sortAscending ? "arrow.up" : "arrow.down", accessibilityDescription: nil)
         saveAndNotify()
     }
 

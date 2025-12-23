@@ -260,7 +260,7 @@ struct StartDesignSystem {
         container.layer?.cornerRadius = 4
 
         let icon = NSImageView()
-        if let sysImage = NSImage(systemSymbolName: granted ? Icons.checkmark : Icons.lock, accessibilityDescription: nil) {
+        if let sysImage = NSImage.mfeSymbol(named: granted ? Icons.checkmark : Icons.lock, accessibilityDescription: nil) {
             let useGrayscale = SettingsStore.shared.useGrayscaleIcons
             icon.image = useGrayscale ? sysImage.grayscale() : sysImage
         }

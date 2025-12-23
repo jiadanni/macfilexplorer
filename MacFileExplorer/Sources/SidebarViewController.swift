@@ -409,11 +409,11 @@ class SidebarViewController: NSViewController {
         let homeURL = fileManager.homeDirectoryForCurrentUser
 
         // Use system icons that don't require file access
-        let folderIcon = NSImage(systemSymbolName: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(for: .folder)
-        let desktopIcon = NSImage(systemSymbolName: "desktopcomputer", accessibilityDescription: nil) ?? folderIcon
-        let documentIcon = NSImage(systemSymbolName: "doc", accessibilityDescription: nil) ?? folderIcon
-        let downloadIcon = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: nil) ?? folderIcon
-        let homeIcon = NSImage(systemSymbolName: "house", accessibilityDescription: nil) ?? folderIcon
+        let folderIcon = NSImage.mfeSymbol(named: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(for: .folder)
+        let desktopIcon = NSImage.mfeSymbol(named: "desktopcomputer", accessibilityDescription: nil) ?? folderIcon
+        let documentIcon = NSImage.mfeSymbol(named: "doc", accessibilityDescription: nil) ?? folderIcon
+        let downloadIcon = NSImage.mfeSymbol(named: "arrow.down.circle", accessibilityDescription: nil) ?? folderIcon
+        let homeIcon = NSImage.mfeSymbol(named: "house", accessibilityDescription: nil) ?? folderIcon
 
         favoriteItems = [
             SidebarItem(name: "Desktop", url: desktopURL, icon: desktopIcon),
@@ -983,7 +983,7 @@ extension SidebarViewController: NSTableViewDelegate {
             let ejectButton = HoverButton()
             ejectButton.translatesAutoresizingMaskIntoConstraints = false
             ejectButton.bezelStyle = .texturedRounded
-            ejectButton.image = NSImage(systemSymbolName: "eject", accessibilityDescription: "Eject")
+            ejectButton.image = NSImage.mfeSymbol(named: "eject", accessibilityDescription: "Eject")
             ejectButton.isBordered = false
             ejectButton.target = self
             ejectButton.action = #selector(ejectDrive(_:))

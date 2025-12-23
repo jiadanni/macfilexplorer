@@ -97,7 +97,7 @@ class StartWidgetView: NSView {
         // Icon
         if let iconName = widgetIcon {
             iconView = NSImageView()
-            iconView.image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil)
+            iconView.image = NSImage.mfeSymbol(named: iconName, accessibilityDescription: nil)
             iconView.contentTintColor = StartDesignSystem.Colors.accent
             iconView.translatesAutoresizingMaskIntoConstraints = false
             headerView.addSubview(iconView)
@@ -111,7 +111,7 @@ class StartWidgetView: NSView {
         // Dismiss button
         if canDismiss {
             dismissButton = NSButton()
-            dismissButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Dismiss")
+            dismissButton.image = NSImage.mfeSymbol(named: "xmark.circle.fill", accessibilityDescription: "Dismiss")
             dismissButton.bezelStyle = .inline
             dismissButton.isBordered = false
             dismissButton.target = self
@@ -272,7 +272,7 @@ class StartWidgetView: NSView {
             headerView.addSubview(iconView)
         }
 
-        iconView.image = NSImage(systemSymbolName: iconName, accessibilityDescription: nil)
+        iconView.image = NSImage.mfeSymbol(named: iconName, accessibilityDescription: nil)
     }
 
     /// Override this in subclasses to add custom content

@@ -85,9 +85,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     var containerView: NSView! // New container view
     var scrollView: NSScrollView! // For outlineView
     var outlineView: NSOutlineView!
-    var collectionView: NSCollectionView! // For icons view
+    var collectionView: NSCollectionView? // For icons view
     var collectionViewScrollView: NSScrollView! // For collection view
-    var browserView: NSBrowser! // For columns view
+    var browserView: NSBrowser? // For columns view
     var zoomControlsAllowedByPane = true // Gated by active pane; combined with view mode to show/hide slider.
     var freeFormLayout: FreeFormCollectionViewLayout? // Custom layout for free-form icon positioning
     // Per-pane preview management
@@ -597,6 +597,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     @objc func handleBrowserDoubleClick(_ sender: NSBrowser) {
+        guard let browserView = browserView else { return }
         let selectedColumn = browserView.selectedColumn
         let selectedRow = browserView.selectedRow(inColumn: selectedColumn)
         
@@ -869,9 +870,9 @@ extension FileBrowserViewController: FileBrowserDataSourceDelegate {
             guard let self else { return }
             self.outlineView.reloadData()
             if self.currentViewMode == .icons || self.currentViewMode == .windowsList {
-                self.collectionView.reloadData()
+                self.collectionView?.reloadData()
             } else if self.currentViewMode == .columns {
-                self.browserView.loadColumnZero()
+                self.browserView?.loadColumnZero()
             }
             
             self.delegate?.directoryDidChange(self, to: dataSource.currentDirectory.path)

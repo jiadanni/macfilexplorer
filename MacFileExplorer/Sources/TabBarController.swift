@@ -153,7 +153,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         var closeButton: NSButton?
         if showClose {
             let cb = NSButton()
-            cb.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close")
+            cb.image = NSImage.mfeSymbol(named: "xmark", accessibilityDescription: "Close")
             cb.bezelStyle = .shadowlessSquare
             cb.isBordered = false
             cb.setButtonType(.momentaryChange)

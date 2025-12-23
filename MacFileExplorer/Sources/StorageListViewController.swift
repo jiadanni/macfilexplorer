@@ -339,7 +339,7 @@ extension StorageListViewController: NSTableViewDelegate {
         switch identifier {
         case "name":
             cellView.textField?.stringValue = item.name
-            cellView.imageView?.image = item.isDirectory ? NSImage(systemSymbolName: "folder", accessibilityDescription: nil) : NSImage(systemSymbolName: "doc", accessibilityDescription: nil)
+            cellView.imageView?.image = item.isDirectory ? NSImage.mfeSymbol(named: "folder", accessibilityDescription: nil) : NSImage.mfeSymbol(named: "doc", accessibilityDescription: nil)
         case "size":
             cellView.textField?.stringValue = item.formattedSize
         case "percentage":

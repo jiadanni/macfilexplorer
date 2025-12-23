@@ -112,7 +112,7 @@ class FavoritesWidgetView: StartWidgetView {
 
         // Icon
         let iconView = NSImageView()
-        if let sysImage = NSImage(systemSymbolName: icon, accessibilityDescription: name) {
+        if let sysImage = NSImage.mfeSymbol(named: icon, accessibilityDescription: name) {
             let useGrayscale = settingsStore.useGrayscaleIcons
             iconView.image = useGrayscale ? sysImage.grayscale() : sysImage
             iconView.contentTintColor = useGrayscale ? NSColor.secondaryLabelColor : StartDesignSystem.Colors.accent
@@ -184,7 +184,7 @@ class FavoritesWidgetView: StartWidgetView {
 
         // Plus icon
         let iconView = NSImageView()
-        if let sysImage = NSImage(systemSymbolName: StartDesignSystem.Icons.addFolder, accessibilityDescription: "Add Folder") {
+        if let sysImage = NSImage.mfeSymbol(named: StartDesignSystem.Icons.addFolder, accessibilityDescription: "Add Folder") {
             let useGrayscale = settingsStore.useGrayscaleIcons
             iconView.image = useGrayscale ? sysImage.grayscale() : sysImage
         }

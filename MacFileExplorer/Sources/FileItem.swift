@@ -447,7 +447,7 @@ class FileItem: Hashable {
 
         if useGrayscale {
             // Grayscale mode: use monochrome SF Symbol for folders, grayscale file icons otherwise
-            if isDirectory, let folderIcon = NSImage(systemSymbolName: "folder", accessibilityDescription: "Folder") {
+            if isDirectory, let folderIcon = NSImage.mfeSymbol(named: "folder", accessibilityDescription: "Folder") {
                 return folderIcon.grayscale()
             }
             return NSWorkspace.shared.icon(forFile: url.path).grayscale()

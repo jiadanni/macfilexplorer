@@ -246,7 +246,7 @@ final class FileBrowserViewModeCoordinator {
         let newBrowser = createBrowserControl()
         owner.browserView = newBrowser
 
-        owner.browserView.delegate = owner
+        owner.browserView?.delegate = owner
         debugLog("BrowserView setup completed with minColumnWidth: 180")
         token.markReady()
     }

@@ -380,7 +380,7 @@ extension StorageAnalyzerWindowController: NSToolbarDelegate {
             item.label = "Rescan"
             item.paletteLabel = "Rescan"
             item.toolTip = "Rescan current location"
-            item.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "Rescan")
+            item.image = NSImage.mfeSymbol(named: "arrow.clockwise", accessibilityDescription: "Rescan")
             item.target = self
             item.action = #selector(rescanAction(_:))
             return item
@@ -390,7 +390,7 @@ extension StorageAnalyzerWindowController: NSToolbarDelegate {
             item.label = "New Scan"
             item.paletteLabel = "New Scan"
             item.toolTip = "Start a new scan"
-            item.image = NSImage(systemSymbolName: "doc.badge.plus", accessibilityDescription: "New Scan")
+            item.image = NSImage.mfeSymbol(named: "doc.badge.plus", accessibilityDescription: "New Scan")
             item.target = self
             item.action = #selector(newScanAction(_:))
             return item
@@ -400,7 +400,7 @@ extension StorageAnalyzerWindowController: NSToolbarDelegate {
             item.label = "Export"
             item.paletteLabel = "Export"
             item.toolTip = "Export results"
-            item.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: "Export")
+            item.image = NSImage.mfeSymbol(named: "square.and.arrow.up", accessibilityDescription: "Export")
             item.target = self
             item.action = #selector(exportAction(_:))
             return item
