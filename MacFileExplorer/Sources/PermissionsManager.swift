@@ -322,7 +322,8 @@ final class PermissionsManager {
         let path = url.path
         for entry in resolvedGrantedDirectoryEntries() {
             guard let grantedURL = entry.url, entry.isValid else { continue }
-            if path == grantedURL.path || path.hasPrefix(grantedURL.path + "/") {
+            // Use file ID-based comparison instead of string prefix to prevent bypass
+            if path == grantedURL.path || isAncestorByFileID(ancestorPath: grantedURL.path, descendantPath: path) {
                 if !containsActiveURL(grantedURL) && grantedURL.startAccessingSecurityScopedResource() {
                     insertActiveURL(grantedURL)
                 }

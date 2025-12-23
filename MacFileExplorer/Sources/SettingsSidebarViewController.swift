@@ -22,7 +22,9 @@ class SettingsSidebarViewController: NSViewController, NSTableViewDelegate, NSTa
         super.viewDidLoad()
         tableView.reloadData()
         tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
-        delegate?.settingsSidebarDidSelectSection(sections[0])
+        if let firstSection = sections.safe(at: 0) {
+            delegate?.settingsSidebarDidSelectSection(firstSection)
+        }
     }
 
     private func setupTableView() {
@@ -81,8 +83,8 @@ class SettingsSidebarViewController: NSViewController, NSTableViewDelegate, NSTa
             cellView?.identifier = cellIdentifier
         }
 
-        if let textField = cellView?.textField {
-            textField.stringValue = sections[row].rawValue
+        if let textField = cellView?.textField, let section = sections.safe(at: row) {
+            textField.stringValue = section.rawValue
             textField.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
         }
 
@@ -93,8 +95,8 @@ class SettingsSidebarViewController: NSViewController, NSTableViewDelegate, NSTa
 
     func tableViewSelectionDidChange(_ notification: Notification) {
         let selectedRow = tableView.selectedRow
-        if selectedRow >= 0 && selectedRow < sections.count {
-            delegate?.settingsSidebarDidSelectSection(sections[selectedRow])
+        if selectedRow >= 0, let selectedSection = sections.safe(at: selectedRow) {
+            delegate?.settingsSidebarDidSelectSection(selectedSection)
         }
     }
 }

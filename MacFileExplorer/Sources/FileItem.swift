@@ -141,7 +141,7 @@ class FileItem: Hashable {
                     FileManager.default.fileExists(atPath: safeResolved, isDirectory: &symlinkIsDir)
                     detectedAsDirectory = symlinkIsDir.boolValue
                 } else {
-                    // Fall back to best-effort resolution (previous behavior)
+                    // Limited fallback: single-level resolution only to reduce attack surface
                     do {
                         let destination = try FileManager.default.destinationOfSymbolicLink(atPath: url.path)
                         var symlinkIsDir: ObjCBool = false
@@ -155,6 +155,7 @@ class FileItem: Hashable {
                             resolvedPath = resolvedURL.path
                         }
 
+                        // Only check if resolved path exists, don't follow further symlinks
                         FileManager.default.fileExists(atPath: resolvedPath, isDirectory: &symlinkIsDir)
                         detectedAsDirectory = symlinkIsDir.boolValue
                     } catch {

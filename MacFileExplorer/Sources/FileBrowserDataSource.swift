@@ -110,8 +110,9 @@ class FileBrowserDataSource {
         if let stored = SettingsStore.shared.folderSortPreferences[currentDirectory.path] {
             let parts = stored.components(separatedBy: "|")
             if parts.count >= 2 {
-                self.sortColumn = parts[0]
-                self.sortAscending = (parts[1] == "asc")
+                guard let sortCol = parts.safe(at: 0), let sortOrder = parts.safe(at: 1) else { return }
+                self.sortColumn = sortCol
+                self.sortAscending = (sortOrder == "asc")
             }
         }
     }

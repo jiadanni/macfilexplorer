@@ -232,7 +232,8 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         guard splitViewItems.count > 0 else { return }
         guard !isAdjustingSplitPosition else { return } // prevent recursive calls
         
-        let currentWidth = splitViewItems[0].viewController.view.frame.width
+        guard let firstItem = splitViewItems.safe(at: 0) else { return }
+        let currentWidth = firstItem.viewController.view.frame.width
         let adjustedWidth = adjustedSidebarWidth(proposed: currentWidth)
         
         // Only adjust if the difference is significant and would improve layout

@@ -298,7 +298,8 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
             // The splitViewItems array includes the previewViewController, so adjust index
             let splitViewItemIndex = index
             if splitViewItemIndex < splitViewItems.count {
-                removeSplitViewItem(splitViewItems[splitViewItemIndex])
+                guard let itemToRemove = splitViewItems.safe(at: splitViewItemIndex) else { return }
+                removeSplitViewItem(itemToRemove)
             }
             
             paneToRemove.removeFromParent()
