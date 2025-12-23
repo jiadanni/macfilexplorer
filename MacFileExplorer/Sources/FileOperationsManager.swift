@@ -107,6 +107,9 @@ final class FileOperationsManager {
             for (index, sourceURL) in items.enumerated() {
                 let targetURL = destination?.appendingPathComponent(sourceURL.lastPathComponent)
                 
+                // Pre-validate source file identity to detect TOCTOU races
+                let sourceFileID = try? fileID(for: sourceURL.path)
+                
                 if operation == .delete {
                     do {
                         try fileManager.trashItem(at: sourceURL, resultingItemURL: nil)
@@ -125,6 +128,13 @@ final class FileOperationsManager {
                     var lastError: Error? = nil
                     
                     while attemptCount < maxAttempts && !operationSucceeded {
+                        // Validate source file identity hasn't changed (TOCTOU check)
+                        if let expectedID = sourceFileID, !validateFileID(path: sourceURL.path, expectedID: expectedID) {
+                            lastError = NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError, 
+                                               userInfo: [NSLocalizedDescriptionKey: "Source file identity changed during operation (possible TOCTOU attack)"])
+                            break
+                        }
+                        
                         do {
                             if operation == .copy {
                                 try fileManager.copyItem(at: sourceURL, to: finalURL)

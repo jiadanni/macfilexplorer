@@ -95,3 +95,25 @@ func isAncestorByFileID(ancestorPath: String, descendantPath: String) -> Bool {
     return false
 }
 
+/// Safely open a file with O_NOFOLLOW and return file descriptor and FileID.
+/// Returns nil if file doesn't exist, is a symlink when O_NOFOLLOW is used, or other error.
+func openSafeNoFollow(path: String) -> (fd: Int32, fileID: FileID)? {
+    let fd = open(path, O_RDONLY | O_NOFOLLOW)
+    if fd < 0 { return nil }
+    
+    var statbuf = stat()
+    if fstat(fd, &statbuf) != 0 {
+        close(fd)
+        return nil
+    }
+    
+    let fid = FileID(dev: UInt64(statbuf.st_dev), ino: UInt64(statbuf.st_ino))
+    return (fd: fd, fileID: fid)
+}
+
+/// Validate that a file still has the expected FileID (no TOCTOU race).
+func validateFileID(path: String, expectedID: FileID) -> Bool {
+    guard let currentID = try? fileID(for: path) else { return false }
+    return currentID == expectedID
+}
+
