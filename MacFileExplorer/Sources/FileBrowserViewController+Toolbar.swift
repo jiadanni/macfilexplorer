@@ -34,9 +34,8 @@ extension FileBrowserViewController {
     }
 
     func toolbarDidToggleHiddenFiles(show: Bool) {
-        showsHiddenFiles = show
-        settings.hiddenFilesState = show
-        refreshCurrentDirectory()
+        // Route through coordinator as SSOT - coordinator will notify observer
+        hiddenFilesCoordinator.setVisibility(show)
     }
 
     func toolbarDidChangeViewMode(_ viewMode: ViewMode) {

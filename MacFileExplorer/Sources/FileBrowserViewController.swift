@@ -67,7 +67,7 @@ final class CancellationToken {
     func cancel() { lock.wait(); _isCancelled = true; lock.signal() }
 }
 
-class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureRecognizerDelegate, QLPreviewPanelDataSource, QLPreviewPanelDelegate, StatusBarDelegate, ToolbarDelegate, NSOutlineViewDelegate, NSOutlineViewDataSource, FileBrowserPreviewPaneObserver {
+class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureRecognizerDelegate, QLPreviewPanelDataSource, QLPreviewPanelDelegate, StatusBarDelegate, ToolbarDelegate, NSOutlineViewDelegate, NSOutlineViewDataSource, FileBrowserPreviewPaneObserver, HiddenFilesVisibilityObserver {
 
     weak var delegate: FileBrowserDelegate?
     
@@ -107,8 +107,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
     
     var showsHiddenFiles: Bool {
-        get { dataSource.showsHiddenFiles }
-        set { dataSource.showsHiddenFiles = newValue }
+        get { hiddenFilesCoordinator.isVisible }
+        set { hiddenFilesCoordinator.isVisible = newValue }
     }
     
     var sortColumn: String {
@@ -137,6 +137,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     var navigationCoordinator: FileBrowserNavigationCoordinator!
     lazy var viewModeCoordinator = FileBrowserViewModeCoordinator(owner: self)
     lazy var previewPaneCoordinator = FileBrowserPreviewPaneCoordinator(settings: settings)
+    lazy var hiddenFilesCoordinator = HiddenFilesVisibilityCoordinator(settingsStore: settings)
     lazy var zoomCoordinator = FileBrowserZoomCoordinator()
     
     // Controllers for focused responsibilities
@@ -247,8 +248,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         // Setup preview pane coordinator as observer
         previewPaneCoordinator.observer = self
         
-        // Load persisted hidden files state
-        self.dataSource.showsHiddenFiles = settings.hiddenFilesState
+        // Setup hidden files coordinator as observer
+        hiddenFilesCoordinator.observer = self
         
         // Load default view & sort (search remains nil)
         currentViewMode = settings.defaultViewMode
@@ -817,5 +818,17 @@ extension FileBrowserViewController: FileBrowserPreviewPaneObserver {
     func previewPaneWidthDidChange(_ width: CGFloat) {
         // Width is persisted automatically by coordinator
         // This callback allows UI to respond if needed
+    }
+}
+
+// MARK: - HiddenFilesVisibilityObserver
+
+extension FileBrowserViewController: HiddenFilesVisibilityObserver {
+    func hiddenFilesVisibilityDidChange(isVisible: Bool) {
+        // Update dataSource to trigger reload
+        dataSource.showsHiddenFiles = isVisible
+        
+        // Update toolbar to reflect current state
+        toolbarViewController?.updateHiddenFilesDisplay(showing: isVisible)
     }
 }
