@@ -58,15 +58,8 @@ extension FileBrowserViewController {
 }
 
 // Cancellation token reference type
-extension FileBrowserViewController: NSSplitViewDelegate {
-    func splitViewDidResizeSubviews(_ notification: Notification) {
-        guard previewVisible, let pv = previewPaneViewController?.view else { return }
-        let width = pv.bounds.width
-        if width > 100 { // persist only reasonable widths
-            settings.previewPaneWidth = width
-        }
-    }
 }
+
 final class CancellationToken {
     private let lock = DispatchSemaphore(value: 1)
     private var _isCancelled = false
@@ -74,7 +67,7 @@ final class CancellationToken {
     func cancel() { lock.wait(); _isCancelled = true; lock.signal() }
 }
 
-class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureRecognizerDelegate, QLPreviewPanelDataSource, QLPreviewPanelDelegate, StatusBarDelegate, ToolbarDelegate, NSOutlineViewDelegate, NSOutlineViewDataSource {
+class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureRecognizerDelegate, QLPreviewPanelDataSource, QLPreviewPanelDelegate, StatusBarDelegate, ToolbarDelegate, NSOutlineViewDelegate, NSOutlineViewDataSource, FileBrowserPreviewPaneObserver {
 
     weak var delegate: FileBrowserDelegate?
     
@@ -93,7 +86,11 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     // Per-pane preview management
     private var previewSplitView: NSSplitView?
     private var previewPaneViewController: PreviewPaneViewController?
-    var previewVisible: Bool = false
+    
+    /// Read-only computed property: preview visibility delegates to coordinator (SSOT)
+    var previewVisible: Bool {
+        return previewPaneCoordinator.isVisible
+    }
     
     // Constraint management for view switching
     var activeConstraints: [NSLayoutConstraint] = []
@@ -246,6 +243,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         
         // Setup coordinators
         zoomCoordinator.delegate = self
+        
+        // Setup preview pane coordinator as observer
+        previewPaneCoordinator.observer = self
         
         // Load persisted hidden files state
         self.dataSource.showsHiddenFiles = settings.hiddenFilesState
@@ -795,5 +795,27 @@ extension FileBrowserViewController: FileBrowserFilterDelegate {
 
     func setFilterCriteria(_ criteria: FilterCriteria) {
         filterCriteria = criteria
+    }
+}
+
+// MARK: - FileBrowserPreviewPaneObserver
+
+extension FileBrowserViewController: FileBrowserPreviewPaneObserver {
+    /// Called when preview pane visibility changes
+    func previewPaneVisibilityDidChange(_ isVisible: Bool) {
+        // Update toolbar to reflect current state
+        toolbarViewController?.updatePreviewPaneDisplay(showing: isVisible)
+    }
+    
+    /// Called when preview pane position changes
+    func previewPanePositionDidChange(_ position: String) {
+        // Layout adjustments if needed when position changes
+        // Currently position is "right" or "bottom", stored for future use
+    }
+    
+    /// Called when preview pane width changes
+    func previewPaneWidthDidChange(_ width: CGFloat) {
+        // Width is persisted automatically by coordinator
+        // This callback allows UI to respond if needed
     }
 }

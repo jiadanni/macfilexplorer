@@ -1,36 +1,93 @@
 import Cocoa
 import Quartz
 
-/// Coordinates preview pane visibility, positioning, and content updates.
-///
-/// Extracted from FileBrowserViewController to isolate preview pane concerns.
-/// Manages:
-/// - Preview pane visibility toggling
-/// - Split view layout with preview pane
-/// - File preview updates
-/// - Preview pane sizing and persistence
+/// Enhanced delegate protocol for preview pane coordinator changes.
+/// Notifies observers when visibility, position, or width changes.
+protocol FileBrowserPreviewPaneObserver: AnyObject {
+    /// Called when preview pane visibility changes
+    func previewPaneVisibilityDidChange(_ isVisible: Bool)
+    
+    /// Called when preview pane position changes
+    func previewPanePositionDidChange(_ position: String)
+    
+    /// Called when preview pane width changes
+    func previewPaneWidthDidChange(_ width: CGFloat)
+}
+
+/// Legacy delegate protocol (kept for backward compatibility)
 protocol FileBrowserPreviewPaneDelegate: AnyObject {
     func previewPaneShouldClose()
     func previewPaneDidResize(width: CGFloat)
 }
 
+/// Single Source of Truth coordinator for preview pane state.
+///
+/// This coordinator owns all preview pane state:
+/// - isVisible: Boolean visibility state
+/// - position: "right" or "bottom" positioning
+/// - width: Saved pane width for restoration
+///
+/// All changes flow through this coordinator and automatically
+/// synchronize to SettingsStore for persistence.
 class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
     weak var delegate: FileBrowserPreviewPaneDelegate?
+    weak var observer: FileBrowserPreviewPaneObserver?
     
     private var settings: SettingsStoreProtocol
     private weak var parentSplitView: NSSplitView?
     private(set) var previewPaneViewController: PreviewPaneViewController?
-    private(set) var isVisible: Bool = false
+    
+    /// SSOT: Preview pane visibility
+    private(set) var isVisible: Bool = false {
+        didSet {
+            guard oldValue != isVisible else { return }
+            updateSettingsStore()
+            observer?.previewPaneVisibilityDidChange(isVisible)
+        }
+    }
+    
+    /// SSOT: Preview pane position ("right" or "bottom")
+    private(set) var position: String = "right" {
+        didSet {
+            guard oldValue != position else { return }
+            updateSettingsStore()
+            observer?.previewPanePositionDidChange(position)
+        }
+    }
+    
+    /// SSOT: Preview pane width (saved on resize)
+    private(set) var width: CGFloat = 300 {
+        didSet {
+            guard oldValue != width && width > 100 else { return }
+            updateSettingsStore()
+            observer?.previewPaneWidthDidChange(width)
+        }
+    }
     
     init(settings: SettingsStoreProtocol = SettingsStore.shared) {
         self.settings = settings
         super.init()
+        
+        // Initialize from persisted settings
+        self.position = settings.previewPanePosition
+        self.width = settings.previewPaneWidth
+        self.isVisible = settings.previewPaneVisible
     }
     
     /// Initializes preview pane with parent split view reference.
     func setup(in parentSplitView: NSSplitView) {
         self.parentSplitView = parentSplitView
         parentSplitView.delegate = self
+    }
+    
+    /// Updates SettingsStore with current state (called on every change).
+    /// Ensures single source of truth between coordinator and persistence layer.
+    private func updateSettingsStore() {
+        settings.previewPaneVisible = isVisible
+        settings.previewPanePosition = position
+        if width > 100 {
+            settings.previewPaneWidth = width
+        }
     }
     
     /// Shows or hides the preview pane.
@@ -48,6 +105,18 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
     /// Toggles preview pane visibility.
     func togglePreviewPane() {
         setPreviewPaneVisible(!isVisible)
+    }
+    
+    /// Sets preview pane position ("right" or "bottom").
+    func setPosition(_ newPosition: String) {
+        guard newPosition == "right" || newPosition == "bottom" else { return }
+        position = newPosition
+    }
+    
+    /// Sets preview pane width.
+    func setWidth(_ newWidth: CGFloat) {
+        guard newWidth > 100 else { return }
+        width = newWidth
     }
     
     /// Updates preview pane content with selected file.
@@ -71,13 +140,12 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
         let previewItem = NSSplitViewItem(viewController: previewVC)
         previewItem.collapseBehavior = .preferResizingSiblingsWithFixedSplitView
         
-        if let width = settings.previewPaneWidth as CGFloat?, width > 100 {
+        if width > 100 {
             previewItem.minimumThickness = 100
             previewItem.maximumThickness = CGFloat.greatestFiniteMagnitude
-            let preferredWidth = width
             
             Task { @MainActor in
-                previewVC.view.frame.size.width = preferredWidth
+                previewVC.view.frame.size.width = self.width
             }
         }
         
@@ -96,10 +164,10 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
     
     func splitViewDidResizeSubviews(_ notification: Notification) {
         guard isVisible, let pv = previewPaneViewController?.view else { return }
-        let width = pv.bounds.width
-        if width > 100 { // persist only reasonable widths
-            settings.previewPaneWidth = width
-            delegate?.previewPaneDidResize(width: width)
+        let newWidth = pv.bounds.width
+        if newWidth > 100 && newWidth != width {
+            width = newWidth
+            delegate?.previewPaneDidResize(width: newWidth)
         }
     }
 }
