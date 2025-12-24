@@ -1,68 +1,38 @@
 import Cocoa
 
 /// Handles view-mode setup and switching for FileBrowserViewController.
+/// Uses a serial dispatch queue to ensure thread-safe, ordered view mode transitions
+/// without blocking the main thread.
 final class FileBrowserViewModeCoordinator {
     private weak var owner: FileBrowserViewController?
-
-    /// Browser setup state machine to prevent concurrent initialization.
-    private enum BrowserSetupState { case idle, preparing, creatingBrowser, ready, failed }
-    private var browserSetupState: BrowserSetupState = .idle {
-        didSet {
-#if DEBUG
-            debugLog("DEBUG: browserSetupState -> \(browserSetupState)")
-#endif
-        }
-    }
-
-    private var suppressedDisplayCalls = 0
+    
+    /// Serial queue for coordinating display operations to prevent concurrent initialization races.
+    /// All view mode changes flow through this queue to ensure sequential, reliable transitions.
+    private let displayQueue = DispatchQueue(label: "com.macfilexplorer.viewmode.display", qos: .userInitiated)
 
     init(owner: FileBrowserViewController) {
         self.owner = owner
     }
 
+    /// Display files in the specified view mode.
+    /// Uses a serial queue to ensure view mode transitions are thread-safe and non-concurrent.
     func displayFiles(for viewMode: ViewMode) {
         guard let owner = owner else { return }
-        assert(Thread.isMainThread, "displayFiles must run on main thread")
-        if browserSetupState == .preparing || browserSetupState == .creatingBrowser {
-            suppressedDisplayCalls += 1
-#if DEBUG
-            debugLog("DEBUG: displayFiles blocked (state=\(browserSetupState)) count=\(suppressedDisplayCalls)")
-#endif
-            return
-        }
-        debugLog("Displaying files for view mode: \(viewMode)")
-
-        // Delegate view switching to displayController
-        owner.displayController.displayViewMode(viewMode)
         
-        // Set first responder
-        Task { @MainActor [weak owner] in
-            guard let owner else { return }
-            owner.view.window?.makeFirstResponder(owner.view)
-        }
-    }
-
-    private func displayListView() {
-        guard let owner = owner else { return }
-        if owner.scrollView.superview == nil {
-            owner.containerView.addSubview(owner.scrollView)
-        }
-        owner.scrollView.isHidden = false
-
-        if !owner.previewVisible {
-            owner.activeConstraints = [
-                owner.scrollView.topAnchor.constraint(equalTo: owner.containerView.topAnchor),
-                owner.scrollView.leadingAnchor.constraint(equalTo: owner.containerView.leadingAnchor),
-                owner.scrollView.trailingAnchor.constraint(equalTo: owner.containerView.trailingAnchor),
-                owner.scrollView.bottomAnchor.constraint(equalTo: owner.containerView.bottomAnchor)
-            ]
-            NSLayoutConstraint.activate(owner.activeConstraints)
-        }
-        owner.outlineView.reloadData()
-
-        Task { @MainActor [weak owner] in
-            guard let owner else { return }
-            owner.view.window?.makeFirstResponder(owner.view)
+        debugLog("Displaying files for view mode: \(viewMode)")
+        
+        // Queue the display operation on the serial queue
+        displayQueue.async { [weak self, weak owner] in
+            guard let owner = owner else { return }
+            
+            // Perform setup on main thread
+            DispatchQueue.main.async {
+                // Delegate view switching to displayController
+                owner.displayController.displayViewMode(viewMode)
+                
+                // Set first responder
+                owner.view.window?.makeFirstResponder(owner.view)
+            }
         }
     }
 
@@ -145,31 +115,40 @@ final class FileBrowserViewModeCoordinator {
     }
 
     private func displayColumnsView() {
-        withBrowserReady { [weak self] browserView in
-            guard let self, let owner = self.owner else { return }
-
-            if browserView.superview == nil && !owner.previewVisible {
-                owner.containerView.addSubview(browserView)
-            }
-            browserView.isHidden = false
-
-            if !owner.previewVisible {
-                owner.activeConstraints = [
-                    browserView.topAnchor.constraint(equalTo: owner.containerView.topAnchor),
-                    browserView.leadingAnchor.constraint(equalTo: owner.containerView.leadingAnchor),
-                    browserView.trailingAnchor.constraint(equalTo: owner.containerView.trailingAnchor),
-                    browserView.bottomAnchor.constraint(equalTo: owner.containerView.bottomAnchor)
-                ]
-                NSLayoutConstraint.activate(owner.activeConstraints)
-            }
-
-            debugLog("displayFiles: Setting up browser view, rootItem has \(owner.rootItem?.children?.count ?? 0) children")
-            browserView.layoutSubtreeIfNeeded()
-            browserView.loadColumnZero()
-            browserView.setNeedsDisplay(browserView.bounds)
-
-            owner.view.window?.makeFirstResponder(owner.view)
+        guard let owner = owner else { return }
+        
+        // Setup browser view if needed
+        if owner.browserView == nil {
+            setupBrowserView()
         }
+        
+        guard let browserView = owner.browserView else {
+            debugLog("Error: BrowserView not properly initialized, falling back to list view")
+            owner.currentViewMode = .list
+            return
+        }
+
+        if browserView.superview == nil && !owner.previewVisible {
+            owner.containerView.addSubview(browserView)
+        }
+        browserView.isHidden = false
+
+        if !owner.previewVisible {
+            owner.activeConstraints = [
+                browserView.topAnchor.constraint(equalTo: owner.containerView.topAnchor),
+                browserView.leadingAnchor.constraint(equalTo: owner.containerView.leadingAnchor),
+                browserView.trailingAnchor.constraint(equalTo: owner.containerView.trailingAnchor),
+                browserView.bottomAnchor.constraint(equalTo: owner.containerView.bottomAnchor)
+            ]
+            NSLayoutConstraint.activate(owner.activeConstraints)
+        }
+
+        debugLog("displayFiles: Setting up browser view, rootItem has \(owner.rootItem?.children?.count ?? 0) children")
+        browserView.layoutSubtreeIfNeeded()
+        browserView.loadColumnZero()
+        browserView.setNeedsDisplay(browserView.bounds)
+
+        owner.view.window?.makeFirstResponder(owner.view)
     }
 
     private func setupCollectionView() {
@@ -222,22 +201,16 @@ final class FileBrowserViewModeCoordinator {
     }
 
     private func setupBrowserView() {
-        assert(Thread.isMainThread, "setupBrowserView must run on main thread")
         guard let owner = owner else { return }
         if owner.browserView != nil {
             debugLog("BrowserView already initialized, skipping setup")
             return
         }
 
-        guard let token = beginBrowserSetup() else { return }
-        token.markCreating()
-
         let newBrowser = createBrowserControl()
         owner.browserView = newBrowser
-
         owner.browserView?.delegate = owner
         debugLog("BrowserView setup completed with minColumnWidth: 180")
-        token.markReady()
     }
 
     private func createBrowserControl() -> NSBrowser {
@@ -258,58 +231,5 @@ final class FileBrowserViewModeCoordinator {
         }
         newBrowser.setCellClass(NSBrowserCell.self)
         return newBrowser
-    }
-
-    private class BrowserSetupToken {
-        weak var owner: FileBrowserViewModeCoordinator?
-        init(owner: FileBrowserViewModeCoordinator) {
-            self.owner = owner
-            owner.browserSetupState = .preparing
-        }
-        func markCreating() { owner?.browserSetupState = .creatingBrowser }
-        func markReady() { owner?.browserSetupState = .ready }
-        func markFailed() { owner?.browserSetupState = .failed }
-        deinit {
-            guard let owner = owner else { return }
-            if owner.browserSetupState == .preparing || owner.browserSetupState == .creatingBrowser {
-                owner.browserSetupState = .failed
-            }
-        }
-    }
-
-    private func beginBrowserSetup() -> BrowserSetupToken? {
-        guard browserSetupState == .idle || browserSetupState == .failed else {
-#if DEBUG
-            debugLog("DEBUG: beginBrowserSetup blocked; state=\(browserSetupState)")
-#endif
-            return nil
-        }
-        return BrowserSetupToken(owner: self)
-    }
-
-    private func enqueueBrowserSetupIfNeeded() {
-        guard let owner = owner else { return }
-        if owner.browserView == nil {
-            Task { @MainActor [weak self] in
-                self?.setupBrowserView()
-            }
-        }
-    }
-
-    private func withBrowserReady(_ completion: @escaping (NSBrowser) -> Void) {
-        guard let owner = owner else { return }
-        if let browserView = owner.browserView, browserSetupState == .ready {
-            completion(browserView)
-            return
-        }
-
-        enqueueBrowserSetupIfNeeded()
-
-        Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 50_000_000)
-            guard let self, let owner = self.owner,
-                  let browserView = owner.browserView, self.browserSetupState == .ready else { return }
-            completion(browserView)
-        }
     }
 }
