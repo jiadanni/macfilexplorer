@@ -35,7 +35,7 @@ final class FileBrowserSelectionManager {
                 selectedRows.forEach { row in
                     if let parent = resolver(selectedColumn),
                        let children = parent.children,
-                       row < children.count {
+                       row >= 0, row < children.count {
                         items.append(children[row])
                     }
                 }

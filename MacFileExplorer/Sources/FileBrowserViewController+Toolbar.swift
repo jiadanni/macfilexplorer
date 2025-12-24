@@ -64,8 +64,9 @@ extension FileBrowserViewController {
     }
 
     func toolbarDidTogglePreviewPane() {
-        if previewVisible { hidePreviewPane() } else { showPreviewPane() }
-        settings.previewPaneVisible = previewVisible
+        previewPaneCoordinator.togglePreviewPane()
+        settings.previewPaneVisible = previewPaneCoordinator.isVisible
+        toolbarViewController.updatePreviewPaneDisplay(showing: previewPaneCoordinator.isVisible)
     }
 
     func toolbarDidRequestShowFilter() {

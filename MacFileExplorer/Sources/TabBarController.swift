@@ -217,7 +217,9 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     @objc private func tabContainerClicked(_ recognizer: NSClickGestureRecognizer) {
         guard let container = recognizer.view else { return }
         if let id = container.identifier?.rawValue, let index = Int(id) {
-            tabButtonClicked(tabButtons[index])
+            if let button = tabButtons.safe(at: index) {
+                tabButtonClicked(button)
+            }
         } else {
             // Fallback: try to find the button inside the container
             if let btn = container.subviews.compactMap({ $0 as? NSButton }).first, btn.tag < tabs.count {
@@ -250,8 +252,7 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     }
 
     private func postTabChangeNotification() {
-        guard currentTabIndex < tabs.count else { return }
-        let currentTabVC = tabs[currentTabIndex]
+        guard let currentTabVC = tabs.safe(at: currentTabIndex) else { return }
         NotificationCenter.default.post(name: .tabDidChangeNotification, object: currentTabVC)
     }
 
@@ -330,7 +331,8 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     func closeCurrentTab() {
         guard tabs.count > 1 else { return }
         // Don't allow closing the Start tab
-        if tabs[currentTabIndex] is StartViewController {
+        guard let currentTab = tabs.safe(at: currentTabIndex) else { return }
+        if currentTab is StartViewController {
             return
         }
         closeTab(at: currentTabIndex)
@@ -339,7 +341,8 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
     private func closeTab(at index: Int) {
         guard index >= 0, index < tabs.count, tabs.count > 1 else { return }
         // Don't allow closing the Start tab
-        if tabs[index] is StartViewController {
+        guard let tab = tabs.safe(at: index) else { return }
+        if tab is StartViewController {
             return
         }
         tabs.remove(at: index)

@@ -848,8 +848,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
             button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             button.lineBreakMode = .byTruncatingMiddle
 
-            if index < breadcrumbURLs.count {
-                button.identifier = NSUserInterfaceItemIdentifier(breadcrumbURLs[index].path)
+            if let url = breadcrumbURLs.safe(at: index) {
+                button.identifier = NSUserInterfaceItemIdentifier(url.path)
             }
             components.append(button)
         }

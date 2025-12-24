@@ -21,8 +21,8 @@ extension FileBrowserViewController: NSCollectionViewDataSource {
     func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
         let item = FileIconItem()
         let items = collectionItems()
-        if indexPath.item < items.count {
-            item.fileItem = items[indexPath.item]
+        if let fileItem = items.safe(at: indexPath.item) {
+            item.fileItem = fileItem
         }
         item.isListMode = (currentViewMode == .windowsList)
         item.zoomLevel = zoomLevel
@@ -51,8 +51,8 @@ extension FileBrowserViewController: NSCollectionViewDelegate {
 
     func collectionView(_ collectionView: NSCollectionView, pasteboardWriterForItemAt indexPath: IndexPath) -> NSPasteboardWriting? {
         let items = collectionItems()
-        guard indexPath.item < items.count else { return nil }
-        return items[indexPath.item].url as NSURL
+        guard let item = items.safe(at: indexPath.item) else { return nil }
+        return item.url as NSURL
     }
 
     func collectionView(_ collectionView: NSCollectionView, validateDrop draggingInfo: NSDraggingInfo, proposedIndexPath: AutoreleasingUnsafeMutablePointer<NSIndexPath>, dropOperation: UnsafeMutablePointer<NSCollectionView.DropOperation>) -> NSDragOperation {
@@ -61,8 +61,7 @@ extension FileBrowserViewController: NSCollectionViewDelegate {
         let items = collectionItems()
         let destinationURL: URL
         if dropOperation.pointee == .on {
-            guard proposedIndexPath.pointee.item < items.count else { return [] }
-            let item = items[proposedIndexPath.pointee.item]
+            guard let item = items.safe(at: proposedIndexPath.pointee.item) else { return [] }
             guard item.isDirectory else { return [] }
             destinationURL = item.url
         } else {
@@ -80,8 +79,7 @@ extension FileBrowserViewController: NSCollectionViewDelegate {
 
         let destinationURL: URL
         if dropOperation == .on {
-            guard indexPath.item < items.count else { return false }
-            let item = items[indexPath.item]
+            guard let item = items.safe(at: indexPath.item) else { return false }
             guard item.isDirectory else { return false }
             destinationURL = item.url
         } else {

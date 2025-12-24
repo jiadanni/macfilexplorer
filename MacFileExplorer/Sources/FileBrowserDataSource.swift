@@ -109,10 +109,11 @@ class FileBrowserDataSource {
     private func applyStoredSortPreferences() {
         if let stored = SettingsStore.shared.folderSortPreferences[currentDirectory.path] {
             let parts = stored.components(separatedBy: "|")
-            if parts.count >= 2 {
-                guard let sortCol = parts.safe(at: 0), let sortOrder = parts.safe(at: 1) else { return }
-                self.sortColumn = sortCol
-                self.sortAscending = (sortOrder == "asc")
+            if parts.count >= 2,
+               parts[0].count > 0,
+               parts[1].count > 0 {
+                self.sortColumn = parts[0]
+                self.sortAscending = (parts[1] == "asc")
             }
         }
     }
@@ -239,7 +240,8 @@ class FileBrowserDataSource {
     
     // Helper to access items for collection view
     func item(at index: Int) -> FileItem? {
-        guard let children = rootItem?.children, index < children.count else { return nil }
+        guard let children = rootItem?.children,
+              index >= 0, index < children.count else { return nil }
         return children[index]
     }
     

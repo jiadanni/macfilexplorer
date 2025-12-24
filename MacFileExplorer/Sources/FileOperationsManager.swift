@@ -20,7 +20,7 @@ final class FileOperationsManager {
     // MARK: - Validation
 
     func isValidDestination(_ destination: URL, for urls: [URL]) -> Bool {
-        // Use canonical paths and file-id ancestor checks to prevent path traversal bypasses
+        // Use canonical paths to prevent path traversal bypasses
         let canonicalDest = destination.standardizedFileURL
 
         for source in urls {
@@ -29,8 +29,10 @@ final class FileOperationsManager {
             // Check for exact match
             if canonicalSource == canonicalDest { return false }
 
-            // Use file-ID based ancestor check to avoid symlink/.. tricks
-            if isAncestorByFileID(ancestorPath: canonicalSource.path, descendantPath: canonicalDest.path) {
+            // Check if destination is inside source (prevent moving folder into itself)
+            let sourceString = canonicalSource.path
+            let destString = canonicalDest.path
+            if destString.hasPrefix(sourceString + "/") {
                 return false
             }
         }
@@ -107,8 +109,8 @@ final class FileOperationsManager {
             for (index, sourceURL) in items.enumerated() {
                 let targetURL = destination?.appendingPathComponent(sourceURL.lastPathComponent)
                 
-                // Pre-validate source file identity to detect TOCTOU races
-                let sourceFileID = try? fileID(for: sourceURL.path)
+                // Store source path for validation (basic TOCTOU check)
+                let sourcePath = sourceURL.path
                 
                 if operation == .delete {
                     do {
@@ -128,10 +130,10 @@ final class FileOperationsManager {
                     var lastError: Error? = nil
                     
                     while attemptCount < maxAttempts && !operationSucceeded {
-                        // Validate source file identity hasn't changed (TOCTOU check)
-                        if let expectedID = sourceFileID, !validateFileID(path: sourceURL.path, expectedID: expectedID) {
+                        // Validate source file still exists (basic TOCTOU check)
+                        if !fileManager.fileExists(atPath: sourcePath) {
                             lastError = NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError, 
-                                               userInfo: [NSLocalizedDescriptionKey: "Source file identity changed during operation (possible TOCTOU attack)"])
+                                               userInfo: [NSLocalizedDescriptionKey: "Source file was removed during operation"])
                             break
                         }
                         

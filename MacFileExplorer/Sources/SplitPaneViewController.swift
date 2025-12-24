@@ -291,7 +291,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
         }
 
         if let index = panes.firstIndex(of: fileBrowser) {
-            let paneToRemove = panes[index]
+            guard let paneToRemove = panes.safe(at: index) else { return }
             panes.remove(at: index)
 
             // Remove the corresponding split view item

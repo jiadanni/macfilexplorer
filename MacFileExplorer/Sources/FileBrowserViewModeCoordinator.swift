@@ -32,24 +32,13 @@ final class FileBrowserViewModeCoordinator {
         }
         debugLog("Displaying files for view mode: \(viewMode)")
 
-        NSLayoutConstraint.deactivate(owner.activeConstraints)
-        owner.activeConstraints.removeAll()
-
-        owner.scrollView.isHidden = true
-        owner.collectionViewScrollView?.isHidden = true
-        owner.browserView?.isHidden = true
-
-        switch viewMode {
-        case .list:
-            displayListView()
-        case .icons, .windowsList:
-            displayCollectionView(for: viewMode)
-        case .columns:
-            displayColumnsView()
-        }
-
-        if owner.previewVisible {
-            owner.ensureContentInPreviewSplit()
+        // Delegate view switching to displayController
+        owner.displayController.displayViewMode(viewMode)
+        
+        // Set first responder
+        Task { @MainActor [weak owner] in
+            guard let owner else { return }
+            owner.view.window?.makeFirstResponder(owner.view)
         }
     }
 

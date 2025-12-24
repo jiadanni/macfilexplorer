@@ -139,6 +139,12 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     let selectionCoordinator = FileBrowserSelectionCoordinator()
     var navigationCoordinator: FileBrowserNavigationCoordinator!
     lazy var viewModeCoordinator = FileBrowserViewModeCoordinator(owner: self)
+    lazy var previewPaneCoordinator = FileBrowserPreviewPaneCoordinator(settings: settings)
+    lazy var zoomCoordinator = FileBrowserZoomCoordinator()
+    
+    // Controllers for focused responsibilities
+    lazy var displayController = FileBrowserDisplayController(viewController: self)
+    lazy var uiSetupController = FileBrowserUISetupController(viewController: self)
     
 
     // Zoom & Layout
@@ -157,11 +163,44 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     private var bannerContainer: NSView?
     private var bannerDismissTask: Task<Void, Never>?
 
-    // Click tracking for delayed rename
+    // Click tracking for delayed rename - protected by clickTrackingLock
+    private let clickTrackingLock = NSLock()
     private var lastClickedRow: Int = -1
     private var lastClickTime: TimeInterval = 0
     private let doubleClickTimeWindow: TimeInterval = 0.5
     private let renameClickDelay: TimeInterval = 0.5
+    
+    // MARK: - Click Tracking State Management
+    
+    /// Thread-safe way to record a click on a row
+    private func recordClick(row: Int) {
+        clickTrackingLock.lock()
+        defer { clickTrackingLock.unlock() }
+        lastClickedRow = row
+        lastClickTime = Date().timeIntervalSince1970
+    }
+    
+    /// Thread-safe way to check if this is a rename-eligible click
+    /// Returns true if click is on same row within renameClickDelay window
+    private func isRenameEligibleClick(row: Int) -> Bool {
+        clickTrackingLock.lock()
+        defer { clickTrackingLock.unlock() }
+        
+        guard lastClickedRow == row else { return false }
+        
+        let timeSinceLastClick = Date().timeIntervalSince1970 - lastClickTime
+        let isWithinWindow = timeSinceLastClick > 0 && timeSinceLastClick < renameClickDelay
+        
+        return isWithinWindow
+    }
+    
+    /// Thread-safe way to clear click tracking state
+    private func clearClickTracking() {
+        clickTrackingLock.lock()
+        defer { clickTrackingLock.unlock() }
+        lastClickedRow = -1
+        lastClickTime = 0
+    }
 
     var currentPath: String {
         return currentDirectory.path
@@ -205,6 +244,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         navigationCoordinator.delegate = self
         selectionCoordinator.delegate = self
         
+        // Setup coordinators
+        zoomCoordinator.delegate = self
+        
         // Load persisted hidden files state
         self.dataSource.showsHiddenFiles = settings.hiddenFilesState
         
@@ -246,7 +288,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         navigationCoordinator.loadDirectory(currentDirectory)
         // Initial preview visibility from global default applied per pane
         let defaultShowPreview = settings.previewPaneVisible
-        if defaultShowPreview { showPreviewPane() }
+        if defaultShowPreview {
+            previewPaneCoordinator.setPreviewPaneVisible(true)
+            toolbarViewController.updatePreviewPaneDisplay(showing: true)
+        }
     }
 
     override func viewDidAppear() {
@@ -277,9 +322,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         } else if event.keyCode == 49 { // Spacebar
             toggleQuickLook()
         } else if event.keyCode == 53 { // Escape key
-            clearSelection()
+            selectionCoordinator.clearSelection()
         } else if event.keyCode == 120 { // F2 key
-            let items = getSelectedItems()
+            let items = selectionCoordinator.selectedItems()
             if let item = items.first, items.count == 1 {
                 contextMenuRename(item)
             }
@@ -296,7 +341,6 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         }
     }
 
-    
     private func openSelection() {
         let items = selectionCoordinator.selectedItems()
         guard let item = items.first, items.count == 1 else { return }
@@ -323,121 +367,13 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     private func setupUI() {
-        setupToolbar()
-        setupStatusBar()
-        setupContainerAndOutlineView()
-        setupOutlineViewColumns()
-        setupOutlineViewBehavior()
-        setupConstraints()
+        // Delegate UI setup to specialized controller
+        uiSetupController.setupUI()
+        
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
-        viewModeCoordinator.displayFiles(for: currentViewMode)
-        updateZoomControlVisibility()
-    }
-
-    private func setupToolbar() {
-        toolbarViewController = ToolbarViewController()
-        toolbarViewController.delegate = self
-        addChild(toolbarViewController)
-        view.addSubview(toolbarViewController.view)
-        toolbarViewController.view.translatesAutoresizingMaskIntoConstraints = false
-        toolbarViewController?.updateViewModeDisplay(for: currentViewMode)
-        toolbarViewController?.updateSortDisplay(column: sortColumn, ascending: sortAscending)
-    }
-
-    private func setupStatusBar() {
-        statusBarViewController = StatusBarViewController()
-        statusBarViewController.delegate = self
-        addChild(statusBarViewController)
-        view.addSubview(statusBarViewController.view)
-        statusBarViewController.view.translatesAutoresizingMaskIntoConstraints = false
-    }
-
-    private func setupContainerAndOutlineView() {
-        containerView = NSView()
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(containerView)
-
-        scrollView = NSScrollView()
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = true
-        scrollView.autohidesScrollers = true
-        scrollView.borderType = .noBorder
-
-        outlineView = NSOutlineView()
-        outlineView.setAccessibilityElement(true)
-        outlineView.setAccessibilityRole(.table)
-        outlineView.setAccessibilityLabel(L10n.text("File list"))
-        outlineView.style = .fullWidth
-        outlineView.floatsGroupRows = false
-        outlineView.rowSizeStyle = .default
-        outlineView.usesAlternatingRowBackgroundColors = true
-        outlineView.allowsMultipleSelection = true
-        outlineView.autoresizesOutlineColumn = false
-        outlineView.doubleAction = #selector(outlineViewDoubleClicked(_:))
-        outlineView.target = self
-        outlineView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
-        outlineView.headerView = NSTableHeaderView()
-        scrollView.documentView = outlineView
-    }
-
-    private func setupOutlineViewColumns() {
-        let nameColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(AppConfig.ColumnID.name))
-        nameColumn.title = L10n.text("Name")
-        nameColumn.width = 250
-        nameColumn.minWidth = 100
-        nameColumn.maxWidth = 500
-        nameColumn.resizingMask = .userResizingMask
-        nameColumn.sortDescriptorPrototype = NSSortDescriptor(key: "name", ascending: true)
-        outlineView.addTableColumn(nameColumn)
-        outlineView.outlineTableColumn = nameColumn
-
-        let dateModifiedColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(AppConfig.ColumnID.dateModified))
-        dateModifiedColumn.title = L10n.text("Date Modified")
-        dateModifiedColumn.width = 150
-        dateModifiedColumn.minWidth = 100
-        dateModifiedColumn.maxWidth = 250
-        dateModifiedColumn.resizingMask = .userResizingMask
-        dateModifiedColumn.sortDescriptorPrototype = NSSortDescriptor(key: "modificationDate", ascending: false)
-        outlineView.addTableColumn(dateModifiedColumn)
-
-        let typeColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(AppConfig.ColumnID.type))
-        typeColumn.title = L10n.text("Type")
-        typeColumn.width = 120
-        typeColumn.minWidth = 80
-        typeColumn.maxWidth = 200
-        typeColumn.resizingMask = .userResizingMask
-        typeColumn.sortDescriptorPrototype = NSSortDescriptor(key: "kind", ascending: true)
-        outlineView.addTableColumn(typeColumn)
-
-        let sizeColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(AppConfig.ColumnID.size))
-        sizeColumn.title = L10n.text("Size")
-        sizeColumn.width = 100
-        sizeColumn.minWidth = 60
-        sizeColumn.maxWidth = 150
-        sizeColumn.resizingMask = .userResizingMask
-        sizeColumn.sortDescriptorPrototype = NSSortDescriptor(key: "size", ascending: false)
-        outlineView.addTableColumn(sizeColumn)
-
-        let dateCreatedColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(AppConfig.ColumnID.dateCreated))
-        dateCreatedColumn.title = L10n.text("Date Created")
-        dateCreatedColumn.width = 150
-        dateCreatedColumn.minWidth = 100
-        dateCreatedColumn.maxWidth = 250
-        dateCreatedColumn.resizingMask = .userResizingMask
-        dateCreatedColumn.sortDescriptorPrototype = NSSortDescriptor(key: "creationDate", ascending: false)
-        outlineView.addTableColumn(dateCreatedColumn)
-
-        let tagsColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("TagsColumn"))
-        tagsColumn.title = L10n.text("Tags")
-        tagsColumn.width = 150
-        tagsColumn.minWidth = 100
-        tagsColumn.maxWidth = 250
-        tagsColumn.resizingMask = .userResizingMask
-        tagsColumn.sortDescriptorPrototype = NSSortDescriptor(key: "tags", ascending: true)
-        outlineView.addTableColumn(tagsColumn)
-
+        
+        // Setup column visibility and context menu
         var columnVisibility = settings.columnVisibility
         if columnVisibility.isEmpty {
             columnVisibility = [
@@ -452,148 +388,64 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         }
         applyColumnVisibility(columnVisibility)
         outlineView.headerView?.menu = createHeaderColumnsMenu()
+        outlineView.menu = createContextMenu()
+        
+        // Display initial view mode
+        viewModeCoordinator.displayFiles(for: currentViewMode)
+        updateZoomControlVisibility()
+        
+        // Update toolbar display
+        toolbarViewController?.updateViewModeDisplay(for: currentViewMode)
+        toolbarViewController?.updateSortDisplay(column: sortColumn, ascending: sortAscending)
+    }
+
+    private func setupToolbar() {
+        // Legacy method - now handled by uiSetupController
+        // Kept for compatibility
+        uiSetupController.setupUI()
+    }
+
+    private func setupStatusBar() {
+        // Legacy method - now handled by uiSetupController
+        // Kept for compatibility
+    }
+
+    private func setupContainerAndOutlineView() {
+        // Legacy method - now handled by uiSetupController
+        // Kept for compatibility
+    }
+
+    private func setupOutlineViewColumns() {
+        // Legacy method - now handled by uiSetupController
+        // Kept for compatibility
     }
 
     private func setupOutlineViewBehavior() {
-        outlineView.delegate = self
-        outlineView.dataSource = self
-        outlineView.registerForDraggedTypes([.fileURL])
-        outlineView.setDraggingSourceOperationMask([.copy, .move], forLocal: false)
-        outlineView.setDraggingSourceOperationMask([.copy, .move], forLocal: true)
-        outlineView.menu = createContextMenu()
+        // Legacy method - now handled by uiSetupController
+        // Kept for compatibility
     }
 
     private func setupConstraints() {
-        NSLayoutConstraint.activate([
-            toolbarViewController.view.topAnchor.constraint(equalTo: view.topAnchor),
-            toolbarViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            toolbarViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            toolbarViewController.view.heightAnchor.constraint(equalToConstant: 84),
-
-            containerView.topAnchor.constraint(equalTo: toolbarViewController.view.bottomAnchor),
-            containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            containerView.bottomAnchor.constraint(equalTo: statusBarViewController.view.topAnchor),
-
-            statusBarViewController.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            statusBarViewController.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            statusBarViewController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            statusBarViewController.view.heightAnchor.constraint(equalToConstant: 22)
-        ])
+        // Legacy method - now handled by uiSetupController
+        // Kept for compatibility
     }
 
     // Ensure active content view is embedded in preview split if preview visible
     func ensureContentInPreviewSplit() {
-        guard previewVisible else { return }
-        guard let contentView = currentActiveContentView() else { return }
-        if previewSplitView == nil {
-            let split = NSSplitView()
-            split.translatesAutoresizingMaskIntoConstraints = false
-            split.isVertical = true
-            split.dividerStyle = .thin
-            previewSplitView = split
-            containerView.addSubview(split)
-            NSLayoutConstraint.activate([
-                split.topAnchor.constraint(equalTo: containerView.topAnchor),
-                split.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                split.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                split.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-            ])
-        }
-        guard let split = previewSplitView else { return }
-        
-        // Ensure preview pane exists first
-        if previewPaneViewController == nil {
-            let previewVC = PreviewPaneViewController()
-            previewVC.position = .right
-            addChild(previewVC)
-            previewPaneViewController = previewVC
-        }
-
-        // Always ensure correct order: content view at index 0, preview at index 1
-        // Remove both views first to reset order
-        contentView.removeFromSuperview()
-        previewPaneViewController?.view.removeFromSuperview()
-
-        // Add content view first (left side)
-        split.insertArrangedSubview(contentView, at: 0)
-
-        // Add preview pane second (right side)
-        let pv = previewPaneViewController!.view
-        pv.translatesAutoresizingMaskIntoConstraints = false
-        pv.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        pv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        split.insertArrangedSubview(pv, at: 1)
-
-        // Set delegate only once
-        if split.delegate == nil {
-            split.delegate = self
-        }
-
-        // Apply saved width if available
-        let savedWidth = Double(settings.previewPaneWidth)
-        let widthToApply = savedWidth > 100 ? savedWidth : 300.0 // Default to 300 if no saved width
-        Task { @MainActor [weak split] in
-            guard let split else { return }
-            let total = split.bounds.width
-            let position = max(0, total - CGFloat(widthToApply))
-            split.setPosition(position, ofDividerAt: 0)
-        }
-
-        // Show current selection
-        if let sel = selectionCoordinator.currentSingleSelection() {
-            previewPaneViewController?.previewFile(sel)
-        }
+        previewPaneCoordinator.setPreviewPaneVisible(true)
     }
 
     private func dismantlePreviewSplit() {
-        guard let split = previewSplitView else { return }
-        // Move active content view back to container
-        if let contentView = currentActiveContentView() {
-            contentView.removeFromSuperview()
-            containerView.addSubview(contentView)
-            NSLayoutConstraint.activate([
-                contentView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                contentView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                contentView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                contentView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-            ])
-        }
-        previewPaneViewController?.view.removeFromSuperview()
-        previewPaneViewController?.removeFromParent()
-        previewPaneViewController = nil
-        split.removeFromSuperview()
-        previewSplitView = nil
+        previewPaneCoordinator.setPreviewPaneVisible(false)
     }
 
     private func currentActiveContentView() -> NSView? {
-        switch currentViewMode {
-        case .list: return scrollView
-        case .icons, .windowsList: return collectionViewScrollView
-        case .columns: return browserView
-        }
+        return displayController.currentActiveContentView()
     }
 
     // Update preview pane with a newly selected file or clear if nil/multiple
     func updatePreviewPane(with file: FileItem?) {
-        guard previewVisible, let previewVC = previewPaneViewController else { return }
-        if let file {
-            previewVC.previewFile(file)
-        } else {
-            previewVC.resetPreview()
-        }
-    }
-
-    func showPreviewPane() {
-        previewVisible = true
-        ensureContentInPreviewSplit()
-        toolbarViewController.updatePreviewPaneDisplay(showing: true)
-    }
-
-    func hidePreviewPane() {
-        previewVisible = false
-        dismantlePreviewSplit()
-        toolbarViewController.updatePreviewPaneDisplay(showing: false)
+        previewPaneCoordinator.updatePreviewPane(with: file)
     }
 
     @objc func handleBrowserDoubleClick(_ sender: NSBrowser) {
@@ -603,9 +455,13 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         
         guard selectedRow >= 0 else { return }
         
+        // Record this click for potential delayed rename
+        recordClick(row: selectedRow)
+        
         let item = fileItemForColumn(selectedColumn)
         guard let children = item?.children,
               selectedRow < children.count else {
+            clearClickTracking()
             return
         }
         
@@ -616,6 +472,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         } else {
             FileBrowserActionHelper.openFile(fileItem.url)
         }
+        
+        // Clear tracking after action
+        clearClickTracking()
     }
     
     @objc func handleCollectionViewDoubleClick(_ sender: NSClickGestureRecognizer) {
@@ -626,11 +485,17 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
            let item = collectionView.item(at: indexPath) as? FileIconItem,
            let fileItem = item.fileItem {
             
+            // Record this click for potential delayed rename
+            recordClick(row: indexPath.item)
+            
             if fileItem.isDirectory {
                 navigationCoordinator.loadDirectory(fileItem.url)
             } else {
                 FileBrowserActionHelper.openFile(fileItem.url)
             }
+            
+            // Clear tracking after action
+            clearClickTracking()
         }
     }
     
@@ -765,6 +630,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     @objc private func outlineViewDoubleClicked(_ sender: Any) {
         let clickedRow = outlineView.clickedRow
         guard clickedRow >= 0 else { return }
+        
+        // Record this click for potential delayed rename
+        recordClick(row: clickedRow)
 
         if let item = outlineView.item(atRow: clickedRow) as? FileItem {
             if item.isDirectory {
@@ -774,6 +642,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
                 FileBrowserActionHelper.openFile(item.url)
             }
         }
+        
+        // Clear tracking after action
+        clearClickTracking()
     }
 
     // MARK: - Public Methods
@@ -798,7 +669,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         presentAsSheet(filterPanel)
     }
     func goBack() {
-        navigationCoordinator.navigateToParent()
+        navigationCoordinator.goBack()
     }
 
     func goForward(to url: URL) {
@@ -812,10 +683,12 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     // MARK: - Public Actions
 
     func cutSelection() {
+        let items = selectionCoordinator.selectedItems()
         contextMenuCut(self)
     }
 
     func copySelection() {
+        let items = selectionCoordinator.selectedItems()
         contextMenuCopy(self)
     }
 
@@ -824,14 +697,11 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     func snapToGrid() {
-        guard currentViewMode == .icons else { return }
-        freeFormLayout?.snapToGrid()
+        zoomCoordinator.snapToGrid()
     }
     
     func toggleFreeFormPositioning() {
-        guard currentViewMode == .icons else { return }
-        isFreeFormEnabled.toggle()
-        freeFormLayout?.isFreeForm = isFreeFormEnabled
+        zoomCoordinator.toggleFreeFormPositioning()
     }
 
 }
@@ -851,6 +721,19 @@ extension FileBrowserViewController {
 
     func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> QLPreviewItem! {
         return nil
+    }
+}
+
+// MARK: - FileBrowserZoomCoordinatorDelegate
+
+extension FileBrowserViewController: FileBrowserZoomCoordinatorDelegate {
+    func updateZoomDisplay() {
+        // Update UI to reflect zoom changes
+        toolbarViewController?.updateZoomDisplay(level: zoomLevel)
+    }
+    
+    func refreshViews() {
+        displayController.refreshViews()
     }
 }
 

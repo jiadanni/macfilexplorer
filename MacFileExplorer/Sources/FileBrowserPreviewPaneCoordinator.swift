@@ -45,6 +45,11 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
         }
     }
     
+    /// Toggles preview pane visibility.
+    func togglePreviewPane() {
+        setPreviewPaneVisible(!isVisible)
+    }
+    
     /// Updates preview pane content with selected file.
     func updatePreviewPane(with file: FileItem?) {
         guard isVisible, let previewVC = previewPaneViewController else { return }

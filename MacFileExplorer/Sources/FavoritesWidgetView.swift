@@ -241,8 +241,7 @@ class FavoritesWidgetView: StartWidgetView {
 
     @objc private func folderCardTapped(_ sender: NSButton) {
         let index = sender.tag
-        guard index < defaultFolders.count else { return }
-
+        guard index >= 0, index < defaultFolders.count else { return }
         let folder = defaultFolders[index]
         guard let url = folder.url else { return }
 

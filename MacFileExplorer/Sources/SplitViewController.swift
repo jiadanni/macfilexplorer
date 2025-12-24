@@ -172,8 +172,9 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
             if animated {
                 terminalViewController?.focusInput()
             } else {
-                Task { @MainActor [weak self] in
-                    try? await Task.sleep(nanoseconds: 100_000_000)
+                // Use a short main-queue async delay instead of Task.sleep to avoid
+                // depending on suspension/timing and to be more robust across systems.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
                     self?.terminalViewController?.focusInput()
                 }
             }

@@ -40,9 +40,7 @@ final class NavigationManager {
     
     /// Current URL in navigation history.
     var currentURL: URL? {
-        guard currentHistoryIndex >= 0, currentHistoryIndex < navigationHistory.count else {
-            return nil
-        }
+        guard currentHistoryIndex >= 0, currentHistoryIndex < navigationHistory.count else { return nil }
         return navigationHistory[currentHistoryIndex]
     }
     
@@ -103,9 +101,12 @@ final class NavigationManager {
         guard canGoBack else { return nil }
         
         currentHistoryIndex -= 1
-        let previousURL = navigationHistory[currentHistoryIndex]
-        notifyDelegate(url: previousURL)
-        return previousURL
+        guard currentHistoryIndex >= 0, currentHistoryIndex < navigationHistory.count else {
+            currentHistoryIndex += 1 // Revert on error
+            return nil
+        }
+        notifyDelegate(url: navigationHistory[currentHistoryIndex])
+        return navigationHistory[currentHistoryIndex]
     }
     
     /// Go forward in navigation history.
@@ -116,9 +117,12 @@ final class NavigationManager {
         guard canGoForward else { return nil }
         
         currentHistoryIndex += 1
-        let nextURL = navigationHistory[currentHistoryIndex]
-        notifyDelegate(url: nextURL)
-        return nextURL
+        guard currentHistoryIndex >= 0, currentHistoryIndex < navigationHistory.count else {
+            currentHistoryIndex -= 1 // Revert on error
+            return nil
+        }
+        notifyDelegate(url: navigationHistory[currentHistoryIndex])
+        return navigationHistory[currentHistoryIndex]
     }
     
     /// Navigate to a specific index in history.
@@ -130,9 +134,8 @@ final class NavigationManager {
         guard index >= 0, index < navigationHistory.count else { return nil }
         
         currentHistoryIndex = index
-        let url = navigationHistory[index]
-        notifyDelegate(url: url)
-        return url
+        notifyDelegate(url: navigationHistory[index])
+        return navigationHistory[index]
     }
     
     /// Clear all navigation history.

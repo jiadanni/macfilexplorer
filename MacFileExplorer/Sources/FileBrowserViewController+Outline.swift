@@ -24,7 +24,10 @@ extension FileBrowserViewController {
         if fileItem?.needsChildLoading == true {
             fileItem?.loadChildren(showsHiddenFiles: showsHiddenFiles)
         }
-        return fileItem?.children?[index] as Any
+        if let child = fileItem?.children?.safe(at: index) {
+            return child as Any
+        }
+        return fileItem as Any
     }
 
     func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {

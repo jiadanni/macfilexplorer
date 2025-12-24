@@ -244,9 +244,7 @@ class StorageListViewController: NSViewController {
 
     @objc private func tableViewDoubleClicked(_ sender: Any) {
         let row = tableView.clickedRow
-        guard row >= 0, row < filteredItems.count else { return }
-
-        let item = filteredItems[row]
+        guard let item = filteredItems.safe(at: row) else { return }
 
         if item.isDirectory {
             drillDown(to: item)

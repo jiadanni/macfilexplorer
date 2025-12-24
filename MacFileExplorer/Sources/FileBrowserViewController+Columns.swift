@@ -19,10 +19,10 @@ extension FileBrowserViewController: NSBrowserDelegate {
         guard let fileItem = (item as? FileItem) ?? rootItem else {
             return item as Any
         }
-        guard let children = fileItem.children, index < children.count else {
-            return fileItem
+        if let child = fileItem.children?.safe(at: index) {
+            return child
         }
-        return children[index]
+        return fileItem
     }
 
     func browser(_ browser: NSBrowser, isLeafItem item: Any?) -> Bool {

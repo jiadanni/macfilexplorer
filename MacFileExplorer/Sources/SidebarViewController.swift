@@ -679,7 +679,7 @@ class SidebarViewController: NSViewController {
             return
         }
 
-        let targetURL = pathComponents[index]
+        guard let targetURL = pathComponents.safe(at: index) else { return }
 
         // Don't auto-load children for user folder to avoid TCC permission dialogs
         // Only load children if user has explicitly expanded this folder before

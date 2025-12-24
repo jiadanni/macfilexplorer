@@ -263,8 +263,7 @@ final class AppearanceSettingsViewController: NSViewController {
             .clear
         ]
 
-        guard sender.tag < presetColors.count else { return }
-        let selectedColor = presetColors[sender.tag]
+        guard let selectedColor = presetColors.safe(at: sender.tag) else { return }
 
         do {
             let colorData = try NSKeyedArchiver.archivedData(withRootObject: selectedColor, requiringSecureCoding: false)
@@ -303,8 +302,7 @@ final class AppearanceSettingsViewController: NSViewController {
             NSColor(red: 0.56, green: 0.56, blue: 0.58, alpha: 1.0)
         ]
 
-        guard sender.tag < presetAccentColors.count else { return }
-        let selectedColor = presetAccentColors[sender.tag]
+        guard let selectedColor = presetAccentColors.safe(at: sender.tag) else { return }
 
         do {
             let colorData = try NSKeyedArchiver.archivedData(withRootObject: selectedColor, requiringSecureCoding: false)

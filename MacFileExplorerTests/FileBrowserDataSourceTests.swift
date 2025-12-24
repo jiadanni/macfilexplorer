@@ -121,10 +121,10 @@ class FileBrowserDataSourceTests: XCTestCase {
         // Then
         let children = sut.rootItem?.children ?? []
         XCTAssertTrue(children.count >= 2)
-        if children.count >= 2 {
-            let first = children[0].name
-            let second = children[1].name
-            XCTAssertLessThan(first, second, "Files should be sorted alphabetically")
+        if children.count >= 2,
+           let first = children.safe(at: 0),
+           let second = children.safe(at: 1) {
+            XCTAssertLessThan(first.name, second.name, "Files should be sorted alphabetically")
         }
     }
     
@@ -140,10 +140,10 @@ class FileBrowserDataSourceTests: XCTestCase {
         // Then
         let children = sut.rootItem?.children ?? []
         XCTAssertTrue(children.count >= 2)
-        if children.count >= 2 {
-            let first = children[0].name
-            let second = children[1].name
-            XCTAssertGreaterThan(first, second, "Files should be sorted reverse alphabetically")
+        if children.count >= 2,
+           let first = children.safe(at: 0),
+           let second = children.safe(at: 1) {
+            XCTAssertGreaterThan(first.name, second.name, "Files should be sorted reverse alphabetically")
         }
     }
     
@@ -158,10 +158,10 @@ class FileBrowserDataSourceTests: XCTestCase {
         
         // Then
         let children = sut.rootItem?.children ?? []
-        if children.count >= 2 {
-            let firstSize = children[0].size
-            let secondSize = children[1].size
-            XCTAssertGreaterThanOrEqual(firstSize, secondSize, "Files should be sorted by size descending")
+        if children.count >= 2,
+           let first = children.safe(at: 0),
+           let second = children.safe(at: 1) {
+            XCTAssertGreaterThanOrEqual(first.size, second.size, "Files should be sorted by size descending")
         }
     }
     

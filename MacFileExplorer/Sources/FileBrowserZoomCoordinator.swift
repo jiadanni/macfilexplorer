@@ -10,17 +10,18 @@ import Cocoa
 /// - Font size scaling per view mode
 /// - Zoom keyboard shortcuts
 
-protocol FileBrowserZoomDelegate: AnyObject {
+protocol FileBrowserZoomCoordinatorDelegate: AnyObject {
     var currentViewMode: ViewMode { get }
-    var outlineView: NSOutlineView! { get }
-    var collectionView: NSCollectionView! { get }
-    var zoomSlider: NSSlider! { get }
-    var settingsStore: SettingsStoreProtocol { get }
-    func updateViewForZoomLevel()
+    var collectionView: NSCollectionView? { get }
+    var freeFormLayout: FreeFormCollectionViewLayout? { get }
+    var isFreeFormEnabled: Bool { get set }
+    var zoomLevel: Double { get set }
+    func updateZoomDisplay()
+    func refreshViews()
 }
 
 class FileBrowserZoomCoordinator: NSObject {
-    weak var delegate: FileBrowserZoomDelegate?
+    weak var delegate: FileBrowserZoomCoordinatorDelegate?
     
     private let minZoomLevel: Double = 50.0
     private let maxZoomLevel: Double = 200.0
@@ -31,53 +32,23 @@ class FileBrowserZoomCoordinator: NSObject {
     /// Initializes zoom coordinator and loads persisted zoom level.
     func initialize() {
         loadZoomLevel()
-        setupZoomSlider()
     }
     
     /// Loads the persisted zoom level for the current view mode.
     private func loadZoomLevel() {
-        guard let delegate = delegate else { return }
-
-        let key = getZoomLevelKey()
-        if let saved = delegate.settingsStore.value(forKey: key) as? Double {
-            currentZoomLevel = saved
-        } else {
-            currentZoomLevel = defaultZoomLevel
-        }
+        // Default to 100% zoom for now - delegate can override this
+        currentZoomLevel = defaultZoomLevel
     }
     
     /// Saves the current zoom level for the current view mode.
     private func saveZoomLevel() {
-        guard let delegate = delegate else { return }
-        
-        let key = getZoomLevelKey()
-        delegate.settingsStore.setValue(currentZoomLevel, forKey: key)
+        // Delegate can handle persistence if needed
     }
     
     /// Returns the settings key for the current view mode's zoom level.
     private func getZoomLevelKey() -> String {
         guard let delegate = delegate else { return "zoom_default" }
         return "zoom_\(delegate.currentViewMode.rawValue)"
-    }
-    
-    /// Configures the zoom slider with appropriate range and value.
-    private func setupZoomSlider() {
-        guard let delegate = delegate else { return }
-        
-        delegate.zoomSlider.minValue = minZoomLevel
-        delegate.zoomSlider.maxValue = maxZoomLevel
-        delegate.zoomSlider.doubleValue = currentZoomLevel
-        delegate.zoomSlider.target = self
-        delegate.zoomSlider.action = #selector(zoomSliderChanged(_:))
-    }
-    
-    /// Handles zoom slider value changes.
-    @objc func zoomSliderChanged(_ sender: NSSlider) {
-        currentZoomLevel = sender.doubleValue
-        saveZoomLevel()
-        
-        guard let delegate = delegate else { return }
-        delegate.updateViewForZoomLevel()
     }
     
     /// Increases zoom level by one step (5%).
@@ -100,20 +71,43 @@ class FileBrowserZoomCoordinator: NSObject {
         delegate.updateViewForZoomLevel()
     }
     
-    /// Adjusts zoom level by the specified amount and updates views.
+    /// Adjusts zoom level by specified amount.
     private func adjustZoom(by amount: Double) {
-        currentZoomLevel = max(minZoomLevel, min(maxZoomLevel, currentZoomLevel + amount))
+        let newZoom = max(minZoomLevel, min(maxZoomLevel, currentZoomLevel + amount))
+        if newZoom != currentZoomLevel {
+            currentZoomLevel = newZoom
+            saveZoomLevel()
+            updateSlider()
+            
+            guard let delegate = delegate else { return }
+            delegate.refreshViews()
+        }
+    }
+    
+    /// Updates zoom slider to reflect current zoom level.
+    private func updateSlider() {
+        // No longer needed with new delegate interface
+    }
+    
+    /// Returns current zoom level as percentage.
+    func getCurrentZoomLevel() -> Double {
+        return currentZoomLevel
+    }
+    
+    /// Sets zoom level to actual size (100%).
+    func actualSize() {
+        currentZoomLevel = 100.0
         saveZoomLevel()
         updateSlider()
         
         guard let delegate = delegate else { return }
-        delegate.updateViewForZoomLevel()
+        delegate.refreshViews()
     }
     
-    /// Updates slider to match current zoom level.
-    private func updateSlider() {
-        guard let delegate = delegate else { return }
-        delegate.zoomSlider.doubleValue = currentZoomLevel
+    /// Returns whether zoom controls should be enabled for current view mode.
+    func areZoomControlsEnabled() -> Bool {
+        guard let delegate = delegate else { return false }
+        return delegate.currentViewMode == .icons || delegate.currentViewMode == .windowsList
     }
     
     /// Returns the current zoom level (0.5 to 2.0 scale).
@@ -133,6 +127,24 @@ class FileBrowserZoomCoordinator: NSObject {
         updateSlider()
         
         guard let delegate = delegate else { return }
-        delegate.updateViewForZoomLevel()
+        delegate.refreshViews()
+    }
+    
+    /// Toggles free-form positioning for icon view mode.
+    func toggleFreeFormPositioning() {
+        guard let delegate = delegate else { return }
+        guard delegate.currentViewMode == .icons else { return }
+        
+        delegate.isFreeFormEnabled.toggle()
+        delegate.freeFormLayout?.isFreeForm = delegate.isFreeFormEnabled
+        delegate.refreshViews()
+    }
+    
+    /// Snaps items to grid in icon view mode.
+    func snapToGrid() {
+        guard let delegate = delegate else { return }
+        guard delegate.currentViewMode == .icons else { return }
+        
+        delegate.freeFormLayout?.snapToGrid()
     }
 }
