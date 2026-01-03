@@ -18,9 +18,9 @@ final class FileBrowserUISetupController {
     
     /// Performs all UI setup operations
     func setupUI() {
+        setupContainerAndOutlineView()
         setupToolbar()
         setupStatusBar()
-        setupContainerAndOutlineView()
         setupConstraints()
     }
     
@@ -54,7 +54,7 @@ final class FileBrowserUISetupController {
         guard let vc = viewController else { return }
         
         // Create container view for switching between view modes
-        let container = RootFileBrowserDropView()
+        let container = RootFileBrowserView()
         container.translatesAutoresizingMaskIntoConstraints = false
         container.dropDelegate = vc
         vc.containerView = container
@@ -164,38 +164,35 @@ final class FileBrowserUISetupController {
         // Accessibility
         outline?.setAccessibilityRole(.outline)
         outline?.setAccessibilityLabel("File Browser")
+        outline?.accessibilityIdentifier = "FileList"
     }
     
     // MARK: - Constraints Setup
     
     private func setupConstraints() {
         guard let vc = viewController else { return }
-        
-        let toolbar = vc.toolbarViewController.view
-        let container = vc.containerView
-        let statusBar = vc.statusBarViewController.view
-        
-        toolbar?.translatesAutoresizingMaskIntoConstraints = false
-        container?.translatesAutoresizingMaskIntoConstraints = false
-        statusBar?.translatesAutoresizingMaskIntoConstraints = false
-        
-        guard let toolbarView = toolbar,
-              let containerView = container,
-              let statusBarView = statusBar else { return }
-        
+
+        let toolbarView = vc.toolbarViewController.view
+        let containerView = vc.containerView!
+        let statusBarView = vc.statusBarViewController.view
+
+        toolbarView.translatesAutoresizingMaskIntoConstraints = false
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        statusBarView.translatesAutoresizingMaskIntoConstraints = false
+
         NSLayoutConstraint.activate([
             // Toolbar at top
             toolbarView.topAnchor.constraint(equalTo: vc.view.topAnchor),
             toolbarView.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor),
             toolbarView.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor),
-            toolbarView.heightAnchor.constraint(equalToConstant: 44),
-            
+            toolbarView.heightAnchor.constraint(equalToConstant: 84),
+
             // Container in middle
             containerView.topAnchor.constraint(equalTo: toolbarView.bottomAnchor),
             containerView.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor),
             containerView.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor),
             containerView.bottomAnchor.constraint(equalTo: statusBarView.topAnchor),
-            
+
             // Status bar at bottom
             statusBarView.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor),
             statusBarView.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor),

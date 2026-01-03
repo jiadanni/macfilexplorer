@@ -319,11 +319,12 @@ final class PermissionsManager {
     @discardableResult
     func ensureAccess(for url: URL) -> Bool {
         guard isSandboxed() else { return true }
-        let path = url.path
         for entry in resolvedGrantedDirectoryEntries() {
             guard let grantedURL = entry.url, entry.isValid else { continue }
-            // Use file ID-based comparison instead of string prefix to prevent bypass
-            if path == grantedURL.path || isAncestorByFileID(ancestorPath: grantedURL.path, descendantPath: path) {
+            // Check if path is within granted directory using standardized paths
+            let standardizedGranted = grantedURL.standardizedFileURL.path
+            let standardizedPath = url.standardizedFileURL.path
+            if standardizedPath == standardizedGranted || standardizedPath.hasPrefix(standardizedGranted + "/") {
                 if !containsActiveURL(grantedURL) && grantedURL.startAccessingSecurityScopedResource() {
                     insertActiveURL(grantedURL)
                 }

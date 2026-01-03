@@ -127,16 +127,16 @@ class FileSystemHelpers {
         var visited = Set<FileID>()
 
         for _ in 0..<maxDepth {
-            do {
-                let fid = try fileID(for: current)
-                if visited.contains(fid) {
-                    // Cycle detected
-                    return nil
-                }
-                visited.insert(fid)
-            } catch {
+            var statbuf = stat()
+            if lstat(current, &statbuf) != 0 {
                 return nil
             }
+            let fid = FileID(dev: UInt64(statbuf.st_dev), ino: UInt64(statbuf.st_ino))
+            if visited.contains(fid) {
+                // Cycle detected
+                return nil
+            }
+            visited.insert(fid)
 
             do {
                 let attrs = try FileManager.default.attributesOfItem(atPath: current)
@@ -267,4 +267,3 @@ func openSafeNoFollow(path: String) -> (fd: Int32, fileID: FileID)? {
 func validateFileID(path: String, expectedID: FileID) -> Bool {
     return FileSystemHelpers.validateFileID(expectedID, for: path)
 }
-

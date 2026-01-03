@@ -62,7 +62,7 @@ protocol SettingsStoreProtocol: AnyObject {
     var expandSidebarToCurrentDirectory: Bool { get set }
 
     // MARK: - Terminal Settings
-    
+
     var openTerminalByDefault: Bool { get set }
 
     // MARK: - Status Bar Settings

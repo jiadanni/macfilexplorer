@@ -1,6 +1,11 @@
 import Cocoa
 
-extension FileBrowserViewController {
+// MARK: - ToolbarDelegate
+
+extension FileBrowserViewController: ToolbarDelegate {
+
+    // MARK: - Navigation
+    
     func toolbarDidRequestBack() {
         navigationCoordinator.goBack()
     }
@@ -13,30 +18,11 @@ extension FileBrowserViewController {
         navigationCoordinator.loadDirectory(url)
     }
 
-    func toolbarDidChangeSortColumn(_ column: String, ascending: Bool) {
-        sortColumn = column
-        sortAscending = ascending
-        toolbarViewController.updateSortDisplay(column: column, ascending: ascending)
-        sortItems()
-        outlineView.reloadData()
-
-        var prefs = settings.folderSortPreferences
-        prefs[currentDirectory.path] = "\(column)|\(ascending ? "asc" : "desc")"
-        settings.folderSortPreferences = prefs
-    }
-
     func toolbarDidRequestNavigateToHistoryIndex(_ index: Int) {
         navigationCoordinator.navigateToHistoryIndex(index)
     }
 
-    func toolbarDidRequestNewFolder() {
-        contextMenuNewFolder(self)
-    }
-
-    func toolbarDidToggleHiddenFiles(show: Bool) {
-        // Route through coordinator as SSOT - coordinator will notify observer
-        hiddenFilesCoordinator.setVisibility(show)
-    }
+    // MARK: - View Options
 
     func toolbarDidChangeViewMode(_ viewMode: ViewMode) {
         currentViewMode = viewMode
@@ -44,6 +30,49 @@ extension FileBrowserViewController {
         updateZoomControlVisibility()
         viewModeCoordinator.displayFiles(for: viewMode)
     }
+
+    func toolbarDidChangeSortColumn(_ column: String, ascending: Bool) {
+        sortColumn = column
+        sortAscending = ascending
+        toolbarViewController.updateSortDisplay(column: column, ascending: ascending)
+
+        var prefs = settings.folderSortPreferences
+        prefs[currentDirectory.path] = "\(column)|\(ascending ? "asc" : "desc")"
+        settings.folderSortPreferences = prefs
+    }
+
+    func toolbarDidToggleHiddenFiles(show: Bool) {
+        // Route through coordinator as SSOT - coordinator will notify observer
+        hiddenFilesCoordinator.setVisibility(show)
+    }
+
+    func toolbarDidTogglePreviewPane() {
+        previewPaneCoordinator.togglePreviewPane()
+        settings.previewPaneVisible = previewPaneCoordinator.isVisible
+        toolbarViewController.updatePreviewPaneDisplay(showing: previewPaneCoordinator.isVisible)
+    }
+
+    // MARK: - Actions
+
+    func toolbarDidRequestNewFolder() {
+        contextMenuNewFolder(self)
+    }
+
+    func toolbarDidRequestOpenInTerminal() {
+        delegate?.toolbarDidRequestOpenInTerminal(from: self)
+    }
+
+    // MARK: - Search & Filter
+
+    func toolbarDidSearchTextChange(_ searchText: String) {
+        searchFilter = searchText
+    }
+
+    func toolbarDidRequestShowFilter() {
+        showFilterPanel()
+    }
+
+    // MARK: - Layout
 
     func toolbarDidRequestSplitVertically() {
         delegate?.fileBrowserDidRequestSplit(self, orientation: .vertical)
@@ -55,24 +84,5 @@ extension FileBrowserViewController {
 
     func toolbarDidRequestClosePane() {
         delegate?.fileBrowserDidRequestClosePane(self)
-    }
-
-    func toolbarDidSearchTextChange(_ searchText: String) {
-        searchFilter = searchText
-        refreshCurrentDirectory()
-    }
-
-    func toolbarDidTogglePreviewPane() {
-        previewPaneCoordinator.togglePreviewPane()
-        settings.previewPaneVisible = previewPaneCoordinator.isVisible
-        toolbarViewController.updatePreviewPaneDisplay(showing: previewPaneCoordinator.isVisible)
-    }
-
-    func toolbarDidRequestShowFilter() {
-        showFilterPanel()
-    }
-
-    func toolbarDidRequestOpenInTerminal() {
-        delegate?.toolbarDidRequestOpenInTerminal(from: self)
     }
 }

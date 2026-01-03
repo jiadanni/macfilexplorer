@@ -15,6 +15,9 @@ class SecurityIntegrationTests: XCTestCase {
     
     private var tempDirectory: URL!
     private var fileOperationsManager: FileOperationsManager!
+    private var fileOperationsDelegate: FileOperationsTestDelegate!
+    private var settingsStore: SettingsStore!
+    private var settingsSuiteName: String!
     
     // MARK: - Setup & Teardown
     
@@ -26,13 +29,27 @@ class SecurityIntegrationTests: XCTestCase {
             .appendingPathComponent("MacFileExplorerSecurityTests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
         
-        fileOperationsManager = FileOperationsManager()
+        settingsSuiteName = "com.macfileexplorer.security.tests.\(UUID().uuidString)"
+        let testDefaults = UserDefaults(suiteName: settingsSuiteName)!
+        testDefaults.removePersistentDomain(forName: settingsSuiteName)
+        settingsStore = SettingsStore(defaults: testDefaults)
+        settingsStore.confirmFileOperations = false
+        settingsStore.showOperationProgress = false
+        fileOperationsDelegate = FileOperationsTestDelegate()
+        fileOperationsManager = FileOperationsManager(delegate: fileOperationsDelegate, settings: settingsStore)
     }
     
     override func tearDownWithError() throws {
         if let tempDirectory = tempDirectory {
             try? FileManager.default.removeItem(at: tempDirectory)
         }
+        if let suiteName = settingsSuiteName,
+           let defaults = UserDefaults(suiteName: suiteName) {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        settingsStore = nil
+        settingsSuiteName = nil
+        fileOperationsDelegate = nil
         
         try super.tearDownWithError()
     }
@@ -47,47 +64,24 @@ class SecurityIntegrationTests: XCTestCase {
         let destination = tempDirectory.appendingPathComponent("destination")
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
         
-        // Create expectation for async operation
         let expectation = self.expectation(description: "File operation completion")
-        var operationResult: Result<Void, Error>?
-        
-        // When: Start copy operation and modify file after pre-validation
-        Task {
-            do {
-                // Attempt copy operation
-                await fileOperationsManager.copyItems([testFile], to: destination) { result in
-                    operationResult = result
-                    expectation.fulfill()
-                }
-            }
+        fileOperationsDelegate.onRefresh = {
+            expectation.fulfill()
         }
+        
+        fileOperationsManager.perform(.copy, items: [testFile], destination: destination, currentDirectory: tempDirectory)
         
         // Simulate concurrent file modification by changing the file's content/identity
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) {
-            do {
-                // Replace the file with different content to trigger TOCTOU
-                try "Modified content during operation".write(to: testFile, atomically: true, encoding: .utf8)
-            } catch {
-                XCTFail("Failed to modify test file: \(error)")
-            }
+            guard FileManager.default.fileExists(atPath: testFile.path) else { return }
+            // Replace the file with different content to trigger concurrent change
+            try? "Modified content during operation".write(to: testFile, atomically: true, encoding: .utf8)
         }
         
-        // Then: Wait for operation completion
         waitForExpectations(timeout: 5.0)
         
-        // The operation should either complete successfully or detect the identity change
-        // (The exact behavior depends on timing - this tests that the system handles it gracefully)
-        switch operationResult {
-        case .success:
-            // If successful, verify the copied file exists
-            let copiedFile = destination.appendingPathComponent("test_file.txt")
-            XCTAssertTrue(FileManager.default.fileExists(atPath: copiedFile.path))
-        case .failure(let error):
-            // If failed due to TOCTOU detection, verify it's the expected error type
-            XCTAssertNotNil(error)
-        case .none:
-            XCTFail("Operation result was nil")
-        }
+        let copiedFile = destination.appendingPathComponent("test_file.txt")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: copiedFile.path))
     }
     
     func testTOCTOUDetection_ConcurrentOperations() throws {
@@ -103,40 +97,21 @@ class SecurityIntegrationTests: XCTestCase {
         let destination = tempDirectory.appendingPathComponent("concurrent_destination")
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
         
-        // When: Perform multiple concurrent copy operations
-        let group = DispatchGroup()
-        var results: [Result<Void, Error>] = []
-        let resultsQueue = DispatchQueue(label: "results")
-        
-        for file in testFiles {
-            group.enter()
-            Task {
-                await fileOperationsManager.copyItems([file], to: destination) { result in
-                    resultsQueue.sync {
-                        results.append(result)
-                    }
-                    group.leave()
-                }
-            }
+        let expectation = self.expectation(description: "Concurrent operations complete")
+        expectation.expectedFulfillmentCount = testFiles.count
+        fileOperationsDelegate.onRefresh = {
+            expectation.fulfill()
         }
         
-        // Then: Wait for all operations to complete
-        let waitResult = group.wait(timeout: .now() + 10.0)
-        XCTAssertEqual(waitResult, .success, "Concurrent operations should complete within timeout")
+        for file in testFiles {
+            fileOperationsManager.perform(.copy, items: [file], destination: destination, currentDirectory: tempDirectory)
+        }
         
-        // Verify all operations completed (successfully or with proper error handling)
-        XCTAssertEqual(results.count, testFiles.count)
+        waitForExpectations(timeout: 10.0)
         
-        // Verify copied files exist or operations failed gracefully
-        for (index, result) in results.enumerated() {
-            switch result {
-            case .success:
-                let copiedFile = destination.appendingPathComponent("test_file_\(index).txt")
-                XCTAssertTrue(FileManager.default.fileExists(atPath: copiedFile.path))
-            case .failure:
-                // Concurrent operations may fail due to timing - this is acceptable
-                break
-            }
+        for index in 0..<testFiles.count {
+            let copiedFile = destination.appendingPathComponent("test_file_\(index).txt")
+            XCTAssertTrue(FileManager.default.fileExists(atPath: copiedFile.path))
         }
     }
     
@@ -310,4 +285,19 @@ class SecurityIntegrationTests: XCTestCase {
         let isValid = FileSystemHelpers.validateFileID(originalFileID, for: testFile)
         XCTAssertFalse(isValid, "File ID should change when file is atomically replaced")
     }
+}
+
+final class FileOperationsTestDelegate: FileOperationsManagerDelegate {
+    var onRefresh: (() -> Void)?
+    var window: NSWindow? = nil
+
+    func fileOperationsManager(_ manager: FileOperationsManager, didRequestPresentSheet viewController: NSViewController) {}
+
+    func fileOperationsManager(_ manager: FileOperationsManager, didRequestPresentError message: String) {}
+
+    func fileOperationsManagerDidRequestRefresh(_ manager: FileOperationsManager) {
+        onRefresh?()
+    }
+
+    func fileOperationsManagerDidRequestRefreshSource(_ manager: FileOperationsManager, sourcePane: FileBrowserViewController) {}
 }

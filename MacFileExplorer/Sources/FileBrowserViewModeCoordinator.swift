@@ -23,17 +23,55 @@ final class FileBrowserViewModeCoordinator {
         
         // Queue the display operation on the serial queue
         displayQueue.async { [weak self, weak owner] in
-            guard let owner = owner else { return }
-            
+            guard let self = self, let owner = owner else { return }
+
             // Perform setup on main thread
             DispatchQueue.main.async {
-                // Delegate view switching to displayController
-                owner.displayController.displayViewMode(viewMode)
-                
+                // Handle view mode switching based on mode type
+                switch viewMode {
+                case .list:
+                    self.displayListView()
+                case .icons, .windowsList:
+                    self.displayCollectionView(for: viewMode)
+                case .columns:
+                    self.displayColumnsView()
+                }
+
                 // Set first responder
                 owner.view.window?.makeFirstResponder(owner.view)
             }
         }
+    }
+
+    private func displayListView() {
+        guard let owner = owner else { return }
+
+        // Ensure the scroll view is added to container
+        if owner.scrollView.superview == nil {
+            owner.containerView.addSubview(owner.scrollView)
+        }
+
+        // Hide other views
+        owner.collectionViewScrollView?.isHidden = true
+        owner.browserView?.isHidden = true
+        owner.scrollView.isHidden = false
+
+        // Setup constraints for list view
+        NSLayoutConstraint.deactivate(owner.activeConstraints)
+        owner.activeConstraints.removeAll()
+
+        if !owner.previewVisible {
+            owner.activeConstraints = [
+                owner.scrollView.topAnchor.constraint(equalTo: owner.containerView.topAnchor),
+                owner.scrollView.bottomAnchor.constraint(equalTo: owner.containerView.bottomAnchor),
+                owner.scrollView.leadingAnchor.constraint(equalTo: owner.containerView.leadingAnchor),
+                owner.scrollView.trailingAnchor.constraint(equalTo: owner.containerView.trailingAnchor)
+            ]
+            NSLayoutConstraint.activate(owner.activeConstraints)
+        }
+
+        // Reload data
+        owner.outlineView.reloadData()
     }
 
     private func displayCollectionView(for viewMode: ViewMode) {
@@ -50,6 +88,12 @@ final class FileBrowserViewModeCoordinator {
             displayFiles(for: .list)
             return
         }
+
+        NSLayoutConstraint.deactivate(owner.activeConstraints)
+        owner.activeConstraints.removeAll()
+
+        owner.scrollView.isHidden = true
+        owner.browserView?.isHidden = true
 
         if collectionViewScrollView.superview == nil && !owner.previewVisible {
             owner.containerView.addSubview(collectionViewScrollView)
@@ -128,6 +172,12 @@ final class FileBrowserViewModeCoordinator {
             return
         }
 
+        NSLayoutConstraint.deactivate(owner.activeConstraints)
+        owner.activeConstraints.removeAll()
+
+        owner.scrollView.isHidden = true
+        owner.collectionViewScrollView?.isHidden = true
+
         if browserView.superview == nil && !owner.previewVisible {
             owner.containerView.addSubview(browserView)
         }
@@ -167,6 +217,7 @@ final class FileBrowserViewModeCoordinator {
         newCollectionView.setAccessibilityElement(true)
         newCollectionView.setAccessibilityRole(.group)
         newCollectionView.setAccessibilityLabel(L10n.text("Icon grid"))
+        newCollectionView.accessibilityIdentifier = "FileCollectionView"
         newCollectionView.delegate = owner
         newCollectionView.dataSource = owner
 

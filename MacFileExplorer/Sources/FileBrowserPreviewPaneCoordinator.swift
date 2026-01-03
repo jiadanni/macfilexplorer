@@ -1,24 +1,21 @@
 import Cocoa
 import Quartz
 
-/// Enhanced delegate protocol for preview pane coordinator changes.
-/// Notifies observers when visibility, position, or width changes.
-protocol FileBrowserPreviewPaneObserver: AnyObject {
+/// Delegate protocol for preview pane coordinator changes.
+/// Notifies delegates when visibility, position, or width changes.
+protocol FileBrowserPreviewPaneDelegate: AnyObject {
     /// Called when preview pane visibility changes
     func previewPaneVisibilityDidChange(_ isVisible: Bool)
-    
+
     /// Called when preview pane position changes
     func previewPanePositionDidChange(_ position: String)
-    
+
     /// Called when preview pane width changes
     func previewPaneWidthDidChange(_ width: CGFloat)
 }
 
-/// Legacy delegate protocol (kept for backward compatibility)
-protocol FileBrowserPreviewPaneDelegate: AnyObject {
-    func previewPaneShouldClose()
-    func previewPaneDidResize(width: CGFloat)
-}
+/// Type alias for backward compatibility during migration
+typealias FileBrowserPreviewPaneObserver = FileBrowserPreviewPaneDelegate
 
 /// Single Source of Truth coordinator for preview pane state.
 ///
@@ -31,7 +28,6 @@ protocol FileBrowserPreviewPaneDelegate: AnyObject {
 /// synchronize to SettingsStore for persistence.
 class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
     weak var delegate: FileBrowserPreviewPaneDelegate?
-    weak var observer: FileBrowserPreviewPaneObserver?
     
     private var settings: SettingsStoreProtocol
     private weak var parentSplitView: NSSplitView?
@@ -42,25 +38,25 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
         didSet {
             guard oldValue != isVisible else { return }
             updateSettingsStore()
-            observer?.previewPaneVisibilityDidChange(isVisible)
+            delegate?.previewPaneVisibilityDidChange(isVisible)
         }
     }
-    
+
     /// SSOT: Preview pane position ("right" or "bottom")
     private(set) var position: String = "right" {
         didSet {
             guard oldValue != position else { return }
             updateSettingsStore()
-            observer?.previewPanePositionDidChange(position)
+            delegate?.previewPanePositionDidChange(position)
         }
     }
-    
+
     /// SSOT: Preview pane width (saved on resize)
     private(set) var width: CGFloat = 300 {
         didSet {
             guard oldValue != width && width > 100 else { return }
             updateSettingsStore()
-            observer?.previewPaneWidthDidChange(width)
+            delegate?.previewPaneWidthDidChange(width)
         }
     }
     

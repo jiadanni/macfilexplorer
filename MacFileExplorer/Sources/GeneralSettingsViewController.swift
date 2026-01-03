@@ -32,11 +32,12 @@ final class GeneralSettingsViewController: NSViewController {
 
         scrollView.documentView = contentView
 
+        let contentContainer = scrollView.contentView
         NSLayoutConstraint.activate([
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            contentView.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            contentView.widthAnchor.constraint(equalTo: contentContainer.widthAnchor),
 
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),

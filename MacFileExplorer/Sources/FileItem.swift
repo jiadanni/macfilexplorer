@@ -84,17 +84,6 @@ class FileItem: Hashable {
         return isDirectory && !hasLoadedChildren
     }
 
-    /// Display name respecting user's file extension preference.
-    ///
-    /// If user has disabled file extensions (via SettingsStore), this returns
-    /// the name without extension for files. Directories always show full name.
-    ///
-    /// **Backward compatibility property** - accesses SettingsStore.shared.
-    /// For better testability, use `displayName(showExtensions:)` method instead.
-    var displayName: String {
-        return displayName(showExtensions: SettingsStore.shared.showFileExtensions)
-    }
-
     /// Returns display name with explicitly provided extension visibility preference.
     ///
     /// This method breaks the circular dependency on SettingsStore and allows
@@ -109,6 +98,18 @@ class FileItem: Hashable {
             // Hide extension for files
             return (name as NSString).deletingPathExtension
         }
+    }
+
+    /// Display name respecting user's file extension preference.
+    ///
+    /// If user has disabled file extensions (via SettingsStore), this returns
+    /// the name without extension for files. Directories always show full name.
+    ///
+    /// **Note**: Uses dependency injection pattern. Pass showExtensions explicitly
+    /// from SettingsStore when available. Defaults to showing extensions if unavailable.
+    @available(*, deprecated, renamed: "displayName(showExtensions:)", message: "Pass showExtensions explicitly for better testability")
+    var displayName: String {
+        return displayName(showExtensions: SettingsStore.shared.showFileExtensions)
     }
 
     init(url: URL) {
@@ -135,13 +136,13 @@ class FileItem: Hashable {
             
             // If it's a symbolic link (Google Drive File Stream uses symlinks), resolve it
             if let isSymlink = resourceValues.isSymbolicLink, isSymlink {
-                // Try safe symlink resolution with cycle detection and max depth
-                if let safeResolved = resolveSymlinkSafe(startingAt: url.path, maxDepth: 10) {
-                    var symlinkIsDir: ObjCBool = false
-                    FileManager.default.fileExists(atPath: safeResolved, isDirectory: &symlinkIsDir)
+                // Resolve symlink using standardized URL resolution
+                let resolvedURL = url.resolvingSymlinksInPath()
+                var symlinkIsDir: ObjCBool = false
+                if FileManager.default.fileExists(atPath: resolvedURL.path, isDirectory: &symlinkIsDir) {
                     detectedAsDirectory = symlinkIsDir.boolValue
                 } else {
-                    // Limited fallback: single-level resolution only to reduce attack surface
+                    // Fallback: single-level resolution only
                     do {
                         let destination = try FileManager.default.destinationOfSymbolicLink(atPath: url.path)
                         var symlinkIsDir: ObjCBool = false
@@ -441,9 +442,10 @@ class FileItem: Hashable {
 
     // MARK: - Computed Properties
 
-    var icon: NSImage {
-        let useGrayscale = SettingsStore.shared.useGrayscaleIcons
-
+    /// Get icon with explicit grayscale preference.
+    /// - Parameter useGrayscale: Whether to render icon in grayscale
+    /// - Returns: Icon for this file item
+    func icon(useGrayscale: Bool) -> NSImage {
         if useGrayscale {
             // Grayscale mode: use monochrome SF Symbol for folders, grayscale file icons otherwise
             if isDirectory, let folderIcon = NSImage.mfeSymbol(named: "folder", accessibilityDescription: "Folder") {
@@ -454,6 +456,11 @@ class FileItem: Hashable {
             // Default (Finder-style color icons)
             return NSWorkspace.shared.icon(forFile: url.path)
         }
+    }
+
+    @available(*, deprecated, message: "Use icon(useGrayscale:) with explicit preference for better testability")
+    var icon: NSImage {
+        return icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons)
     }
 
     var isImage: Bool {

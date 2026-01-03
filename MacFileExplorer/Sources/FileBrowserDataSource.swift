@@ -13,6 +13,10 @@ class FileBrowserDataSource {
     
     private(set) var currentDirectory: URL
     private(set) var rootItem: FileItem?
+    private let loadStateLock = NSLock()
+    private var loadGeneration: Int = 0
+    private var loadTask: Task<Void, Never>?
+    private var unfilteredItems: [FileItem] = []
     
     var showsHiddenFiles: Bool = false {
         didSet { if oldValue != showsHiddenFiles { reload() } }
@@ -68,26 +72,50 @@ class FileBrowserDataSource {
     private func loadData(isSearch: Bool) {
         let url = currentDirectory
         let showsHidden = showsHiddenFiles
+        let generation = nextLoadGeneration()
+        loadTask?.cancel()
         
-        Task.detached(priority: .userInitiated) { [weak self] in
+        loadTask = Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             
             let item = FileItem(url: url)
             // Note: recursive=isSearch logic from VC
+            var didReportError = false
             let success = item.loadChildren(showsHiddenFiles: showsHidden, recursive: isSearch) { errorMsg in
                 // We'll treat the string error as an NSError for the protocol
                 let error = NSError(domain: "FileBrowserDataSource", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMsg])
-                Task { @MainActor in
+                didReportError = true
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    guard self.isCurrentLoad(generation) else { return }
                     self.delegate?.dataSource(self, didFailToLoad: error)
                 }
             }
             
             if !success {
                 debugLog("Warning: Failed to load children for \(url.path)")
+                if !didReportError {
+                    let exists = FileManager.default.fileExists(atPath: url.path)
+                    let message = exists
+                        ? "Unable to open '\(url.lastPathComponent)'."
+                        : "The folder '\(url.lastPathComponent)' could not be found or is unavailable."
+                    let error = NSError(domain: "FileBrowserDataSource", code: -1, userInfo: [NSLocalizedDescriptionKey: message])
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        guard self.isCurrentLoad(generation) else { return }
+                        self.delegate?.dataSource(self, didFailToLoad: error)
+                    }
+                }
             }
             
+            if Task.isCancelled {
+                return
+            }
+
             await MainActor.run {
+                guard self.isCurrentLoad(generation) else { return }
                 self.rootItem = item
+                self.unfilteredItems = item.children ?? []
                 
                 // Load stored sort preference for this folder
                 self.applyStoredSortPreferences()
@@ -127,7 +155,7 @@ class FileBrowserDataSource {
     private func compareItems(_ item1: FileItem, _ item2: FileItem) -> Bool {
         switch sortColumn {
         case AppConfig.ColumnID.name:
-            let result = item1.name.localizedStandardCompare(item2.name)
+            let result = item1.name.safeLocalizedCompare(item2.name)
             return sortAscending ? (result == .orderedAscending) : (result == .orderedDescending)
         case AppConfig.ColumnID.size:
             if item1.isDirectory != item2.isDirectory { return item1.isDirectory }
@@ -146,24 +174,20 @@ class FileBrowserDataSource {
     }
 
     private func sortItems() {
-        guard let rootItem = rootItem, var children = rootItem.children else { return }
-        
-        children.sort { compareItems($0, $1) }
-        
-        rootItem.children = children
-        
-        // Recursive sort
-        children.forEach {
-            if $0.isDirectory, var subChildren = $0.children {
-                sortChildren(&subChildren)
-                 $0.children = subChildren
+        measureTime("DataSource: sortItems") {
+            unfilteredItems.sort { compareItems($0, $1) }
+            
+            // Recursive sort subfolders (these are shared between lists)
+            unfilteredItems.forEach {
+                if $0.isDirectory, var subChildren = $0.children {
+                    sortChildren(&subChildren)
+                     $0.children = subChildren
+                }
             }
         }
-        // If we need to trigger an update without reloading from disk, we might need a separate delegate method,
-        // or just call didLoadItems again (simplest for now)
-        // delegate?.dataSource(self, didLoadItems: children)
-        // NOTE: View controller often calls sort separately, so we might expose a public sort method that triggers update?
-        // For now, let's assume the VC will call reloadData when it changes sort properties, OR we notify delegate.
+        
+        // Re-apply filter since source order changed
+        applySearchFilter()
     }
     
     private func sortChildren(_ children: inout [FileItem]) {
@@ -180,33 +204,29 @@ class FileBrowserDataSource {
     private func applySearchFilter() {
         guard let rootItem = rootItem else { return }
         
-        // Reload children from disk/cache or just re-filter?
-        // Ideally we filter the *original* loaded children.
-        // Current implementation in VC mutates rootItem.children directly after load.
-        // If we want to support dynamic filtering without reload, we need to store `originalChildren`.
-        // However, looking at VC code: loadDirectory loads -> item.children is populated.
-        // applySearchFilter filters `rootItem.children` in place (effectively losing non-matching).
-        // BUT wait, VC's applySearchFilter does: `if var children = rootItem.children { ... rootItem.children = children }`
-        // If `rootItem` reloads, it gets fresh children. If we refine search, we might need to re-fetch if we destroyed data?
-        // Actually `rootItem.loadChildren` re-reads from disk. So filtering is destructive to the in-memory array but safe because we reload on change.
-        
-        let hasSearchText = searchFilter != nil && !searchFilter!.isEmpty
-        let hasFilterCriteria = filterCriteria.isActive
-        
-        guard hasSearchText || hasFilterCriteria else { return }
-        
-        if var children = rootItem.children {
-            children = children.filter { item in
-                if hasSearchText, let searchText = searchFilter {
-                    if !item.name.localizedCaseInsensitiveContains(searchText) { return false }
+        measureTime("DataSource: applySearchFilter") {
+            let hasSearchText = searchFilter != nil && !searchFilter!.isEmpty
+            let hasFilterCriteria = filterCriteria.isActive
+            
+            if !(hasSearchText || hasFilterCriteria) {
+                rootItem.children = unfilteredItems
+            } else {
+                rootItem.children = unfilteredItems.filter { item in
+                    if hasSearchText, let searchText = searchFilter {
+                        if !item.name.localizedCaseInsensitiveContains(searchText) { return false }
+                    }
+                    
+                    if hasFilterCriteria {
+                        if !filterCriteria.matches(item) { return false }
+                    }
+                    return true
                 }
-                
-                if hasFilterCriteria {
-                    if !filterCriteria.matches(item) { return false }
-                }
-                return true
             }
-            rootItem.children = children
+        }
+        
+        // Notify delegate about the change in visible items
+        if let children = rootItem.children {
+            delegate?.dataSource(self, didLoadItems: children)
         }
     }
     
@@ -236,6 +256,19 @@ class FileBrowserDataSource {
             }
         }
         return nil
+    }
+
+    private func nextLoadGeneration() -> Int {
+        loadStateLock.lock()
+        defer { loadStateLock.unlock() }
+        loadGeneration += 1
+        return loadGeneration
+    }
+
+    private func isCurrentLoad(_ generation: Int) -> Bool {
+        loadStateLock.lock()
+        defer { loadStateLock.unlock() }
+        return generation == loadGeneration
     }
     
     // Helper to access items for collection view

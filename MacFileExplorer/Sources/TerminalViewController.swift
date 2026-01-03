@@ -167,7 +167,7 @@ class TerminalViewController: NSViewController {
 
         let task = Process()
         task.executableURL = URL(fileURLWithPath: shellPath)
-        task.arguments = ["-l"]
+        task.arguments = ["-i"]  // Interactive shell (not login) since we use custom RC via ZDOTDIR
 
         var environment = ProcessInfo.processInfo.environment
         environment["TERM"] = "xterm-256color"
@@ -176,6 +176,10 @@ class TerminalViewController: NSViewController {
         environment["PWD"] = currentDirectory
         // Disable zsh's partial line indicator (the % symbol)
         environment["PROMPT_EOL_MARK"] = ""
+        // Use app-specific terminal config directory instead of user's ~/.zshrc
+        if let terminalConfigDir = getOrCreateTerminalConfigDir() {
+            environment["ZDOTDIR"] = terminalConfigDir
+        }
         task.environment = environment
         task.currentDirectoryURL = URL(fileURLWithPath: currentDirectory)
 
@@ -229,9 +233,13 @@ class TerminalViewController: NSViewController {
         masterHandle = handle
 
         let stream = AsyncStream<Data> { [weak self] continuation in
-            self?.outputContinuation = continuation
+            Task { @MainActor [weak self] in
+                self?.outputContinuation = continuation
+            }
             continuation.onTermination = { [weak self] _ in
-                self?.outputContinuation = nil
+                Task { @MainActor [weak self] in
+                    self?.outputContinuation = nil
+                }
             }
             handle.readabilityHandler = { handle in
                 let data = handle.availableData
@@ -473,6 +481,62 @@ class TerminalViewController: NSViewController {
         }
 
         return "/bin/zsh"
+    }
+
+    /// Returns the path to the app's custom terminal config directory.
+    /// Creates the directory and copies the default .zshrc if needed.
+    private func getOrCreateTerminalConfigDir() -> String? {
+        let fileManager = FileManager.default
+
+        // Get Application Support directory
+        guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            debugLog("TerminalViewController: Could not find Application Support directory")
+            return nil
+        }
+
+        let terminalConfigDir = appSupport
+            .appendingPathComponent("MacFileExplorer", isDirectory: true)
+            .appendingPathComponent("terminal", isDirectory: true)
+
+        // Create directory if needed
+        if !fileManager.fileExists(atPath: terminalConfigDir.path) {
+            do {
+                try fileManager.createDirectory(at: terminalConfigDir, withIntermediateDirectories: true)
+                debugLog("TerminalViewController: Created terminal config directory at \(terminalConfigDir.path)")
+            } catch {
+                debugLog("TerminalViewController: Failed to create terminal config directory: \(error)")
+                return nil
+            }
+        }
+
+        // Copy default .zshrc from bundle if it doesn't exist
+        let zshrcPath = terminalConfigDir.appendingPathComponent(".zshrc")
+        if !fileManager.fileExists(atPath: zshrcPath.path) {
+            if let bundleRC = Bundle.main.path(forResource: "default-terminal", ofType: "zshrc") {
+                do {
+                    try fileManager.copyItem(atPath: bundleRC, toPath: zshrcPath.path)
+                    debugLog("TerminalViewController: Copied default terminal config to \(zshrcPath.path)")
+                } catch {
+                    debugLog("TerminalViewController: Failed to copy default terminal config: \(error)")
+                }
+            } else {
+                debugLog("TerminalViewController: default-terminal.zshrc not found in bundle")
+            }
+        }
+
+        return terminalConfigDir.path
+    }
+
+    /// Returns the path to the terminal config file for external editing.
+    static func terminalConfigFilePath() -> URL? {
+        let fileManager = FileManager.default
+        guard let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        return appSupport
+            .appendingPathComponent("MacFileExplorer", isDirectory: true)
+            .appendingPathComponent("terminal", isDirectory: true)
+            .appendingPathComponent(".zshrc")
     }
 
     // MARK: - Public Methods

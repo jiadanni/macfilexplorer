@@ -105,12 +105,13 @@ class PreviewViewController: NSViewController {
             if item.isImage {
                 imageView.isHidden = false
                 let targetURL = item.url
-                imageLoadTask = Task.detached(priority: .userInitiated) { [weak self] in
-                    let image = NSImage(contentsOf: targetURL)
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run {
-                        self?.imageView.image = image
-                    }
+                imageLoadTask = Task { [weak self] in
+                    let data = await Task.detached(priority: .userInitiated) {
+                        try? Data(contentsOf: targetURL)
+                    }.value
+                    let image = data.flatMap { NSImage(data: $0) }
+                    guard let self, !Task.isCancelled else { return }
+                    self.imageView.image = image
                 }
             } else {
                 imageView.isHidden = true

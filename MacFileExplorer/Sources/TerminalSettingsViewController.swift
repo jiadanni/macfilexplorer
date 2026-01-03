@@ -67,6 +67,57 @@ final class TerminalSettingsViewController: NSViewController {
         toolbarButtonDescriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         toolbarButtonDescriptionLabel.textColor = .secondaryLabelColor
         stackView.addArrangedSubview(toolbarButtonDescriptionLabel)
+
+        // Add spacer
+        let spacer = NSView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.heightAnchor.constraint(equalToConstant: 10).isActive = true
+        stackView.addArrangedSubview(spacer)
+
+        // Configuration section
+        let configTitleLabel = NSTextField(labelWithString: "Configuration:")
+        configTitleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
+        stackView.addArrangedSubview(configTitleLabel)
+
+        // Edit config button
+        let editConfigButton = NSButton(title: "Edit Terminal Configuration…", target: self, action: #selector(editTerminalConfig(_:)))
+        editConfigButton.bezelStyle = .rounded
+        stackView.addArrangedSubview(editConfigButton)
+
+        // Config description
+        let configDescriptionLabel = NSTextField(labelWithString: "Opens the terminal's .zshrc file in your default editor. Changes take effect on next terminal launch.")
+        configDescriptionLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+        configDescriptionLabel.textColor = .secondaryLabelColor
+        configDescriptionLabel.maximumNumberOfLines = 2
+        configDescriptionLabel.preferredMaxLayoutWidth = 300
+        stackView.addArrangedSubview(configDescriptionLabel)
+    }
+
+    @objc private func editTerminalConfig(_ sender: NSButton) {
+        guard let configPath = TerminalViewController.terminalConfigFilePath() else {
+            let alert = NSAlert()
+            alert.messageText = "Configuration Not Found"
+            alert.informativeText = "Could not locate the terminal configuration file. Try opening the built-in terminal first to generate the default configuration."
+            alert.alertStyle = .warning
+            alert.runModal()
+            return
+        }
+
+        // Create the config file if it doesn't exist by ensuring the directory setup runs
+        let fileManager = FileManager.default
+        if !fileManager.fileExists(atPath: configPath.path) {
+            // The file will be created when the terminal is first opened
+            // For now, show a helpful message
+            let alert = NSAlert()
+            alert.messageText = "Configuration Not Generated Yet"
+            alert.informativeText = "The terminal configuration file will be created when you first open the built-in terminal. Open the terminal once, then come back here to edit the configuration."
+            alert.alertStyle = .informational
+            alert.runModal()
+            return
+        }
+
+        // Open the config file in the default editor
+        NSWorkspace.shared.open(configPath)
     }
 
     private func addCheckbox(title: String, key: UserDefaults.Keys, defaultValue: Bool = false) {

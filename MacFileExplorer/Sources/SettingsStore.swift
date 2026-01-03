@@ -18,6 +18,18 @@ protocol SettingsStoreDelegate: AnyObject {
     ///   - settingsStore: The SettingsStore instance
     ///   - isVisible: Whether hidden files are now visible
     func settingsStore(_ settingsStore: SettingsStoreProtocol, hiddenFilesStateDidChange isVisible: Bool)
+
+    /// Called when the global folder color changes.
+    func settingsStoreDidUpdateGlobalFolderColor(_ settingsStore: SettingsStoreProtocol)
+
+    /// Called when the show file extensions setting changes.
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, showFileExtensionsDidChange show: Bool)
+
+    /// Called when the easy select setting changes.
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, easySelectDidChange enabled: Bool)
+
+    /// Called when the accent color changes.
+    func settingsStoreDidUpdateAccentColor(_ settingsStore: SettingsStoreProtocol)
 }
 
 /// Centralized type-safe access to application settings.
@@ -105,7 +117,7 @@ final class SettingsStore: SettingsStoreProtocol {
         get { defaults.object(forKey: UserDefaults.Keys.showFileExtensions.rawValue) as? Bool ?? true }
         set { 
             defaults.set(newValue, forKey: UserDefaults.Keys.showFileExtensions.rawValue)
-            postSettingsChangeNotification()
+            notifyDelegates { $0.settingsStore(self, showFileExtensionsDidChange: newValue) }
         }
     }
 
@@ -113,9 +125,8 @@ final class SettingsStore: SettingsStoreProtocol {
     /// Default: `false`
     var useGrayscaleIcons: Bool {
         get { defaults.bool(forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue) }
-        set { 
+        set {
             defaults.set(newValue, forKey: UserDefaults.Keys.useGrayscaleIcons.rawValue)
-            postSettingsChangeNotification()
         }
     }
     
@@ -125,7 +136,6 @@ final class SettingsStore: SettingsStoreProtocol {
         get { defaults.bool(forKey: UserDefaults.Keys.useGrayscaleWindowControls.rawValue) }
         set {
             defaults.set(newValue, forKey: UserDefaults.Keys.useGrayscaleWindowControls.rawValue)
-            postSettingsChangeNotification()
         }
     }
     
@@ -140,7 +150,10 @@ final class SettingsStore: SettingsStoreProtocol {
     /// Default: `false`
     var enableEasySelect: Bool {
         get { defaults.bool(forKey: UserDefaults.Keys.enableEasySelect.rawValue) }
-        set { defaults.set(newValue, forKey: UserDefaults.Keys.enableEasySelect.rawValue) }
+        set { 
+            defaults.set(newValue, forKey: UserDefaults.Keys.enableEasySelect.rawValue)
+             notifyDelegates { $0.settingsStore(self, easySelectDidChange: newValue) }
+        }
     }
     
     /// Startup folder path. If nil, uses default behavior.
@@ -154,7 +167,10 @@ final class SettingsStore: SettingsStoreProtocol {
     /// Key: UserDefaults.Keys.accentColor
     var accentColor: Data? {
         get { defaults.data(forKey: UserDefaults.Keys.accentColor.rawValue) }
-        set { defaults.set(newValue, forKey: UserDefaults.Keys.accentColor.rawValue) }
+        set { 
+            defaults.set(newValue, forKey: UserDefaults.Keys.accentColor.rawValue)
+            notifyDelegates { $0.settingsStoreDidUpdateAccentColor(self) }
+        }
     }
 
     // MARK: - Preview Pane Settings
@@ -168,8 +184,6 @@ final class SettingsStore: SettingsStoreProtocol {
             notifyDelegates { delegate in
                 delegate.settingsStore(self, previewPaneVisibilityDidChange: newValue)
             }
-            // Keep notification for backward compatibility during transition period
-            NotificationCenter.default.post(name: .previewPaneToggled, object: nil)
         }
     }
     
@@ -286,7 +300,7 @@ final class SettingsStore: SettingsStoreProtocol {
     }
 
     // MARK: - Terminal Settings
-    
+
     /// Whether to open terminal by default.
     /// Default: `false`
     var openTerminalByDefault: Bool {
@@ -673,7 +687,6 @@ final class SettingsStore: SettingsStoreProtocol {
             notifyDelegates { delegate in
                 delegate.settingsStore(self, hiddenFilesStateDidChange: newValue)
             }
-            postSettingsChangeNotification()
         }
     }
 
@@ -769,7 +782,7 @@ final class SettingsStore: SettingsStoreProtocol {
         get { defaults.data(forKey: UserDefaults.Keys.globalFolderColor.rawValue) }
         set { 
             defaults.set(newValue, forKey: UserDefaults.Keys.globalFolderColor.rawValue)
-            NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+            notifyDelegates { $0.settingsStoreDidUpdateGlobalFolderColor(self) }
         }
     }
 
@@ -779,7 +792,7 @@ final class SettingsStore: SettingsStoreProtocol {
         get { defaults.string(forKey: UserDefaults.Keys.globalFolderColor.rawValue) }
         set { 
             defaults.set(newValue, forKey: UserDefaults.Keys.globalFolderColor.rawValue) 
-            NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+            notifyDelegates { $0.settingsStoreDidUpdateGlobalFolderColor(self) }
         }
     }
     
@@ -789,7 +802,7 @@ final class SettingsStore: SettingsStoreProtocol {
         get { defaults.dictionary(forKey: "GlobalFolderColors") as? [String: String] ?? [:] }
         set { 
             defaults.set(newValue, forKey: "GlobalFolderColors") 
-            NotificationCenter.default.post(name: .globalFolderColorDidChangeNotification, object: nil)
+            notifyDelegates { $0.settingsStoreDidUpdateGlobalFolderColor(self) }
         }
     }
 
@@ -819,7 +832,6 @@ final class SettingsStore: SettingsStoreProtocol {
         for key in UserDefaults.Keys.allCases {
             defaults.removeObject(forKey: key.rawValue)
         }
-        postSettingsChangeNotification()
     }
 
     // MARK: - Compatibility Helpers
@@ -836,12 +848,8 @@ final class SettingsStore: SettingsStoreProtocol {
         defaults.set(value, forKey: key)
     }
 
+    
     func removeValue(forKey key: String) {
         defaults.removeObject(forKey: key)
-    }
-    
-    /// Posts a notification that settings have changed.
-    private func postSettingsChangeNotification() {
-        NotificationCenter.default.post(name: .settingsDidChange, object: nil)
     }
 }

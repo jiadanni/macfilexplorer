@@ -68,7 +68,7 @@ class FileBrowserZoomCoordinator: NSObject {
         updateSlider()
         
         guard let delegate = delegate else { return }
-        delegate.updateViewForZoomLevel()
+        delegate.updateZoomDisplay()
     }
     
     /// Adjusts zoom level by specified amount.

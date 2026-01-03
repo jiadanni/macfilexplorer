@@ -113,22 +113,6 @@ extension UserDefaults {
         case showStartOnLaunch = "showStartOnLaunch"       // Bool - show Start tab on launch
         case dismissedWelcome = "dismissedWelcome"         // Bool - user dismissed welcome widget
 
-        static var allCases: [Keys] {
-            [
-                .warnOnExtensionChange, .enableEasySelect, .restoreTabsOnReopen, .showFavorites, .showRecents,
-                .showLocations, .sidebarOrder, .openTerminalByDefault, .showContextMenuHotkeys, .hideOpenWith,
-                .hideGetInfo, .hideCopy, .hideCut, .hidePaste, .hideRename, .hideMoveToTrash, .hideNewFolder,
-                .hideShowInFinder, .expandSidebarToCurrentDirectory, .showStatusBar, .autoRenameOnConflict,
-                .deleteWithBackspaceOnly, .confirmFileOperations, .showOperationProgress, .showBackForwardButtons,
-                .showViewModeButton, .showHiddenFilesButton, .showSplitButtons, .showPreviewPaneButton,
-                .showNewFolderButton, .showSortButton, .showStorageAnalyzerButton, .showOpenTerminalButton, .columnVisibility, .openSettingsInTab,
-                .folderSortPreferences, .hiddenFilesState, .defaultViewMode, .defaultSortColumn, .defaultSortAscending,
-                .maximumPanes, .showFolderSizes, .showGoHome, .showGoDesktop, .showGoDocuments, .showGoDownloads,
-                .showGoApplications, .showGoUtilities, .showGoLibrary, .showGoComputer, .showGoAirDrop, .showGoNetwork,
-                .showGoiCloudDrive, .showGoRecent, .showGoConnectToServer, .previewPaneWidth, .grantedDirectoriesPaths,
-                .grantedDirectoryBookmarks, .grantedDirectoryBookmarksMigrated, .hasLaunchedBefore,
-                .hasCompletedOnboarding, .showStartOnLaunch, .dismissedWelcome,
-            ]
-        }
+        // Use synthesized CaseIterable allCases for completeness.
     }
 }

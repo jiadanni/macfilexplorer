@@ -210,7 +210,7 @@ class StorageOverviewWidgetView: StartWidgetView {
         let totalSize: Int64
     }
 
-    private func getDiskStorageInfo() -> StorageInfo {
+    private nonisolated func getDiskStorageInfo() -> StorageInfo {
         let fileManager = FileManager.default
         let homeURL = fileManager.homeDirectoryForCurrentUser
 
@@ -247,7 +247,7 @@ class StorageOverviewWidgetView: StartWidgetView {
         }
     }
 
-    private func estimateStorageCategories(totalUsed: Int64) -> [StorageCategory] {
+    private nonisolated func estimateStorageCategories(totalUsed: Int64) -> [StorageCategory] {
         // Calculate actual sizes for major directories
         let fileManager = FileManager.default
         let homeURL = fileManager.homeDirectoryForCurrentUser
@@ -283,7 +283,7 @@ class StorageOverviewWidgetView: StartWidgetView {
         return categories.filter { $0.size > 0 }
     }
 
-    private func calculateDirectorySize(_ url: URL) -> Int64 {
+    private nonisolated func calculateDirectorySize(_ url: URL) -> Int64 {
         let fileManager = FileManager.default
         var totalSize: Int64 = 0
 
@@ -330,7 +330,7 @@ class StorageOverviewWidgetView: StartWidgetView {
         return totalSize
     }
 
-    private func formatBytes(_ bytes: Int64) -> String {
+    private nonisolated func formatBytes(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         formatter.allowedUnits = [.useGB, .useTB]

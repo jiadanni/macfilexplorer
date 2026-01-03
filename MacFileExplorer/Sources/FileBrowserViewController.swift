@@ -58,8 +58,6 @@ extension FileBrowserViewController {
 }
 
 // Cancellation token reference type
-}
-
 final class CancellationToken {
     private let lock = DispatchSemaphore(value: 1)
     private var _isCancelled = false
@@ -67,7 +65,7 @@ final class CancellationToken {
     func cancel() { lock.wait(); _isCancelled = true; lock.signal() }
 }
 
-class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureRecognizerDelegate, QLPreviewPanelDataSource, QLPreviewPanelDelegate, StatusBarDelegate, ToolbarDelegate, NSOutlineViewDelegate, NSOutlineViewDataSource, FileBrowserPreviewPaneObserver, HiddenFilesVisibilityObserver {
+class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureRecognizerDelegate, QLPreviewPanelDataSource, QLPreviewPanelDelegate, StatusBarDelegate, NSOutlineViewDelegate, NSOutlineViewDataSource, FileBrowserPreviewPaneObserver, HiddenFilesVisibilityObserver, SettingsStoreDelegate {
 
     weak var delegate: FileBrowserDelegate?
     
@@ -143,8 +141,15 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     // Controllers for focused responsibilities
     lazy var displayController = FileBrowserDisplayController(viewController: self)
     lazy var uiSetupController = FileBrowserUISetupController(viewController: self)
+    lazy var contextMenuProvider: FileBrowserContextMenuProvider = {
+        let provider = FileBrowserContextMenuProvider(settings: settings)
+        provider.delegate = self
+        return provider
+    }()
+    lazy var dragDropHandler: FileBrowserDragDropHandler = {
+        return FileBrowserDragDropHandler(delegate: self)
+    }()
     
-
     // Zoom & Layout
     var zoomLevel: Double = 1.0
     var isFreeFormEnabled: Bool = true
@@ -244,12 +249,12 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         
         // Setup coordinators
         zoomCoordinator.delegate = self
-        
-        // Setup preview pane coordinator as observer
-        previewPaneCoordinator.observer = self
-        
-        // Setup hidden files coordinator as observer
-        hiddenFilesCoordinator.observer = self
+
+        // Setup preview pane coordinator delegate
+        previewPaneCoordinator.delegate = self
+
+        // Setup hidden files coordinator delegate
+        hiddenFilesCoordinator.delegate = self
         
         // Load default view & sort (search remains nil)
         currentViewMode = settings.defaultViewMode
@@ -263,22 +268,13 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         filterCoordinator.delegate = self
         filterCoordinator.initialize()
         filterCriteria = filterCoordinator.getFilterCriteria()
-
-        NotificationCenter.default.addObserver(forName: .globalFolderColorDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.refreshCurrentDirectory()
-        }
-        NotificationCenter.default.addObserver(forName: .showFileExtensionsDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.refreshCurrentDirectory()
-        }
-        NotificationCenter.default.addObserver(forName: .easySelectDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            self?.refreshCurrentDirectory()
-        }
+        
+        // Register as delegate
+        settings.addDelegate(self)
     }
 
     deinit {
-        NotificationCenter.default.removeObserver(self, name: .globalFolderColorDidChangeNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .showFileExtensionsDidChangeNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: .easySelectDidChangeNotification, object: nil)
+        settings.removeDelegate(self)
     }
 
     override func loadView() {
@@ -388,8 +384,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             settings.columnVisibility = columnVisibility
         }
         applyColumnVisibility(columnVisibility)
-        outlineView.headerView?.menu = createHeaderColumnsMenu()
-        outlineView.menu = createContextMenu()
+        outlineView.headerView?.menu = contextMenuProvider.createColumnVisibilityMenu(columns: outlineView.tableColumns)
+        outlineView.menu = contextMenuProvider.createContextMenu()
         
         // Display initial view mode
         viewModeCoordinator.displayFiles(for: currentViewMode)
@@ -398,6 +394,26 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         // Update toolbar display
         toolbarViewController?.updateViewModeDisplay(for: currentViewMode)
         toolbarViewController?.updateSortDisplay(column: sortColumn, ascending: sortAscending)
+    }
+
+    func applyColumnVisibility(_ visibility: [String: Bool]) {
+        for column in outlineView.tableColumns {
+            let id = column.identifier.rawValue
+            if id == AppConfig.ColumnID.name {
+                column.isHidden = false
+                continue
+            }
+            let shouldShow = visibility[id] ?? true
+            column.isHidden = !shouldShow
+        }
+    }
+
+    func createContextMenu() -> NSMenu {
+        return contextMenuProvider.createContextMenu()
+    }
+
+    func createHeaderColumnsMenu() -> NSMenu {
+        return contextMenuProvider.createColumnVisibilityMenu(columns: outlineView.tableColumns)
     }
 
     private func setupToolbar() {
@@ -584,17 +600,6 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         dataSource.reload()
     }
 
-    // Sorting and Filtering now delegated to DataSource
-    func sortItems() {
-        // No-op or trigger datasource
-        // Delegated to dataSource properties which auto-sort
-    }
-
-    func applySearchFilter() {
-        // No-op or trigger datasource
-        // Delegated to dataSource properties
-    }
-
     private func toggleQuickLook() {
         if QLPreviewPanel.shared()?.isVisible == true {
             QLPreviewPanel.shared()?.orderOut(nil)
@@ -628,7 +633,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         showBanner(message: message, style: .error)
     }
 
-    @objc private func outlineViewDoubleClicked(_ sender: Any) {
+    @objc func outlineViewDoubleClicked(_ sender: Any) {
         let clickedRow = outlineView.clickedRow
         guard clickedRow >= 0 else { return }
         
@@ -652,6 +657,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
     func toggleHiddenFilesState() {
         toolbarDidToggleHiddenFiles(show: !showsHiddenFiles)
+    }
+
+    func showsHiddenFilesState() {
+        toggleHiddenFilesState()
     }
 
     func isShowingHiddenFiles() -> Bool {
@@ -684,12 +693,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     // MARK: - Public Actions
 
     func cutSelection() {
-        let items = selectionCoordinator.selectedItems()
         contextMenuCut(self)
     }
 
     func copySelection() {
-        let items = selectionCoordinator.selectedItems()
         contextMenuCopy(self)
     }
 
@@ -704,7 +711,6 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     func toggleFreeFormPositioning() {
         zoomCoordinator.toggleFreeFormPositioning()
     }
-
 }
 
 // MARK: - NSOutlineView delegate/dataSource moved to FileBrowserViewController+Outline.swift
@@ -730,7 +736,8 @@ extension FileBrowserViewController {
 extension FileBrowserViewController: FileBrowserZoomCoordinatorDelegate {
     func updateZoomDisplay() {
         // Update UI to reflect zoom changes
-        toolbarViewController?.updateZoomDisplay(level: zoomLevel)
+        // Zoom display is handled via collection view layout updates
+        displayController.updateCollectionViewForZoom()
     }
     
     func refreshViews() {
@@ -742,9 +749,7 @@ extension FileBrowserViewController: FileBrowserZoomCoordinatorDelegate {
 
 extension FileBrowserViewController: FileBrowserDataSourceDelegate {
     func dataSource(_ dataSource: FileBrowserDataSource, didLoadItems items: [FileItem]) {
-        // Data loaded, update UI
-        sortItems() // Sort happens in data source mostly, but update checks UI state
-        applySearchFilter() // UI filter logic might still be needed if not fully moved?
+        // Data loaded, update UI. Filtering and sorting are handled by the data source.
         // Actually, dataSource handles sort/filter on its data.
         // But we need to update the views.
         
@@ -774,6 +779,33 @@ extension FileBrowserViewController: FileBrowserDataSourceDelegate {
 }
 
 // MARK: - Filter Delegate Support
+// MARK: - SettingsStoreDelegate
+extension FileBrowserViewController {
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, previewPaneVisibilityDidChange isVisible: Bool) {
+        // Handled by previewPaneCoordinator mostly, but if we need direct action:
+        // previewPaneCoordinator updates itself via its own logic if it observes, 
+        // OR we manually trigger.
+        // Current logic: previewPaneCoordinator is the SSOT for this VC. 
+        // If external change happens, we should update our coordinator.
+        previewPaneCoordinator.setPreviewPaneVisible(isVisible)
+    }
+    
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, hiddenFilesStateDidChange isVisible: Bool) {
+        hiddenFilesCoordinator.setVisibility(isVisible)
+    }
+    
+    func settingsStoreDidUpdateGlobalFolderColor(_ settingsStore: SettingsStoreProtocol) {
+        refreshCurrentDirectory()
+    }
+    
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, showFileExtensionsDidChange show: Bool) {
+        refreshCurrentDirectory()
+    }
+    
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, easySelectDidChange enabled: Bool) {
+        refreshCurrentDirectory()
+    }
+}
 
 extension FileBrowserViewController: FileBrowserFilterDelegate {
     var filterPanel: FilterPanelViewController! {
@@ -791,7 +823,9 @@ extension FileBrowserViewController: FileBrowserFilterDelegate {
     }
 
     func reloadBrowserData() {
-        refreshCurrentDirectory()
+        // In-memory filtering is handled automatically via setFilterCriteria.
+        // If we want to force a disk reload for some reason, we'd call refreshCurrentDirectory here.
+        // For now, let the DataSource auto-apply filters non-destructively.
     }
 
     func setFilterCriteria(_ criteria: FilterCriteria) {
@@ -801,7 +835,7 @@ extension FileBrowserViewController: FileBrowserFilterDelegate {
 
 // MARK: - FileBrowserPreviewPaneObserver
 
-extension FileBrowserViewController: FileBrowserPreviewPaneObserver {
+extension FileBrowserViewController {
     /// Called when preview pane visibility changes
     func previewPaneVisibilityDidChange(_ isVisible: Bool) {
         // Update toolbar to reflect current state
@@ -823,12 +857,79 @@ extension FileBrowserViewController: FileBrowserPreviewPaneObserver {
 
 // MARK: - HiddenFilesVisibilityObserver
 
-extension FileBrowserViewController: HiddenFilesVisibilityObserver {
+extension FileBrowserViewController {
     func hiddenFilesVisibilityDidChange(isVisible: Bool) {
         // Update dataSource to trigger reload
         dataSource.showsHiddenFiles = isVisible
         
         // Update toolbar to reflect current state
         toolbarViewController?.updateHiddenFilesDisplay(showing: isVisible)
+    }
+}
+
+// MARK: - FileBrowserContextMenuDelegate
+extension FileBrowserViewController: FileBrowserContextMenuDelegate {
+    func getSelectedItems() -> [FileItem] {
+        return selectionCoordinator.selectedItems()
+    }
+
+    func getAllFolders() -> [URL] {
+        // Return potentially relevant folders for move/copy
+        return [FileManager.default.homeDirectoryForCurrentUser]
+    }
+
+    func refreshDirectory() {
+        refreshCurrentDirectory()
+    }
+
+    func openFile(_ url: URL, withApplication: URL?) {
+        if let appURL = withApplication {
+            FileBrowserActionHelper.openFile(url, withApplication: appURL)
+        } else {
+            FileBrowserActionHelper.openFile(url)
+        }
+    }
+
+    func openInNewTab(url: URL) {
+        delegate?.openInNewTab(url: url)
+    }
+
+    func addToFavorites(item: FileItem) {
+        delegate?.fileBrowserDidRequestAddToFavorites(self, item: item)
+    }
+
+    func openInTerminal() {
+        delegate?.toolbarDidRequestOpenInTerminal(from: self)
+    }
+
+    func closePane() {
+        delegate?.fileBrowserDidRequestClosePane(self)
+    }
+
+    func getOutlineView() -> NSOutlineView? {
+        return outlineView
+    }
+
+    func getView() -> NSView {
+        return view
+    }
+}
+
+// MARK: - FileBrowserDragDropDelegate
+extension FileBrowserViewController: FileBrowserDragDropDelegate {
+    func performFileOperation(_ operation: FileOperationType, items: [URL], destination: URL?, sourcePane: FileBrowserViewController?) {
+        self.performFileOperation(operation, items: items, destination: destination, sourcePane: sourcePane)
+    }
+    
+    func isValidDestination(_ destination: URL, for urls: [URL]) -> Bool {
+        return self.isValidDestination(destination, for: urls)
+    }
+    
+    func preferredDragOperation(from info: NSDraggingInfo) -> FileOperationType? {
+        return self.preferredDragOperation(from: info)
+    }
+    
+    func dragSourceFileBrowser(from info: NSDraggingInfo) -> FileBrowserViewController? {
+        return self.dragSourceFileBrowser(from: info)
     }
 }

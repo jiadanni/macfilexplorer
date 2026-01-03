@@ -34,12 +34,12 @@ extension FileBrowserViewController: NSCollectionViewDataSource {
 extension FileBrowserViewController: NSCollectionViewDelegate {
     func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
         notifyPaneBecameActive()
-        selectionCoordinator.handleCollectionSelectionDidChange()
+        _ = selectionCoordinator.handleCollectionSelectionDidChange()
     }
 
     func collectionView(_ collectionView: NSCollectionView, didDeselectItemsAt indexPaths: Set<IndexPath>) {
         notifyPaneBecameActive()
-        selectionCoordinator.handleCollectionSelectionDidChange()
+        _ = selectionCoordinator.handleCollectionSelectionDidChange()
     }
 
 
@@ -56,39 +56,14 @@ extension FileBrowserViewController: NSCollectionViewDelegate {
     }
 
     func collectionView(_ collectionView: NSCollectionView, validateDrop draggingInfo: NSDraggingInfo, proposedIndexPath: AutoreleasingUnsafeMutablePointer<NSIndexPath>, dropOperation: UnsafeMutablePointer<NSCollectionView.DropOperation>) -> NSDragOperation {
-        guard let urls = draggingInfo.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else { return [] }
-
         let items = collectionItems()
-        let destinationURL: URL
-        if dropOperation.pointee == .on {
-            guard let item = items.safe(at: proposedIndexPath.pointee.item) else { return [] }
-            guard item.isDirectory else { return [] }
-            destinationURL = item.url
-        } else {
-            destinationURL = currentDirectory
-        }
-
-        guard isValidDestination(destinationURL, for: urls) else { return [] }
-        guard let op = preferredDragOperation(from: draggingInfo) else { return [] }
-        return op == .copy ? .copy : .move
+        let targetItem = dropOperation.pointee == .on ? items.safe(at: proposedIndexPath.pointee.item) : nil
+        return dragDropHandler.validateDrop(draggingInfo, proposedTarget: targetItem)
     }
 
     func collectionView(_ collectionView: NSCollectionView, acceptDrop draggingInfo: NSDraggingInfo, indexPath: IndexPath, dropOperation: NSCollectionView.DropOperation) -> Bool {
-        guard let urls = draggingInfo.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else { return false }
         let items = collectionItems()
-
-        let destinationURL: URL
-        if dropOperation == .on {
-            guard let item = items.safe(at: indexPath.item) else { return false }
-            guard item.isDirectory else { return false }
-            destinationURL = item.url
-        } else {
-            destinationURL = currentDirectory
-        }
-
-        guard isValidDestination(destinationURL, for: urls) else { return false }
-        guard let op = preferredDragOperation(from: draggingInfo) else { return false }
-        performFileOperation(op, items: urls, destination: destinationURL, sourcePane: dragSourceFileBrowser(from: draggingInfo))
-        return true
+        let targetItem = dropOperation == .on ? items.safe(at: indexPath.item) : nil
+        return dragDropHandler.acceptDrop(draggingInfo, target: targetItem)
     }
 }

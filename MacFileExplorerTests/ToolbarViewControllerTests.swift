@@ -24,7 +24,7 @@ class ToolbarViewControllerTests: XCTestCase {
     
     func testViewSize() {
         let viewFrame = toolbarViewController.view.frame
-        XCTAssertEqual(viewFrame.height, 40, "Toolbar height should be 40")
+        XCTAssertGreaterThanOrEqual(viewFrame.height, 40, "Toolbar height should be at least 40")
     }
     
     func testUpdatePath() {

@@ -82,7 +82,7 @@ extension FileBrowserViewController: NSBrowserDelegate {
 
     func browser(_ browser: NSBrowser, selectionDidChangeInColumn column: Int) {
         notifyPaneBecameActive()
-        selectionCoordinator.handleBrowserSelectionDidChange(column: column)
+        _ = selectionCoordinator.handleBrowserSelectionDidChange(column: column)
     }
 
     // MARK: - Drag and Drop for Browser View
@@ -99,48 +99,25 @@ extension FileBrowserViewController: NSBrowserDelegate {
     }
 
     func browser(_ browser: NSBrowser, validateDrop info: NSDraggingInfo, proposedItem item: Any?, proposedChildIndex index: Int) -> NSDragOperation {
-        guard info.draggingPasteboard.canReadObject(forClasses: [NSURL.self]) else { return [] }
-
-        let targetDirectoryItem: FileItem?
+        let targetItem: FileItem?
         if let fileItem = item as? FileItem {
-            guard fileItem.isDirectory else { return [] }
-            targetDirectoryItem = fileItem
+            targetItem = fileItem
         } else {
             let proposedColumn = columnIndex(atWindowPoint: info.draggingLocation, in: browser)
-            guard proposedColumn >= 0 else { return [] }
-            targetDirectoryItem = fileItemForColumn(proposedColumn)
+            targetItem = proposedColumn >= 0 ? fileItemForColumn(proposedColumn) : nil
         }
-
-        guard let destinationURL = targetDirectoryItem?.url else { return [] }
-
-        guard let draggedURLs = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else { return [] }
-        guard isValidDestination(destinationURL, for: draggedURLs) else { return [] }
-        guard let op = preferredDragOperation(from: info) else { return [] }
-        return op == .copy ? .copy : .move
+        return dragDropHandler.validateDrop(info, proposedTarget: targetItem)
     }
 
     func browser(_ browser: NSBrowser, acceptDrop info: NSDraggingInfo, item: Any?, childIndex index: Int) -> Bool {
-        guard let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else {
-            return false
-        }
-
-        let targetDirectoryItem: FileItem?
+        let targetItem: FileItem?
         if let fileItem = item as? FileItem {
-            guard fileItem.isDirectory else { return false }
-            targetDirectoryItem = fileItem
+            targetItem = fileItem
         } else {
             let proposedColumn = columnIndex(atWindowPoint: info.draggingLocation, in: browser)
-            guard proposedColumn >= 0 else { return false }
-            targetDirectoryItem = fileItemForColumn(proposedColumn)
+            targetItem = proposedColumn >= 0 ? fileItemForColumn(proposedColumn) : nil
         }
-
-        guard let destinationURL = targetDirectoryItem?.url else { return false }
-
-        guard isValidDestination(destinationURL, for: urls) else { return false }
-        guard let operation = preferredDragOperation(from: info) else { return false }
-
-        performFileOperation(operation, items: urls, destination: destinationURL, sourcePane: dragSourceFileBrowser(from: info))
-        return true
+        return dragDropHandler.acceptDrop(info, target: targetItem)
     }
 }
 
@@ -148,13 +125,13 @@ extension FileBrowserViewController: NSBrowserDelegate {
 
 extension FileBrowserViewController: RootFileBrowserDropDelegate {
     func rootViewPreferredOperation(for info: NSDraggingInfo) -> NSDragOperation {
-        guard let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else { return [] }
-        guard isValidDestination(currentDirectory, for: urls) else { return [] }
-        guard let op = preferredDragOperation(from: info) else { return [] }
-        return op == .copy ? .copy : .move
+        return dragDropHandler.validateDrop(info, proposedTarget: nil)
     }
 
     func rootViewPerformDrop(urls: [URL], operation: FileOperationType, info: NSDraggingInfo) {
-        performFileOperation(operation, items: urls, destination: currentDirectory, sourcePane: dragSourceFileBrowser(from: info))
+        // Since we already have the urls and operation from the delegate callback, 
+        // we can either use the handler or directly call performFileOperation.
+        // But to keep it consistent, let's use the handler's logic.
+        _ = dragDropHandler.acceptDrop(info, target: nil)
     }
 }

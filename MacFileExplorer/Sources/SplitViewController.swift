@@ -17,7 +17,8 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     private let terminalCoordinator = TerminalVisibilityCoordinator()
     private var hasInitializedTabs = false
     private let minimumContentWidth: CGFloat = 320 // keep room for file panes
-    private var isAdjustingSplitPosition = false // prevent recursive position updates
+    private let sidebarMinWidth: CGFloat = 140
+    private let sidebarMaxWidth: CGFloat = 260
     private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
     // Computed property for backward compatibility - reads from coordinator
@@ -38,7 +39,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         splitView.delegate = self
 
         // Create sidebar
-        sidebarViewController = SidebarViewController()
+        sidebarViewController = SidebarViewController(settings: settingsStore)
         sidebarViewController?.delegate = self
         let sidebarItem = NSSplitViewItem(viewController: sidebarViewController!)
         // Determine fixed width (load saved or default)
@@ -46,13 +47,13 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         // Clamp to a compact range so the sidebar never forces a wide window
         let clampedWidth: CGFloat
         if savedWidth > 0 {
-            clampedWidth = CGFloat(min(max(savedWidth, 160), 240))
+            clampedWidth = CGFloat(min(max(savedWidth, sidebarMinWidth), sidebarMaxWidth))
         } else {
             clampedWidth = 200
         }
         let initialWidth: CGFloat = clampedWidth
-        sidebarItem.minimumThickness = 140 // allow narrowing
-        sidebarItem.maximumThickness = 260 // cap width to avoid locking the window but leave room for content
+        sidebarItem.minimumThickness = sidebarMinWidth // allow narrowing
+        sidebarItem.maximumThickness = sidebarMaxWidth // cap width to avoid locking the window but leave room for content
         sidebarItem.holdingPriority = .defaultLow // prefer shrinking the sidebar first
         sidebarItem.canCollapse = false
         addSplitViewItem(sidebarItem)
@@ -85,6 +86,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         // Add content split view to main split view
         let contentItem = NSSplitViewItem(viewController: contentSplitViewController!)
         contentItem.canCollapse = false
+        contentItem.minimumThickness = minimumContentWidth
         addSplitViewItem(contentItem)
 
         // Apply initial divider position to honor fixed width
@@ -234,26 +236,12 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         // Persist sidebar width only when the main split view (sidebar + content) resizes.
         guard notification.object as? NSSplitView === splitView else { return }
         guard splitViewItems.count > 0 else { return }
-        guard !isAdjustingSplitPosition else { return } // prevent recursive calls
-        
         guard let firstItem = splitViewItems.safe(at: 0) else { return }
         let currentWidth = firstItem.viewController.view.frame.width
-        let adjustedWidth = adjustedSidebarWidth(proposed: currentWidth)
-        
-        // Only adjust if the difference is significant and would improve layout
-        if abs(currentWidth - adjustedWidth) > 1.0 {
-            isAdjustingSplitPosition = true
-            // Defer to avoid constraint conflicts during active layout
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.splitView.setPosition(adjustedWidth, ofDividerAt: 0)
-                self.isAdjustingSplitPosition = false
-            }
-        }
-        
+
         // Persist width for next launch
         if currentWidth > 120 {
-            let clampedWidth = max(140.0, min(currentWidth, 240.0))
+            let clampedWidth = max(sidebarMinWidth, min(currentWidth, sidebarMaxWidth))
             settingsStore.sidebarFixedWidth = Double(clampedWidth)
         }
     }
@@ -261,8 +249,8 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     private func adjustedSidebarWidth(proposed: CGFloat) -> CGFloat {
         // Ensure the content side retains a minimum width
         let totalWidth = splitView.frame.width
-        let maxAllowed = max(140.0, min(260.0, totalWidth - minimumContentWidth))
-        let minAllowed: CGFloat = 140.0
+        let maxAllowed = max(sidebarMinWidth, min(sidebarMaxWidth, totalWidth - minimumContentWidth))
+        let minAllowed: CGFloat = sidebarMinWidth
         let clamped = min(max(proposed, minAllowed), maxAllowed.isFinite ? maxAllowed : proposed)
         return clamped
     }
@@ -344,7 +332,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
 // MARK: - TerminalVisibilityObserver
 
-extension SplitViewController: TerminalVisibilityObserver {
+extension SplitViewController {
     func terminalVisibilityDidChange(isVisible: Bool) {
         // Observer callback when coordinator visibility changes
         // The UI is already updated in setTerminalVisibility()

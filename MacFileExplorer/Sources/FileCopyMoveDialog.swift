@@ -361,10 +361,13 @@ class FileOperation {
         // Calculate total size
         var totalSize: Int64 = 0
         var filesToProcess: [URL] = []
+        var sourceSizes: [URL: Int64] = [:]
 
         for sourceURL in sourceFiles {
+            var sourceSize: Int64 = 0
+
             if let enumerator = fileManager.enumerator(at: sourceURL, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
-                for case let fileURL as URL in enumerator {
+                while let fileURL = enumerator.nextObject() as? URL {
                     let shouldCancel = await control.shouldCancel()
                     if Task.isCancelled || shouldCancel { return }
 
@@ -377,13 +380,28 @@ class FileOperation {
                     do {
                         let resourceValues = try fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
                         if let isDirectory = resourceValues.isDirectory, !isDirectory {
-                            totalSize += Int64(resourceValues.fileSize ?? 0)
+                            let fileSize = Int64(resourceValues.fileSize ?? 0)
+                            totalSize += fileSize
+                            sourceSize += fileSize
                         }
                     } catch {
                         debugLog("Error getting file size: \(error)")
                     }
                 }
+            } else {
+                do {
+                    let resourceValues = try sourceURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
+                    if resourceValues.isDirectory != true {
+                        let fileSize = Int64(resourceValues.fileSize ?? 0)
+                        totalSize += fileSize
+                        sourceSize += fileSize
+                        filesToProcess.append(sourceURL)
+                    }
+                } catch {
+                    debugLog("Error getting file size: \(error)")
+                }
             }
+            sourceSizes[sourceURL] = sourceSize
         }
 
         delegate?.fileOperationDidStart(totalBytes: totalSize, fileCount: filesToProcess.count)
@@ -409,30 +427,26 @@ class FileOperation {
                 if SettingsStore.shared.autoRenameOnConflict {
                     finalDestination = generateUniqueURL(for: destinationURL)
                 } else {
-                    // Show conflict dialog (simplified for now)
                     delegate?.fileOperationDidFail(error: "File '\(fileName)' already exists at destination")
                     return
                 }
             }
 
             do {
-                if type == .copy {
-                    try fileManager.copyItem(at: sourceURL, to: finalDestination)
-                } else {
+                if type == .move && isOnSameVolume(sourceURL, destination) {
+                    // Fast atomic move on same volume
                     try fileManager.moveItem(at: sourceURL, to: finalDestination)
+                    bytesProcessed += sourceSizes[sourceURL] ?? 0
+                    delegate?.fileOperationDidProgress(currentFile: fileName, bytesProcessed: bytesProcessed, totalBytes: totalSize)
+                } else {
+                    // Copy (or cross-volume move) - handle recursively for progress
+                    try await processRecursively(at: sourceURL, to: finalDestination, totalSize: totalSize, bytesProcessed: &bytesProcessed)
+                    
+                    if type == .move {
+                        // If it was a cross-volume move, we copied it. Now delete source.
+                        try fileManager.removeItem(at: sourceURL)
+                    }
                 }
-
-                // Update progress
-                if let attributes = try? fileManager.attributesOfItem(atPath: sourceURL.path),
-                   let fileSize = attributes[.size] as? Int64 {
-                    bytesProcessed += fileSize
-                }
-
-                delegate?.fileOperationDidProgress(
-                    currentFile: fileName,
-                    bytesProcessed: bytesProcessed,
-                    totalBytes: totalSize
-                )
             } catch {
                 delegate?.fileOperationDidFail(error: "Failed to \(type == .copy ? "copy" : "move") '\(fileName)': \(error.localizedDescription)")
                 return
@@ -440,6 +454,97 @@ class FileOperation {
         }
 
         delegate?.fileOperationDidComplete()
+    }
+
+    private func isOnSameVolume(_ url1: URL, _ url2: URL) -> Bool {
+        do {
+            let v1 = try url1.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier
+            let v2 = try url2.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier
+            return v1?.isEqual(v2) ?? false
+        } catch {
+            return false
+        }
+    }
+
+    private func processRecursively(at source: URL, to destination: URL, totalSize: Int64, bytesProcessed: inout Int64) async throws {
+        let fileManager = FileManager.default
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: source.path, isDirectory: &isDirectory) else { return }
+
+        if isDirectory.boolValue {
+            try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+            let contents = try fileManager.contentsOfDirectory(at: source, includingPropertiesForKeys: nil)
+            for item in contents {
+                let shouldCancel = await control.shouldCancel()
+                if Task.isCancelled || shouldCancel { return }
+                await control.waitIfPaused()
+
+                let itemName = item.lastPathComponent
+                let itemDestination = destination.appendingPathComponent(itemName)
+                try await processRecursively(at: item, to: itemDestination, totalSize: totalSize, bytesProcessed: &bytesProcessed)
+            }
+            
+            // Copy directory attributes after contents are processed
+            let attributes = try fileManager.attributesOfItem(atPath: source.path)
+            try fileManager.setAttributes(attributes, ofItemAtPath: destination.path)
+        } else {
+            try await chunkedCopy(from: source, to: destination, totalSize: totalSize, bytesProcessed: &bytesProcessed)
+        }
+    }
+
+    private func chunkedCopy(from source: URL, to destination: URL, totalSize: Int64, bytesProcessed: inout Int64) async throws {
+        let fileManager = FileManager.default
+        let fileName = source.lastPathComponent
+        
+        guard let inputStream = InputStream(url: source) else {
+            throw NSError(domain: "FileOperation", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to open source file for reading"])
+        }
+        guard let outputStream = OutputStream(url: destination, append: false) else {
+            throw NSError(domain: "FileOperation", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to open destination file for writing"])
+        }
+
+        inputStream.open()
+        outputStream.open()
+        defer {
+            inputStream.close()
+            outputStream.close()
+        }
+
+        let bufferSize = 1024 * 1024 // 1MB buffer
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+
+        while inputStream.hasBytesAvailable {
+            let shouldCancel = await control.shouldCancel()
+            if Task.isCancelled || shouldCancel { 
+                try? fileManager.removeItem(at: destination) // Cleanup partial file
+                return 
+            }
+            await control.waitIfPaused()
+
+            let bytesRead = inputStream.read(buffer, maxLength: bufferSize)
+            if bytesRead < 0 {
+                throw inputStream.streamError ?? NSError(domain: "FileOperation", code: 3, userInfo: [NSLocalizedDescriptionKey: "Read error"])
+            } else if bytesRead == 0 {
+                break
+            }
+
+            var bytesWrittenTotal = 0
+            while bytesWrittenTotal < bytesRead {
+                let bytesWritten = outputStream.write(buffer.advanced(by: bytesWrittenTotal), maxLength: bytesRead - bytesWrittenTotal)
+                if bytesWritten < 0 {
+                    throw outputStream.streamError ?? NSError(domain: "FileOperation", code: 4, userInfo: [NSLocalizedDescriptionKey: "Write error"])
+                }
+                bytesWrittenTotal += bytesWritten
+            }
+
+            bytesProcessed += Int64(bytesRead)
+            delegate?.fileOperationDidProgress(currentFile: fileName, bytesProcessed: bytesProcessed, totalBytes: totalSize)
+        }
+        
+        // Copy file attributes
+        let attributes = try fileManager.attributesOfItem(atPath: source.path)
+        try fileManager.setAttributes(attributes, ofItemAtPath: destination.path)
     }
 
     private func generateUniqueURL(for url: URL) -> URL {

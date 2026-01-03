@@ -286,7 +286,7 @@ class StorageAnalyzerEngine {
 
         var childItems: [StorageItem] = []
 
-        for case let fileURL as URL in enumerator {
+        while let fileURL = enumerator.nextObject() as? URL {
             // Check for cancellation
             if await control.shouldCancel() { return }
 

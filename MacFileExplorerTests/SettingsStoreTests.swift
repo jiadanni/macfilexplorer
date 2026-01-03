@@ -12,20 +12,25 @@ class SettingsStoreTests: XCTestCase {
     
     var settingsStore: SettingsStore!
     var testDefaults: UserDefaults!
+    var testSuiteName: String!
     
     override func setUpWithError() throws {
         try super.setUpWithError()
         
         // Create a test UserDefaults suite to avoid polluting user preferences
-        testDefaults = UserDefaults(suiteName: "com.macfileexplorer.tests.\(UUID().uuidString)")!
+        testSuiteName = "com.macfileexplorer.tests.\(UUID().uuidString)"
+        testDefaults = UserDefaults(suiteName: testSuiteName)!
         settingsStore = SettingsStore(defaults: testDefaults)
     }
     
     override func tearDownWithError() throws {
         // Clean up test suite
-        testDefaults.removePersistentDomain(forName: testDefaults.persistentDomainNames().first ?? "")
+        if let suiteName = testSuiteName {
+            testDefaults.removePersistentDomain(forName: suiteName)
+        }
         settingsStore = nil
         testDefaults = nil
+        testSuiteName = nil
         
         try super.tearDownWithError()
     }

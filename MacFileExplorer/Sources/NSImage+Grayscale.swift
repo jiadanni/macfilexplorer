@@ -20,11 +20,4 @@ extension NSImage {
     }
 }
 
-extension NSImage {
-    static func mfeSymbol(named name: String, accessibilityDescription: String?) -> NSImage? {
-        if #available(macOS 11.0, *) {
-            return NSImage(systemSymbolName: name, accessibilityDescription: accessibilityDescription)
-        }
-        return nil
-    }
-}
+// Symbol helpers live in NSImage+Symbols.swift

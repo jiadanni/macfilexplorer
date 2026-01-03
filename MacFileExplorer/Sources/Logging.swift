@@ -17,6 +17,15 @@ private func sanitizeLogMessage(_ message: String) -> String {
     sanitizePath(message)
 }
 
+/// Measure the execution time of a block of code (for profiling)
+func measureTime<T>(_ label: String, block: () -> T) -> T {
+    let start = CFAbsoluteTimeGetCurrent()
+    let result = block()
+    let diff = CFAbsoluteTimeGetCurrent() - start
+    debugLog("⏱️ \(label) took \(String(format: "%.4f", diff))s")
+    return result
+}
+
 /// Safe localized comparison helper.
 /// Use this instead of direct localizedStandardCompare calls.
 extension String {

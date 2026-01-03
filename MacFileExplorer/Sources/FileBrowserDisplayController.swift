@@ -158,7 +158,7 @@ final class FileBrowserDisplayController {
             layout = flowLayout
         } else {
             // Grid layout for Icons mode
-            if vc.settings.freeFormIconPositioning {
+            if vc.isFreeFormEnabled {
                 let freeFormLayout = FreeFormCollectionViewLayout()
                 vc.freeFormLayout = freeFormLayout
                 layout = freeFormLayout

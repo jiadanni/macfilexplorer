@@ -111,8 +111,12 @@ class FileBrowserDataSourceTests: XCTestCase {
     
     func testSortColumn_ByName_Ascending() {
         // Given
+        let expectation = expectation(description: "Data loaded")
+        mockDelegate.onDataLoaded = { _ in
+            expectation.fulfill()
+        }
         sut.navigate(to: tempDirectory)
-        Thread.sleep(forTimeInterval: 0.5)
+        wait(for: [expectation], timeout: 2.0)
         
         // When
         sut.sortColumn = AppConfig.ColumnID.name
@@ -130,8 +134,12 @@ class FileBrowserDataSourceTests: XCTestCase {
     
     func testSortColumn_ByName_Descending() {
         // Given
+        let expectation = expectation(description: "Data loaded")
+        mockDelegate.onDataLoaded = { _ in
+            expectation.fulfill()
+        }
         sut.navigate(to: tempDirectory)
-        Thread.sleep(forTimeInterval: 0.5)
+        wait(for: [expectation], timeout: 2.0)
         
         // When
         sut.sortColumn = AppConfig.ColumnID.name
@@ -149,8 +157,12 @@ class FileBrowserDataSourceTests: XCTestCase {
     
     func testSortColumn_BySize() {
         // Given
+        let expectation = expectation(description: "Data loaded")
+        mockDelegate.onDataLoaded = { _ in
+            expectation.fulfill()
+        }
         sut.navigate(to: tempDirectory)
-        Thread.sleep(forTimeInterval: 0.5)
+        wait(for: [expectation], timeout: 2.0)
         
         // When
         sut.sortColumn = AppConfig.ColumnID.size

@@ -111,29 +111,10 @@ extension FileBrowserViewController {
 
 extension FileBrowserViewController {
     func outlineView(_ outlineView: NSOutlineView, validateDrop info: NSDraggingInfo, proposedItem item: Any?, proposedChildIndex index: Int) -> NSDragOperation {
-        guard let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else { return [] }
-        let destinationURL: URL
-        if let fileItem = item as? FileItem {
-            destinationURL = fileItem.isDirectory ? fileItem.url : currentDirectory
-        } else {
-            destinationURL = currentDirectory
-        }
-        guard isValidDestination(destinationURL, for: urls) else { return [] }
-        guard let op = preferredDragOperation(from: info) else { return [] }
-        return op == .copy ? .copy : .move
+        return dragDropHandler.validateDrop(info, proposedTarget: item as? FileItem)
     }
 
     func outlineView(_ outlineView: NSOutlineView, acceptDrop info: NSDraggingInfo, item: Any?, childIndex index: Int) -> Bool {
-        guard let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else { return false }
-        let destinationURL: URL
-        if let fileItem = item as? FileItem {
-            destinationURL = fileItem.isDirectory ? fileItem.url : currentDirectory
-        } else {
-            destinationURL = currentDirectory
-        }
-        guard isValidDestination(destinationURL, for: urls) else { return false }
-        guard let op = preferredDragOperation(from: info) else { return false }
-        performFileOperation(op, items: urls, destination: destinationURL, sourcePane: dragSourceFileBrowser(from: info))
-        return true
+        return dragDropHandler.acceptDrop(info, target: item as? FileItem)
     }
 }

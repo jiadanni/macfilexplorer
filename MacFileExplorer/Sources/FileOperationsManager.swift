@@ -42,8 +42,8 @@ final class FileOperationsManager {
     
     // MARK: - Drag & Drop Helpers
     
-    func preferredDragOperation(from info: NSDraggingInfo) -> FileOperationType? {
-        let osModifierFlags = NSApp.currentEvent?.modifierFlags ?? []
+    func preferredDragOperation(from info: NSDraggingInfo, modifierFlags: NSEvent.ModifierFlags = NSApp.currentEvent?.modifierFlags ?? []) -> FileOperationType? {
+        let osModifierFlags = modifierFlags
         let sourceMask = info.draggingSourceOperationMask
 
         if osModifierFlags.contains(.option), sourceMask.contains(.copy) {
@@ -120,7 +120,7 @@ final class FileOperationsManager {
                             self.delegate?.fileOperationsManager(self, didRequestPresentError: "Failed to move '\(sourceURL.lastPathComponent)' to Trash: \(error.localizedDescription)")
                         }
                     }
-                } else if var targetURL = targetURL {
+                } else if let targetURL = targetURL {
                     // Handle name conflicts atomically via operation error handling
                     // Prevent TOCTOU race: let FileManager report the error, then auto-rename if enabled
                     var finalURL = targetURL

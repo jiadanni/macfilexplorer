@@ -24,7 +24,15 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
         }
     }
 
-    var isListMode: Bool = false // Set to true for Windows List view
+    var isListMode: Bool = false { // Set to true for Windows List view
+        didSet {
+            guard isListMode != oldValue else { return }
+            if myImageView == nil {
+                setupUI()
+            }
+            updateLayoutConstraints()
+        }
+    }
     var zoomLevel: Double = 1.0 {
         didSet {
             // Ensure UI is set up before updating constraints

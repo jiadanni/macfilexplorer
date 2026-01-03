@@ -27,12 +27,14 @@
 		48AEEAF8A9128BB5AA25BBD4 /* FileBrowserFilterCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF96240872576DF225D9F467 /* FileBrowserFilterCoordinator.swift */; };
 		506B430CAE9F7E198C97F816 /* FileBrowserPreviewPaneCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6110C5F50B85CF313E260BD2 /* FileBrowserPreviewPaneCoordinator.swift */; };
 		6031BD53EF224E56A641B0B0 /* FileBrowserActionHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9128C20CD205ABF8E7FD423E /* FileBrowserActionHelper.swift */; };
+		TERM0001000000000000001A /* TerminalVisibilityCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = TERM0002000000000000001A /* TerminalVisibilityCoordinator.swift */; };
+		DISP0001000000000000001A /* FileBrowserDisplayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DISP0002000000000000001A /* FileBrowserDisplayController.swift */; };
+		USET0001000000000000001A /* FileBrowserUISetupController.swift in Sources */ = {isa = PBXBuildFile; fileRef = USET0002000000000000001A /* FileBrowserUISetupController.swift */; };
 		617E78C00A3B9EE92A79BE33 /* PermissionsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25571C2C8395C0D079C08C7 /* PermissionsManager.swift */; };
 		633148A0C6271F6FEE429180 /* PendingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9410711140846533B4EE97F /* PendingSettings.swift */; };
 		6992E55E368F7549A680630D /* FileBrowserViewController+FileOperations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0178878CFF509ED4D5E67486 /* FileBrowserViewController+FileOperations.swift */; };
 		6A472FB704FA4AC7BD1C3BA4 /* StorageScopeSelectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06050E7A60B4D73BE112E7F /* StorageScopeSelectionViewController.swift */; };
 		6D7342074ECD4C96B27AE074 /* FavoritesWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FBDDCAF9FC944D889F88AB7 /* FavoritesWidgetView.swift */; };
-		6D84E2546FAF6984AEA3C9FB /* FileBrowserViewController+ContextMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 283DE3E4357893F39FBD4D84 /* FileBrowserViewController+ContextMenu.swift */; };
 		6D8D80F0C9991F4A409135FB /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD773D7538AD3464BF8857A1 /* AppConfig.swift */; };
 		6DC2FE305F52F910D0039BF1 /* GoMenuSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7D3C8D1A946CD6030946240 /* GoMenuSettingsViewController.swift */; };
 		731ADAEB562AE887A6B1E8B0 /* NSColor+CustomAccentColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1FADE6425CA28DEED521D3 /* NSColor+CustomAccentColor.swift */; };
@@ -65,6 +67,7 @@
 		AA0000170000000000000001 /* FileSystemMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000180000000000000001 /* FileSystemMonitor.swift */; };
 		AA0000190000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000200000000000000001 /* Assets.xcassets */; };
 		AA0000210000000000000001 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = AA0000220000000000000001 /* MainMenu.xib */; };
+		TERMRC01000000000000001 /* default-terminal.zshrc in Resources */ = {isa = PBXBuildFile; fileRef = TERMRC02000000000000001 /* default-terminal.zshrc */; };
 		AA0000300000000000000001 /* SidebarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000310000000000000001 /* SidebarViewController.swift */; };
 		AA0000330000000000000001 /* ToolbarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000320000000000000001 /* ToolbarViewController.swift */; };
 		AA0000340000000000000001 /* SplitPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000350000000000000001 /* SplitPaneViewController.swift */; };
@@ -80,6 +83,7 @@
 		AACA7BD52B81536725519668 /* FileBrowserViewController+Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7059AB63FC0A8FFE8457DD23 /* FileBrowserViewController+Collection.swift */; };
 		AF0B1C2D3E4F567890123457 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0B1C2D3E4F567890123456 /* Atomic.swift */; };
 		AF0B1C2D3E4F567890123459 /* NSImage+Grayscale.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0B1C2D3E4F567890123458 /* NSImage+Grayscale.swift */; };
+		AF0B1C2D3E4F567890123461 /* NSImage+Symbols.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0B1C2D3E4F567890123460 /* NSImage+Symbols.swift */; };
 		B456E33B145DA24A6D1A1CF6 /* FileBrowserViewController+Outline.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2717543BED9FDD152C6B430 /* FileBrowserViewController+Outline.swift */; };
 		B463D291D24015C3949708E5 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4F42A041AC2EE71E4CDDECBC /* Localizable.strings */; };
 		BA3148F27927A4CD8F8172BE /* FileBrowserViewController+NavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C7B9208F6406E999DE8AF15 /* FileBrowserViewController+NavigationCoordinator.swift */; };
@@ -109,6 +113,8 @@
 		FB1A2B3C4D5E6F708192A1B5 /* FileBrowserDataSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB1A2B3C4D5E6F708192A1B4 /* FileBrowserDataSource.swift */; };
 		FF86E3A1B6CE2AAA0B02587F /* FileBrowserViewController+Toolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2ED3BB0F2CB38E1F542348E /* FileBrowserViewController+Toolbar.swift */; };
 		NAV0001000200030004000501 /* NavigationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = NAV0001000200030004000500 /* NavigationManager.swift */; };
+		HID0001000200030004000501 /* HiddenFilesVisibilityCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = HID0001000200030004000500 /* HiddenFilesVisibilityCoordinator.swift */; };
+		ARR0001000200030004000501 /* Array+Safe.swift in Sources */ = {isa = PBXBuildFile; fileRef = ARR0001000200030004000500 /* Array+Safe.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -123,7 +129,6 @@
 		1F46AEEDB309A87AEB40CEBE /* FileBrowserNavigationCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserNavigationCoordinator.swift; sourceTree = "<group>"; };
 		1F74C22C3ADD41E2A27FBABA /* ContextualPermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextualPermissionManager.swift; sourceTree = "<group>"; };
 		1FBDDCAF9FC944D889F88AB7 /* FavoritesWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesWidgetView.swift; sourceTree = "<group>"; };
-		283DE3E4357893F39FBD4D84 /* FileBrowserViewController+ContextMenu.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "FileBrowserViewController+ContextMenu.swift"; sourceTree = "<group>"; };
 		293673BC82851580CDC5ACFD /* FileBrowserViewController+StatusBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "FileBrowserViewController+StatusBar.swift"; sourceTree = "<group>"; };
 		2EE3071256D14F848904E873 /* StorageProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageProgressViewController.swift; sourceTree = "<group>"; };
 		313C281B1524A427D6E39CD0 /* GeneralSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsViewController.swift; sourceTree = "<group>"; };
@@ -150,6 +155,9 @@
 		8A1B2C3D4E5F678901234568 /* TabButtonContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabButtonContainerView.swift; sourceTree = "<group>"; };
 		8A5505188B08D8F3F27C23A0 /* FileBrowserViewController+SelectionCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = "FileBrowserViewController+SelectionCoordinator.swift"; sourceTree = "<group>"; };
 		9128C20CD205ABF8E7FD423E /* FileBrowserActionHelper.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserActionHelper.swift; sourceTree = "<group>"; };
+		TERM0002000000000000001A /* TerminalVisibilityCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalVisibilityCoordinator.swift; sourceTree = "<group>"; };
+		DISP0002000000000000001A /* FileBrowserDisplayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowserDisplayController.swift; sourceTree = "<group>"; };
+		USET0002000000000000001A /* FileBrowserUISetupController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowserUISetupController.swift; sourceTree = "<group>"; };
 		92FD942D5BA469E7FE8943C0 /* PermissionsSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsSettingsViewController.swift; sourceTree = "<group>"; };
 		972207DF39678B36C030424E /* FileBrowserViewController+Columns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FileBrowserViewController+Columns.swift"; sourceTree = "<group>"; };
 		9CA5260DDE46454E997823C4 /* WelcomeWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeWidgetView.swift; sourceTree = "<group>"; };
@@ -171,6 +179,7 @@
 		AA0000180000000000000001 /* FileSystemMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSystemMonitor.swift; sourceTree = "<group>"; };
 		AA0000200000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA0000220000000000000001 /* MainMenu.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = MainMenu.xib; sourceTree = "<group>"; };
+		TERMRC02000000000000001 /* default-terminal.zshrc */ = {isa = PBXFileReference; lastKnownFileType = text; path = "default-terminal.zshrc"; sourceTree = "<group>"; };
 		AA0000230000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0000240000000000000001 /* MacFileExplorer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacFileExplorer.entitlements; sourceTree = "<group>"; };
 		AA0000310000000000000001 /* SidebarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarViewController.swift; sourceTree = "<group>"; };
@@ -187,6 +196,7 @@
 		ABBBCC2BFE824B9CB573D557 /* StorageOverviewWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageOverviewWidgetView.swift; sourceTree = "<group>"; };
 		AF0B1C2D3E4F567890123456 /* Atomic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Atomic.swift; sourceTree = "<group>"; };
 		AF0B1C2D3E4F567890123458 /* NSImage+Grayscale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSImage+Grayscale.swift"; sourceTree = "<group>"; };
+		AF0B1C2D3E4F567890123460 /* NSImage+Symbols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSImage+Symbols.swift"; sourceTree = "<group>"; };
 		AF7A16206E1A5FEA62C81C3F /* TerminalSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSettingsViewController.swift; sourceTree = "<group>"; };
 		B091D0A463D4F89E7966E313 /* AppearanceSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsViewController.swift; sourceTree = "<group>"; };
 		B1FFE03C491D474790704210 /* GettingStartedWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GettingStartedWidgetView.swift; sourceTree = "<group>"; };
@@ -217,6 +227,8 @@
 		FB1A2B3C4D5E6F708192A1B4 /* FileBrowserDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowserDataSource.swift; sourceTree = "<group>"; };
 		FF2910B7DB83FCFDA7B22D6B /* FileBrowserSelectionCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowserSelectionCoordinator.swift; sourceTree = "<group>"; };
 		NAV0001000200030004000500 /* NavigationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationManager.swift; sourceTree = "<group>"; };
+		HID0001000200030004000500 /* HiddenFilesVisibilityCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MacFileExplorer/Sources/HiddenFilesVisibilityCoordinator.swift"; sourceTree = SOURCE_ROOT; };
+		ARR0001000200030004000500 /* Array+Safe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "MacFileExplorer/Sources/Array+Safe.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -336,6 +348,7 @@
 				08B971B3759F927A8101D61E /* AccentColorControls.swift */,
 				AF0B1C2D3E4F567890123456 /* Atomic.swift */,
 				AF0B1C2D3E4F567890123458 /* NSImage+Grayscale.swift */,
+				AF0B1C2D3E4F567890123460 /* NSImage+Symbols.swift */,
 				533E45BA233E6BBAE045936E /* Logging.swift */,
 				DB1234567890ABCDEFFEDCBA /* FileBrowserSelectionManager.swift */,
 				DC1234567890ABCDEFFEDCBA /* SettingsStore.swift */,
@@ -349,12 +362,14 @@
 				DF96240872576DF225D9F467 /* FileBrowserFilterCoordinator.swift */,
 				1F46AEEDB309A87AEB40CEBE /* FileBrowserNavigationCoordinator.swift */,
 				FF2910B7DB83FCFDA7B22D6B /* FileBrowserSelectionCoordinator.swift */,
+				TERM0002000000000000001A /* TerminalVisibilityCoordinator.swift */,
+				DISP0002000000000000001A /* FileBrowserDisplayController.swift */,
+				USET0002000000000000001A /* FileBrowserUISetupController.swift */,
 				CD773D7538AD3464BF8857A1 /* AppConfig.swift */,
 				CD25000CB3988F34F6C2DB32 /* SettingsStoreProtocol.swift */,
 				37016D72CD8E53ED39337E9B /* KeychainStore.swift */,
 				1C7B9208F6406E999DE8AF15 /* FileBrowserViewController+NavigationCoordinator.swift */,
 				8A5505188B08D8F3F27C23A0 /* FileBrowserViewController+SelectionCoordinator.swift */,
-				283DE3E4357893F39FBD4D84 /* FileBrowserViewController+ContextMenu.swift */,
 				0178878CFF509ED4D5E67486 /* FileBrowserViewController+FileOperations.swift */,
 				B2ED3BB0F2CB38E1F542348E /* FileBrowserViewController+Toolbar.swift */,
 				293673BC82851580CDC5ACFD /* FileBrowserViewController+StatusBar.swift */,
@@ -367,6 +382,7 @@
 			children = (
 				AA0000200000000000000001 /* Assets.xcassets */,
 				AA0000220000000000000001 /* MainMenu.xib */,
+				TERMRC02000000000000001 /* default-terminal.zshrc */,
 				16F13AFA7D36527FAC1CEC06 /* Help */,
 				3D612BCE865A633DAA120BBC /* en.lproj */,
 			);
@@ -450,6 +466,7 @@
 			files = (
 				AA0000190000000000000001 /* Assets.xcassets in Resources */,
 				AA0000210000000000000001 /* MainMenu.xib in Resources */,
+				TERMRC01000000000000001 /* default-terminal.zshrc in Resources */,
 				922DA356552FC1D24A4C899D /* Help in Resources */,
 				B463D291D24015C3949708E5 /* Localizable.strings in Resources */,
 			);
@@ -535,11 +552,14 @@
 				774DEAE20156EAD3D3E020FD /* AccentColorControls.swift in Sources */,
 				AF0B1C2D3E4F567890123457 /* Atomic.swift in Sources */,
 				AF0B1C2D3E4F567890123459 /* NSImage+Grayscale.swift in Sources */,
+				AF0B1C2D3E4F567890123461 /* NSImage+Symbols.swift in Sources */,
 				921129CF103EA5C95631022D /* Logging.swift in Sources */,
 				9FFFEEEEDDCCBBAA99887766 /* FileBrowserSelectionManager.swift in Sources */,
 				FB1A2B3C4D5E6F708192A1B5 /* FileBrowserDataSource.swift in Sources */,
 				F0B10C20D30E40F50A60B70D /* FileOperationsManager.swift in Sources */,
 				NAV0001000200030004000501 /* NavigationManager.swift in Sources */,
+				HID0001000200030004000501 /* HiddenFilesVisibilityCoordinator.swift in Sources */,
+				ARR0001000200030004000501 /* Array+Safe.swift in Sources */,
 				9FFFEEEEDDCCBBAA99887767 /* SettingsStore.swift in Sources */,
 				C4F1E8A3831726DD68683ABE /* L10n.swift in Sources */,
 				6031BD53EF224E56A641B0B0 /* FileBrowserActionHelper.swift in Sources */,
@@ -551,12 +571,14 @@
 				48AEEAF8A9128BB5AA25BBD4 /* FileBrowserFilterCoordinator.swift in Sources */,
 				CBDEDEC686D96E5691A0455A /* FileBrowserNavigationCoordinator.swift in Sources */,
 				91130CC2E27F90734BB97986 /* FileBrowserSelectionCoordinator.swift in Sources */,
+				TERM0001000000000000001A /* TerminalVisibilityCoordinator.swift in Sources */,
+				DISP0001000000000000001A /* FileBrowserDisplayController.swift in Sources */,
+				USET0001000000000000001A /* FileBrowserUISetupController.swift in Sources */,
 				6D8D80F0C9991F4A409135FB /* AppConfig.swift in Sources */,
 				C4A6E222371DE7B849D2EA9A /* SettingsStoreProtocol.swift in Sources */,
 				826BA14665778A8DA689673D /* KeychainStore.swift in Sources */,
 				BA3148F27927A4CD8F8172BE /* FileBrowserViewController+NavigationCoordinator.swift in Sources */,
 				38F6969BCD01FB2A180C3952 /* FileBrowserViewController+SelectionCoordinator.swift in Sources */,
-				6D84E2546FAF6984AEA3C9FB /* FileBrowserViewController+ContextMenu.swift in Sources */,
 				6992E55E368F7549A680630D /* FileBrowserViewController+FileOperations.swift in Sources */,
 				FF86E3A1B6CE2AAA0B02587F /* FileBrowserViewController+Toolbar.swift in Sources */,
 				7D7B7A0792D0B2FD9EAD498F /* FileBrowserViewController+StatusBar.swift in Sources */,

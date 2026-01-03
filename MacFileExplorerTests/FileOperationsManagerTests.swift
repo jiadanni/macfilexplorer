@@ -8,7 +8,8 @@ class FileOperationsManagerTests: XCTestCase {
     
     var sut: FileOperationsManager!
     var mockDelegate: MockFileOperationsDelegate!
-    var mockSettings: MockSettingsStore!
+    var settingsStore: SettingsStore!
+    var settingsSuiteName: String!
     var tempDirectory: URL!
     
     override func setUpWithError() throws {
@@ -19,9 +20,12 @@ class FileOperationsManagerTests: XCTestCase {
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
         
-        mockSettings = MockSettingsStore()
+        settingsSuiteName = "com.macfileexplorer.fileoperations.tests.\(UUID().uuidString)"
+        let testDefaults = UserDefaults(suiteName: settingsSuiteName)!
+        testDefaults.removePersistentDomain(forName: settingsSuiteName)
+        settingsStore = SettingsStore(defaults: testDefaults)
         mockDelegate = MockFileOperationsDelegate()
-        sut = FileOperationsManager(delegate: mockDelegate, settings: mockSettings)
+        sut = FileOperationsManager(delegate: mockDelegate, settings: settingsStore)
     }
     
     override func tearDownWithError() throws {
@@ -32,7 +36,12 @@ class FileOperationsManagerTests: XCTestCase {
         
         sut = nil
         mockDelegate = nil
-        mockSettings = nil
+        if let suiteName = settingsSuiteName,
+           let defaults = UserDefaults(suiteName: suiteName) {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        settingsStore = nil
+        settingsSuiteName = nil
         tempDirectory = nil
         
         try super.tearDownWithError()
@@ -107,10 +116,9 @@ class FileOperationsManagerTests: XCTestCase {
         // Given
         let mockDraggingInfo = MockDraggingInfo()
         mockDraggingInfo.mockSourceOperationMask = [.copy, .move]
-        mockDraggingInfo.mockModifierFlags = [.option]
         
         // When
-        let operation = sut.preferredDragOperation(from: mockDraggingInfo)
+        let operation = sut.preferredDragOperation(from: mockDraggingInfo, modifierFlags: [.option])
         
         // Then
         XCTAssertEqual(operation, .copy, "Option key should force copy operation")
@@ -120,10 +128,9 @@ class FileOperationsManagerTests: XCTestCase {
         // Given
         let mockDraggingInfo = MockDraggingInfo()
         mockDraggingInfo.mockSourceOperationMask = [.move, .copy]
-        mockDraggingInfo.mockModifierFlags = []
         
         // When
-        let operation = sut.preferredDragOperation(from: mockDraggingInfo)
+        let operation = sut.preferredDragOperation(from: mockDraggingInfo, modifierFlags: [])
         
         // Then
         XCTAssertEqual(operation, .move, "Default should be move when available")
@@ -133,10 +140,9 @@ class FileOperationsManagerTests: XCTestCase {
         // Given
         let mockDraggingInfo = MockDraggingInfo()
         mockDraggingInfo.mockSourceOperationMask = [.copy]
-        mockDraggingInfo.mockModifierFlags = []
         
         // When
-        let operation = sut.preferredDragOperation(from: mockDraggingInfo)
+        let operation = sut.preferredDragOperation(from: mockDraggingInfo, modifierFlags: [])
         
         // Then
         XCTAssertEqual(operation, .copy, "Should return copy if that's all that's allowed")
@@ -146,10 +152,9 @@ class FileOperationsManagerTests: XCTestCase {
         // Given
         let mockDraggingInfo = MockDraggingInfo()
         mockDraggingInfo.mockSourceOperationMask = []
-        mockDraggingInfo.mockModifierFlags = []
         
         // When
-        let operation = sut.preferredDragOperation(from: mockDraggingInfo)
+        let operation = sut.preferredDragOperation(from: mockDraggingInfo, modifierFlags: [])
         
         // Then
         XCTAssertNil(operation, "Should return nil if no operations allowed")
@@ -159,7 +164,7 @@ class FileOperationsManagerTests: XCTestCase {
     
     func testPerform_WithConfirmationEnabled_ShowsDialog() {
         // Given
-        mockSettings.confirmFileOperations = true
+        settingsStore.confirmFileOperations = true
         let source = tempDirectory.appendingPathComponent("file.txt")
         let destination = tempDirectory.appendingPathComponent("dest", isDirectory: true)
         
@@ -167,13 +172,15 @@ class FileOperationsManagerTests: XCTestCase {
         sut.perform(.copy, items: [source], destination: destination, currentDirectory: tempDirectory)
         
         // Then
-        XCTAssertTrue(mockDelegate.didRequestPresentSheet, "Should show confirmation dialog")
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.1))
+        let hasSheet = mockDelegate.window?.attachedSheet != nil || !(mockDelegate.window?.sheets.isEmpty ?? true)
+        XCTAssertTrue(hasSheet, "Should show confirmation dialog")
     }
     
     func testPerform_WithConfirmationDisabled_ExecutesDirectly() {
         // Given
-        mockSettings.confirmFileOperations = false
-        mockSettings.showOperationProgress = false
+        settingsStore.confirmFileOperations = false
+        settingsStore.showOperationProgress = false
         let source = tempDirectory.appendingPathComponent("file.txt")
         let destination = tempDirectory.appendingPathComponent("dest", isDirectory: true)
         
@@ -225,29 +232,13 @@ class MockFileOperationsDelegate: FileOperationsManagerDelegate {
     }
 }
 
-class MockDraggingInfo: NSDraggingInfo {
+final class MockDraggingInfo: NSObject, NSDraggingInfo {
     var mockSourceOperationMask: NSDragOperation = []
-    var mockModifierFlags: NSEvent.ModifierFlags = []
     
     var draggingSourceOperationMask: NSDragOperation {
         return mockSourceOperationMask
     }
-    
-    override var currentEvent: NSEvent? {
-        let event = NSEvent.otherEvent(
-            with: .applicationDefined,
-            location: .zero,
-            modifierFlags: mockModifierFlags,
-            timestamp: 0,
-            windowNumber: 0,
-            context: nil,
-            subtype: 0,
-            data1: 0,
-            data2: 0
-        )
-        return event
-    }
-    
+
     // Required protocol implementations (stubbed)
     var draggingDestinationWindow: NSWindow? { nil }
     var draggingSequenceNumber: Int { 0 }
@@ -258,14 +249,13 @@ class MockDraggingInfo: NSDraggingInfo {
     var draggingSource: Any? { nil }
     
     func slideDraggedImage(to screenPoint: NSPoint) {}
-    func namesOfPromisedFilesDropped(atDestination dropDestination: URL) -> [String]? { nil }
+    override func namesOfPromisedFilesDropped(atDestination dropDestination: URL) -> [String]? { nil }
     
     func enumerateDraggingItems(options enumOpts: NSDraggingItemEnumerationOptions = [], for view: NSView?, classes classArray: [AnyClass], searchOptions: [NSPasteboard.ReadingOptionKey : Any] = [:], using block: (NSDraggingItem, Int, UnsafeMutablePointer<ObjCBool>) -> Void) {}
     
-    var numberOfValidItemsForDrop: Int {
-        get { 0 }
-        set {}
-    }
+    var numberOfValidItemsForDrop: Int = 0
+    var draggingFormation: NSDraggingFormation = .default
+    var animatesToDestination: Bool = false
     
     var springLoadingHighlight: NSSpringLoadingHighlight { .standard }
     func resetSpringLoading() {}

@@ -8,7 +8,6 @@ extension Notification.Name {
     static let showFileExtensionsDidChangeNotification = Notification.Name("showFileExtensionsDidChangeNotification")
     static let easySelectDidChangeNotification = Notification.Name("easySelectDidChangeNotification")
     static let toolbarSettingsDidChangeNotification = Notification.Name("toolbarSettingsDidChangeNotification")
-    static let settingsDidChange = Notification.Name("settingsDidChange")
     static let pendingSettingsDidChange = Notification.Name("pendingSettingsDidChange")
     static let didChangeWindowControlAppearance = Notification.Name("didChangeWindowControlAppearance")
     static let zoomDidChangeNotification = Notification.Name("zoomDidChangeNotification")

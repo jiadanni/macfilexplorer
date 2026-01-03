@@ -74,7 +74,7 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
             return
         }
 
-        let fileBrowser = FileBrowserViewController()
+        let fileBrowser = FileBrowserViewController(settings: settingsStore)
         fileBrowser.delegate = self // SplitPaneViewController is now the FileBrowserDelegate
         panes.append(fileBrowser)
 

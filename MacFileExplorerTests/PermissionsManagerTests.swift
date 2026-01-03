@@ -12,11 +12,20 @@ class PermissionsManagerTests: XCTestCase {
     
     var permissionsManager: PermissionsManager!
     var tempDirectoryURL: URL!
+    private var originalGrantedDirectories: [String] = []
+    private var originalGrantedDirectoryBookmarks: [Data] = []
+    private var originalMigrationFlag: Bool = false
     
     override func setUpWithError() throws {
         try super.setUpWithError()
         
         permissionsManager = PermissionsManager.shared
+        originalGrantedDirectories = SettingsStore.shared.grantedDirectories
+        originalGrantedDirectoryBookmarks = SettingsStore.shared.grantedDirectoryBookmarks
+        originalMigrationFlag = SettingsStore.shared.permissionsMigrationFlag
+        SettingsStore.shared.grantedDirectories = []
+        SettingsStore.shared.grantedDirectoryBookmarks = []
+        SettingsStore.shared.permissionsMigrationFlag = false
         
         // Create temporary directory for testing
         tempDirectoryURL = FileManager.default.temporaryDirectory
@@ -29,6 +38,9 @@ class PermissionsManagerTests: XCTestCase {
         if FileManager.default.fileExists(atPath: tempDirectoryURL.path) {
             try FileManager.default.removeItem(at: tempDirectoryURL)
         }
+        SettingsStore.shared.grantedDirectories = originalGrantedDirectories
+        SettingsStore.shared.grantedDirectoryBookmarks = originalGrantedDirectoryBookmarks
+        SettingsStore.shared.permissionsMigrationFlag = originalMigrationFlag
         
         try super.tearDownWithError()
     }
@@ -42,7 +54,11 @@ class PermissionsManagerTests: XCTestCase {
         
         let grantedDirs = permissionsManager.grantedDirectories()
         XCTAssertEqual(grantedDirs.count, initialCount + 1, "Should have one more granted directory")
-        XCTAssertTrue(grantedDirs.contains(tempDirectoryURL), "Should contain the added directory")
+        let targetPath = tempDirectoryURL.resolvingSymlinksInPath().standardizedFileURL.path
+        let containsGranted = grantedDirs.contains {
+            $0.resolvingSymlinksInPath().standardizedFileURL.path == targetPath
+        }
+        XCTAssertTrue(containsGranted, "Should contain the added directory")
     }
     
     func testRemoveGrantedDirectory() throws {
@@ -165,15 +181,14 @@ class PermissionsManagerTests: XCTestCase {
         XCTAssertNotNil(PermissionStatus.notDetermined.color)
         XCTAssertNotNil(PermissionStatus.notApplicable.color)
         
-        // Verify colors are distinct
+        // Verify explicit status colors are distinct (exclude dynamic system color)
         let colors = [
             PermissionStatus.granted.color,
             PermissionStatus.denied.color,
-            PermissionStatus.notDetermined.color,
-            PermissionStatus.notApplicable.color
+            PermissionStatus.notDetermined.color
         ]
         let uniqueColors = Set(colors.map { "\($0.redComponent),\($0.greenComponent),\($0.blueComponent)" })
-        XCTAssertEqual(uniqueColors.count, 4, "All permission status colors should be distinct")
+        XCTAssertEqual(uniqueColors.count, 3, "Explicit permission status colors should be distinct")
     }
     
     // MARK: - Thread Safety Tests

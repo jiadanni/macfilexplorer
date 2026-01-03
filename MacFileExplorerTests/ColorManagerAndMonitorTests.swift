@@ -9,19 +9,26 @@ import XCTest
 /// - Color conversion and encoding
 class ColorManagerTests: XCTestCase {
     
-    var testDefaults: UserDefaults!
+    private var originalGlobalColorData: Data?
+    private var originalGlobalColorHex: String?
+    private var originalFolderColors: [String: String] = [:]
     
     override func setUpWithError() throws {
         try super.setUpWithError()
         
-        // Create test UserDefaults to avoid polluting user preferences
-        testDefaults = UserDefaults(suiteName: "com.macfileexplorer.colormanager.tests.\(UUID().uuidString)")!
+        originalGlobalColorData = SettingsStore.shared.globalFolderColor
+        originalGlobalColorHex = SettingsStore.shared.globalFolderColorHex
+        originalFolderColors = SettingsStore.shared.folderColors
+        
+        SettingsStore.shared.globalFolderColor = nil
+        SettingsStore.shared.globalFolderColorHex = nil
+        SettingsStore.shared.folderColors = [:]
     }
     
     override func tearDownWithError() throws {
-        // Clean up
-        testDefaults.removePersistentDomain(forName: testDefaults.persistentDomainNames().first ?? "")
-        testDefaults = nil
+        SettingsStore.shared.globalFolderColor = originalGlobalColorData
+        SettingsStore.shared.globalFolderColorHex = originalGlobalColorHex
+        SettingsStore.shared.folderColors = originalFolderColors
         
         try super.tearDownWithError()
     }
@@ -61,21 +68,17 @@ class ColorManagerTests: XCTestCase {
     
     // MARK: - Folder Icon Color Tests
     
-    func testGetFolderIconColorPriority() throws {
-        // Test URL
-        let testURL = URL(fileURLWithPath: "/Users/test/Documents")
+    func testGetFolderColorForFolderName() throws {
+        let folderName = "Documents"
         
-        // 1. Without any colors set, should return nil
-        let noColor = ColorManager.getFolderIconColor(for: testURL)
+        let noColor = ColorManager.shared.getColor(forFolderName: folderName)
         XCTAssertNil(noColor, "Should return nil when no colors are set")
         
-        // 2. With global color set, should return that
-        ColorManager.setGlobalFolderColor(NSColor.red)
-        let globalColor = ColorManager.getFolderIconColor(for: testURL)
-        XCTAssertNotNil(globalColor, "Should return global color when set")
+        ColorManager.shared.setColor(NSColor.red, forFolderName: folderName)
+        let customColor = ColorManager.shared.getColor(forFolderName: folderName)
+        XCTAssertNotNil(customColor, "Should return custom color when set for folder name")
         
-        // Clean up
-        ColorManager.setGlobalFolderColor(nil)
+        ColorManager.shared.removeColor(forFolderName: folderName)
     }
     
     // MARK: - Color Utility Tests
@@ -84,14 +87,10 @@ class ColorManagerTests: XCTestCase {
         let originalColor = NSColor(red: 0.5, green: 0.75, blue: 1.0, alpha: 1.0)
         
         // Convert to hex
-        if let hex = originalColor.hexString {
-            XCTAssertFalse(hex.isEmpty, "Hex string should not be empty")
-            XCTAssertTrue(hex.hasPrefix("#"), "Hex string should start with #")
-            XCTAssertEqual(hex.count, 7, "Hex string should be 7 characters (#RRGGBB)")
-            
-            // Note: ColorManager.getColor(forFolderName:) tests would require
-            // the full color dictionary implementation
-        }
+        let hex = originalColor.hexString
+        XCTAssertFalse(hex.isEmpty, "Hex string should not be empty")
+        XCTAssertTrue(hex.hasPrefix("#"), "Hex string should start with #")
+        XCTAssertEqual(hex.count, 7, "Hex string should be 7 characters (#RRGGBB)")
     }
     
     // MARK: - Thread Safety Tests

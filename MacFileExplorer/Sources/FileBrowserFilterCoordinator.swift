@@ -46,7 +46,7 @@ class FileBrowserFilterCoordinator: NSObject {
     /// Saves current filter criteria to settings.
     private func saveFilterCriteria() {
         guard let delegate = delegate else { return }
-        guard var settingsStore = delegate.settingsStore else { return }
+        guard let settingsStore = delegate.settingsStore else { return }
         
         if let encoded = try? JSONEncoder().encode(currentFilterCriteria) {
             settingsStore.filterCriteriaData = encoded
@@ -64,14 +64,14 @@ class FileBrowserFilterCoordinator: NSObject {
     /// Saves search history to settings.
     private func saveSearchHistory() {
         guard let delegate = delegate else { return }
-        guard var settingsStore = delegate.settingsStore else { return }
+        guard let settingsStore = delegate.settingsStore else { return }
         settingsStore.searchHistory = searchHistory
     }
     
     /// Configures the filter panel with current criteria.
     private func setupFilterPanel() {
         guard let delegate = delegate else { return }
-        guard let filterPanel = delegate.filterPanel else { return }
+        guard delegate.filterPanel != nil else { return }
         
         // Note: FilterPanelViewController is initialized with currentFilter in its init,
         // so this setup method is primarily for future runtime updates if needed.
