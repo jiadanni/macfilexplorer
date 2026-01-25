@@ -16,7 +16,7 @@ cp -r MacFileExplorer/Sources "$TEMP_DIR/"
 cp -r MacFileExplorerTests "$TEMP_DIR/"
 
 # Remove AppDelegate.swift from the library build (it has @main which conflicts with test runner)
-rm "$TEMP_DIR/Sources/AppDelegate.swift"
+rm "$TEMP_DIR/Sources/App/AppDelegate.swift"
 
 cd "$TEMP_DIR"
 
@@ -51,13 +51,13 @@ EOF
 echo "Running tests..."
 echo ""
 
-swift test
+swift test "$@"
 
 TEST_RESULT=$?
 
 # Clean up
 cd -
-rm -rf "$TEMP_DIR"
+# rm -rf "$TEMP_DIR"
 
 echo ""
 if [ $TEST_RESULT -eq 0 ]; then

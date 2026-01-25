@@ -63,7 +63,7 @@ class PreviewPaneViewController: NSViewController {
         titleLabel = NSTextField(labelWithString: "Preview")
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.font = NSFont.boldSystemFont(ofSize: 13)
-        titleLabel.accessibilityIdentifier = "PreviewTitle"
+        titleLabel.setAccessibilityIdentifier("PreviewTitle")
         headerView.addSubview(titleLabel)
 
         closeButton = NSButton()
@@ -160,7 +160,7 @@ class PreviewPaneViewController: NSViewController {
             return
         }
         
-        titleLabel.stringValue = fileItem.displayName
+        titleLabel.stringValue = fileItem.displayName(showExtensions: SettingsStore.shared.showFileExtensions)
         
         // Find handler
         guard let handler = handlers.first(where: { $0.canHandle(fileItem) }) else { return }

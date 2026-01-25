@@ -9,6 +9,7 @@
 package-lock.json
 
 ## Build generated
+docs/
 build/
 DerivedData/
 

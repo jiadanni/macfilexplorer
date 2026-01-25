@@ -25,6 +25,13 @@ We extracted distinct responsibilities from `FileBrowserViewController` into ded
 *   **`FileBrowserSelectionCoordinator`**: Manages file selection state.
 *   **`HiddenFilesVisibilityCoordinator`**: Manages the visibility of hidden files.
 *   **`FileBrowserFilterCoordinator`**: Handles search and filtering logic.
+*   **`FileBrowserOutlineCoordinator`**: Manages `NSOutlineView` data source and delegate logic (List view).
+*   **`FileBrowserCollectionCoordinator`**: Manages `NSCollectionView` logic (Icon and Windows List views).
+*   **`FileBrowserColumnCoordinator`**: Manages `NSBrowser` logic (Column view).
+*   **`FileBrowserInteractionCoordinator`**: Handles click tracking, double-clicks, and delayed renaming.
+*   **`FileBrowserQuickLookCoordinator`**: Manages QuickLook preview panel integration.
+*   **`FileBrowserStatusBarCoordinator`**: Manages status bar updates and zoom controls.
+*   **`FileBrowserDragDropCoordinator`**: Handles root-level drag-and-drop operations.
 
 ### 2. Dependency Injection & SSOT
 *   **`SettingsStoreProtocol`**: Defined a protocol for the settings store to allow dependency injection.

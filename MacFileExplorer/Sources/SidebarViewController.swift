@@ -146,6 +146,7 @@ class SidebarViewController: NSViewController {
 
             let availableHeight = totalHeight - mainDividerThickness - bottomDividerThickness
             let sectionHeight = availableHeight / 3.0
+            _ = sectionHeight // Silencing unused warning as proportional split is currently disabled to allow user resizing
 
             // We only set this initially or if we want to enforce it always (which might fight user resizing)
             // For now, let's leave it as is, or we can check if it's the *first* layout

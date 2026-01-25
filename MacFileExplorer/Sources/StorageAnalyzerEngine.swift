@@ -37,38 +37,25 @@ private actor StorageAnalyzerCache {
 }
 
 private actor ScanControl {
-    private var isCancelled = false
-    private var isPaused = false
     private var waiters: [CheckedContinuation<Void, Never>] = []
 
     func reset() {
-        isCancelled = false
-        isPaused = false
-        resumeAll()
-    }
-
-    func cancel() {
-        isCancelled = true
         resumeAll()
     }
 
     func pause() {
-        isPaused = true
+        // No-op here, state managed by class
     }
 
     func resume() {
-        isPaused = false
         resumeAll()
     }
 
-    func shouldCancel() -> Bool {
-        isCancelled
+    func cancel() {
+        resumeAll()
     }
 
-    func waitIfPaused() async {
-        if isCancelled || !isPaused {
-            return
-        }
+    func wait() async {
         await withCheckedContinuation { continuation in
             waiters.append(continuation)
         }
@@ -89,6 +76,9 @@ class StorageAnalyzerEngine {
 
     private let control = ScanControl()
     private var scanTask: Task<Void, Never>?
+
+    @Atomic private var isCancelled = false
+    @Atomic private var isPaused = false
 
     /// Root URL being scanned
     private(set) var rootURL: URL?
@@ -124,6 +114,8 @@ class StorageAnalyzerEngine {
 
         scanTask = Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
+            self.isCancelled = false
+            self.isPaused = false
             await self.control.reset()
 
             // Check cache first
@@ -141,17 +133,19 @@ class StorageAnalyzerEngine {
 
     /// Cancels the current scan
     func cancel() {
+        isCancelled = true
         scanTask?.cancel()
         Task { await control.cancel() }
     }
 
     /// Pauses the current scan
     func pause() {
-        Task { await control.pause() }
+        isPaused = true
     }
 
     /// Resumes a paused scan
     func resume() {
+        isPaused = false
         Task { await control.resume() }
     }
 
@@ -199,7 +193,7 @@ class StorageAnalyzerEngine {
             try await scanDirectory(item: root, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: 0, visitedPaths: &visitedPaths)
 
             // Check if cancelled
-            if await control.shouldCancel() {
+            if isCancelled {
                 await MainActor.run {
                     self.delegate?.analyzerWasCancelled()
                 }
@@ -230,11 +224,13 @@ class StorageAnalyzerEngine {
 
     private func scanDirectory(item: StorageItem, itemsScanned: inout Int, totalSize: inout Int64, currentDepth: Int = 0, visitedPaths: inout Set<String>) async throws {
         // Check for cancellation
-        if await control.shouldCancel() { return }
+        if isCancelled { return }
 
         // Handle pause
-        await control.waitIfPaused()
-        if await control.shouldCancel() { return }
+        if isPaused {
+            await control.wait()
+        }
+        if isCancelled { return }
 
         // Depth limit to prevent unbounded recursion
         guard currentDepth < options.maxDepth else {
@@ -288,11 +284,13 @@ class StorageAnalyzerEngine {
 
         while let fileURL = enumerator.nextObject() as? URL {
             // Check for cancellation
-            if await control.shouldCancel() { return }
+            if isCancelled { return }
 
             // Handle pause
-            await control.waitIfPaused()
-            if await control.shouldCancel() { return }
+            if isPaused {
+                await control.wait()
+            }
+            if isCancelled { return }
 
             do {
                 let resourceValues = try fileURL.resourceValues(forKeys: Set(keys))

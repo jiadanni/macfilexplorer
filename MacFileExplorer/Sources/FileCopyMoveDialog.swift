@@ -281,9 +281,8 @@ protocol FileOperationDelegate: AnyObject {
 }
 
 private actor FileOperationControl {
-    private var isPaused = false
-    private var isCancelled = false
     private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var isPaused = false
 
     func pause() {
         isPaused = true
@@ -295,27 +294,22 @@ private actor FileOperationControl {
     }
 
     func cancel() {
-        isCancelled = true
         resumeAll()
     }
 
-    func shouldCancel() -> Bool {
-        isCancelled
+    private func resumeAll() {
+        let currentWaiters = waiters
+        waiters.removeAll()
+        for waiter in currentWaiters {
+            waiter.resume()
+        }
     }
 
-    func waitIfPaused() async {
-        if isCancelled || !isPaused {
-            return
-        }
+    func wait() async {
+        if !isPaused { return }
         await withCheckedContinuation { continuation in
             waiters.append(continuation)
         }
-    }
-
-    private func resumeAll() {
-        let pending = waiters
-        waiters.removeAll()
-        pending.forEach { $0.resume() }
     }
 }
 
@@ -328,6 +322,9 @@ class FileOperation {
 
     private let control = FileOperationControl()
     private var operationTask: Task<Void, Never>?
+
+    @Atomic private var isPaused = false
+    @Atomic private var isCancelled = false
 
     init(type: FileCopyMoveDialog.OperationType, sourceFiles: [URL], destination: URL, delegate: FileOperationDelegate?) {
         self.type = type
@@ -343,14 +340,16 @@ class FileOperation {
     }
 
     func pause() {
-        Task { await control.pause() }
+        isPaused = true
     }
 
     func resume() {
+        isPaused = false
         Task { await control.resume() }
     }
 
     func cancel() {
+        isCancelled = true
         operationTask?.cancel()
         Task { await control.cancel() }
     }
@@ -368,15 +367,15 @@ class FileOperation {
 
             if let enumerator = fileManager.enumerator(at: sourceURL, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
                 while let fileURL = enumerator.nextObject() as? URL {
-                    let shouldCancel = await control.shouldCancel()
-                    if Task.isCancelled || shouldCancel { return }
+                    if Task.isCancelled || isCancelled { return }
 
                     filesToProcess.append(fileURL)
 
                     // Get file size
-                    await control.waitIfPaused()
-                    let shouldCancelAfterPause = await control.shouldCancel()
-                    if Task.isCancelled || shouldCancelAfterPause { return }
+                    if isPaused {
+                        await control.wait()
+                    }
+                    if Task.isCancelled || isCancelled { return }
                     do {
                         let resourceValues = try fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
                         if let isDirectory = resourceValues.isDirectory, !isDirectory {
@@ -411,12 +410,12 @@ class FileOperation {
         var bytesProcessed: Int64 = 0
 
         for sourceURL in sourceFiles {
-            let shouldCancel = await control.shouldCancel()
-            if Task.isCancelled || shouldCancel { return }
+            if Task.isCancelled || isCancelled { return }
 
-            await control.waitIfPaused()
-            let shouldCancelAfterPause = await control.shouldCancel()
-            if Task.isCancelled || shouldCancelAfterPause { return }
+            if isPaused {
+                await control.wait()
+            }
+            if Task.isCancelled || isCancelled { return }
 
             let fileName = sourceURL.lastPathComponent
             let destinationURL = destination.appendingPathComponent(fileName)
@@ -475,9 +474,10 @@ class FileOperation {
             try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
             let contents = try fileManager.contentsOfDirectory(at: source, includingPropertiesForKeys: nil)
             for item in contents {
-                let shouldCancel = await control.shouldCancel()
-                if Task.isCancelled || shouldCancel { return }
-                await control.waitIfPaused()
+                if Task.isCancelled || isCancelled { return }
+                if isPaused {
+                    await control.wait()
+                }
 
                 let itemName = item.lastPathComponent
                 let itemDestination = destination.appendingPathComponent(itemName)
@@ -515,12 +515,13 @@ class FileOperation {
         defer { buffer.deallocate() }
 
         while inputStream.hasBytesAvailable {
-            let shouldCancel = await control.shouldCancel()
-            if Task.isCancelled || shouldCancel { 
+            if Task.isCancelled || isCancelled { 
                 try? fileManager.removeItem(at: destination) // Cleanup partial file
                 return 
             }
-            await control.waitIfPaused()
+            if isPaused {
+                await control.wait()
+            }
 
             let bytesRead = inputStream.read(buffer, maxLength: bufferSize)
             if bytesRead < 0 {

@@ -234,6 +234,7 @@ class FileSystemMonitorTests: XCTestCase {
         var localMonitor: FileSystemMonitor? = FileSystemMonitor(url: tempDirectoryURL) {
             expectation.fulfill()
         }
+        _ = localMonitor // Silence unused warning while keeping it for deinit test
         
         // Create a file
         let testFile = tempDirectoryURL.appendingPathComponent("test1.txt")

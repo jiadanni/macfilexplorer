@@ -12,7 +12,7 @@ Connect to Server creates the server in Finder and launches Finder.
 [] app icon
 [] Permissions. 
 [-] Display Folder size in the list view, if possible. 
-[] Google Drive folders are not displayed correctly. 
+[x] Google Drive folders are not displayed correctly. - Fixed: Added support for ~/Google Drive path detection
 
 
 [x] Zoom slider should not be displayed for Application views that are not applicable

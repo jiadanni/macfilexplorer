@@ -65,7 +65,7 @@ class LocationsViewController: NSViewController {
         tableView.menu?.delegate = self
         
         tableView.registerForDraggedTypes([.fileURL])
-        tableView.accessibilityIdentifier = "LocationsTable"
+        tableView.setAccessibilityIdentifier("LocationsTable")
         
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("DrivesColumn"))
         column.width = 180
@@ -93,6 +93,8 @@ class LocationsViewController: NSViewController {
         let workspace = NSWorkspace.shared
         
         driveItems = []
+        
+        // Load mounted volumes
         if let volumeURLs = fileManager.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey, .volumeIsRemovableKey, .volumeIsEjectableKey], options: [.skipHiddenVolumes]) {
             for volumeURL in volumeURLs {
                 do {
@@ -105,6 +107,35 @@ class LocationsViewController: NSViewController {
                 }
             }
         }
+        
+        // Add Google Drive if it exists in home directory (modern default)
+        // This ensures Google Drive appears in sidebar even if not mounted as a volume
+        if let googleDrivePath = AppConfig.GoogleDrive.homeDirectoryPath {
+            if fileManager.fileExists(atPath: googleDrivePath.path) {
+                // Check if Google Drive is already in the list
+                let alreadyListed = driveItems.contains { 
+                    $0.url.path == googleDrivePath.path || 
+                    $0.name.localizedCaseInsensitiveContains("Google Drive")
+                }
+                
+                if !alreadyListed {
+                    let icon = workspace.icon(forFile: googleDrivePath.path)
+                    driveItems.append(SidebarItem(name: "Google Drive", url: googleDrivePath, icon: icon))
+                    debugLog("✅ Added Google Drive to locations: \(googleDrivePath.path)")
+                }
+            }
+        }
+        
+        // Sort items: mounted volumes first, then Google Drive
+        driveItems.sort { item1, item2 in
+            let isGD1 = item1.name.localizedCaseInsensitiveContains("Google Drive")
+            let isGD2 = item2.name.localizedCaseInsensitiveContains("Google Drive")
+            if isGD1 != isGD2 {
+                return !isGD1 // Non-Google Drive items first
+            }
+            return item1.name.localizedCaseInsensitiveCompare(item2.name) == .orderedAscending
+        }
+        
         tableView.reloadData()
     }
     

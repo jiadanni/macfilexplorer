@@ -1,19 +1,19 @@
 import Foundation
 
-/// Observer protocol for hidden files visibility changes
-protocol HiddenFilesVisibilityObserver: AnyObject {
+/// Delegate protocol for hidden files visibility changes
+protocol HiddenFilesVisibilityDelegate: AnyObject {
     func hiddenFilesVisibilityDidChange(isVisible: Bool)
 }
 
 /// Single source of truth for hidden files visibility state.
 /// This coordinator manages hidden files visibility, persists state to SettingsStore,
-/// and notifies observers of visibility changes.
+/// and notifies delegates of visibility changes.
 class HiddenFilesVisibilityCoordinator {
     // MARK: - Properties
 
     private let settingsStore: SettingsStoreProtocol
 
-    weak var observer: HiddenFilesVisibilityObserver?
+    weak var delegate: HiddenFilesVisibilityDelegate?
 
     /// Whether hidden files are currently visible.
     /// Setting this property triggers a SettingsStore update and observer notification.
@@ -21,7 +21,7 @@ class HiddenFilesVisibilityCoordinator {
         didSet {
             if isVisible != oldValue {
                 updateSettingsStore()
-                observer?.hiddenFilesVisibilityDidChange(isVisible: isVisible)
+                delegate?.hiddenFilesVisibilityDidChange(isVisible: isVisible)
             }
         }
     }

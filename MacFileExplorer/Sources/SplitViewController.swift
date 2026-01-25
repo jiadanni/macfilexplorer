@@ -5,7 +5,7 @@ protocol SplitViewControllerDelegate: AnyObject {
     func splitViewController(_ splitViewController: SplitViewController, didUpdateDiskSpace diskSpace: String?)
 }
 
-class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControllerDelegate, TerminalViewControllerDelegate, TerminalVisibilityObserver {
+class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControllerDelegate, TerminalViewControllerDelegate, TerminalVisibilityDelegate, SettingsStoreDelegate {
 
     weak var delegate: SplitViewControllerDelegate?
 
@@ -21,10 +21,13 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     private let sidebarMaxWidth: CGFloat = 260
     private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
-    // Computed property for backward compatibility - reads from coordinator
+    // Single Source of Truth for terminal visibility
     var isTerminalVisible: Bool {
-        return terminalCoordinator.isVisible
+        get { terminalCoordinator.isVisible }
+        set { terminalCoordinator.isVisible = newValue }
     }
+
+    private var shouldAnimateTerminalTransition = true
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -75,7 +78,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         // Create terminal view controller (initially hidden)
         terminalViewController = TerminalViewController()
         terminalViewController?.delegate = self
-        terminalCoordinator.observer = self
+        terminalCoordinator.delegate = self
         terminalSplitItem = NSSplitViewItem(viewController: terminalViewController!)
         terminalSplitItem?.minimumThickness = 150
         terminalSplitItem?.maximumThickness = 500
@@ -95,6 +98,8 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
             let safeWidth = self.adjustedSidebarWidth(proposed: initialWidth)
             self.splitView.setPosition(safeWidth, ofDividerAt: 0)
         }
+        // Register for settings changes
+        settingsStore.addDelegate(self)
     }
 
     override func viewDidAppear() {
@@ -119,9 +124,9 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
             // Restore terminal visibility state from coordinator
             if terminalCoordinator.isVisible {
-                // Restore state without animation to avoid crashes during initial setup
                 Task { @MainActor [weak self] in
-                    self?.setTerminalVisibility(true, animated: false)
+                    self?.shouldAnimateTerminalTransition = false
+                    self?.applyTerminalVisibility(true, animated: false)
                 }
             }
         }
@@ -142,51 +147,47 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
     }
 
     func toggleTerminal() {
-        debugLog("SplitViewController: toggleTerminal called - currentState=\(isTerminalVisible)")
-        setTerminalVisibility(!isTerminalVisible, animated: true)
+        debugLog("SplitViewController: toggleTerminal called - Current State: \(isTerminalVisible)")
+        shouldAnimateTerminalTransition = true
+        terminalCoordinator.toggleTerminal()
     }
 
     func showTerminal(at path: String? = nil) {
-        setTerminalVisibility(true, path: path, animated: true)
+        let url = path.map { URL(fileURLWithPath: $0) }
+        shouldAnimateTerminalTransition = true
+        terminalCoordinator.setVisibility(true, at: url)
     }
 
-    private func setTerminalVisibility(_ visible: Bool, path: String? = nil, animated: Bool = true) {
+    private func applyTerminalVisibility(_ visible: Bool, animated: Bool) {
         guard let terminalSplitItem = terminalSplitItem else { return }
-
-        // Only act if state changes
-        guard terminalCoordinator.isVisible != visible else {
-            if visible {
-                terminalViewController?.focusInput()
-            }
-            return
-        }
-
-        terminalCoordinator.isVisible = visible
+        
         if animated {
-            terminalSplitItem.animator().isCollapsed = !visible
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.25
+                terminalSplitItem.animator().isCollapsed = !visible
+            }, completionHandler: { [weak self] in
+                self?.handleTerminalVisibilityTransitionComplete(visible)
+            })
         } else {
             terminalSplitItem.isCollapsed = !visible
+            handleTerminalVisibilityTransitionComplete(visible)
         }
+    }
 
+    private func handleTerminalVisibilityTransitionComplete(_ visible: Bool) {
         if visible {
-            let targetPath = path ?? tabBarController?.getCurrentPath()
-            if let targetPath {
-                debugLog("  Opening terminal - setting directory to \(targetPath)")
-                terminalViewController?.changeDirectory(to: targetPath)
+            if let targetURL = terminalCoordinator.currentDirectory {
+                debugLog("  Terminal Visible - Setting directory to \(targetURL.path)")
+                terminalViewController?.changeDirectory(to: targetURL.path)
+            } else if let currentPath = tabBarController?.getCurrentPath() {
+                 debugLog("  Terminal Visible - Setting directory to current tab path \(currentPath)")
+                 terminalViewController?.changeDirectory(to: currentPath)
             }
-
-            // Defer focus when not animated to ensure view is fully laid out
-            if animated {
-                terminalViewController?.focusInput()
-            } else {
-                // Use a short main-queue async delay instead of Task.sleep to avoid
-                // depending on suspension/timing and to be more robust across systems.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-                    self?.terminalViewController?.focusInput()
-                }
-            }
+            
+            // Ensure focus
+            terminalViewController?.focusInput()
         } else {
-            debugLog("  Closing terminal - restoring focus to tabBarController.view")
+            debugLog("  Terminal Hidden - Restoring focus")
             view.window?.makeFirstResponder(tabBarController?.view)
         }
     }
@@ -334,9 +335,18 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
 
 extension SplitViewController {
     func terminalVisibilityDidChange(isVisible: Bool) {
-        // Observer callback when coordinator visibility changes
-        // The UI is already updated in setTerminalVisibility()
-        // This extension point allows for future additional handling if needed
-        debugLog("SplitViewController: Terminal visibility changed to \(isVisible)")
+        debugLog("SplitViewController: Terminal visibility SSOT changed to \(isVisible)")
+        applyTerminalVisibility(isVisible, animated: shouldAnimateTerminalTransition)
+    }
+
+    // MARK: - SettingsStoreDelegate
+    
+    func settingsStore(_ settingsStore: SettingsStoreProtocol, terminalVisibilityDidChange isVisible: Bool) {
+        // If the change came from SettingsStore (not our coordinator), update coordinator
+        // The coordinator will then notify us via terminalVisibilityDidChange
+        if terminalCoordinator.isVisible != isVisible {
+            shouldAnimateTerminalTransition = true
+            terminalCoordinator.setVisibility(isVisible)
+        }
     }
 }

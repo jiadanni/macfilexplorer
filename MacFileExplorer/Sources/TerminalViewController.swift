@@ -200,14 +200,10 @@ class TerminalViewController: NSViewController {
             startReadingPTY()
             appendOutput("Shell session started (\(shellPath))\n", color: .green)
             lastSyncedDirectory = currentDirectory
-            // Disable shell-side echo so input isn't duplicated; hide command output via sentinel.
+            // Disable shell-side echo for initial setup to hide setup commands.
             suppressOutputUntilSentinel = true
             writeToShell("stty -echo; printf \"\(sentinelEcho)\\n\"\n")
-            // Trigger prompt display without altering user prompt or shell rc behavior
-            Task { @MainActor [weak self] in
-                try? await Task.sleep(nanoseconds: 50_000_000)
-                self?.writeToShell("\n")
-            }
+            // No extra newline needed here as printf ends with \n and we want to keep it clean.
         } catch {
             appendOutput("Failed to start shell: \(error.localizedDescription)\n", color: .red)
             shellTask = nil
@@ -267,32 +263,45 @@ class TerminalViewController: NSViewController {
     }
 
     private func processOutput(_ output: String) {
-        // Drop any programmatic cd echoes until the sentinel is seen so the UI stays clean
+        // Drop any programmatic echoes until the sentinel is seen so the UI stays clean
         var text = output
+        
         if suppressOutputUntilSentinel {
             if let sentinelRange = text.range(of: sentinelEcho) {
                 suppressOutputUntilSentinel = false
+                
+                // Discard everything in the current buffer up to and including the current line
+                // This ensures the echo of the command itself is completely hidden.
                 let afterSentinel = text[sentinelRange.upperBound...]
-                // If nothing but whitespace follows the sentinel, just refresh the caret and bail.
-                if afterSentinel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if let nextNewline = afterSentinel.firstIndex(of: "\n") {
+                    text = String(afterSentinel[afterSentinel.index(after: nextNewline)...])
+                } else if let nextCR = afterSentinel.firstIndex(of: "\r") {
+                    text = String(afterSentinel[afterSentinel.index(after: nextCR)...])
+                } else {
+                    text = ""
+                }
+                
+                // If nothing meaningful remains, we've successfully swallowed the internal command.
+                if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     promptLocation = textView.string.count
                     textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
                     return
                 }
-                text = String(afterSentinel)
             } else {
+                // Sentinel not found yet in this chunk, discard all to keep UI clean.
                 return
             }
         }
 
-        // Normalize CRLF/CR so carriage returns don't leave ghost prompts in the text view.
-        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        // Normalize carriage returns: CRLF -> LF, standalone CR -> empty (avoids ghost prompts)
+        let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
+                            .replacingOccurrences(of: "\r", with: "")
+        
         let cleaned = stripControlSequences(normalized)
         let filtered = cleaned
             .components(separatedBy: "\n")
             .filter { !$0.contains(sentinelEcho) }
             .joined(separator: "\n")
-            .replacingOccurrences(of: "\\n", with: "\n") // Avoid literal \n noise from stty or prompts
 
         let attributed = parseANSI(filtered)
         if attributed.length > 0 {
@@ -303,8 +312,8 @@ class TerminalViewController: NSViewController {
             promptLocation = textView.string.count
             // Ensure cursor is positioned at the end for user input
             textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
-        } else if suppressOutputUntilSentinel == false {
-            // Even if no text was added, update cursor position (e.g., after sentinel-only output)
+        } else {
+            // Even if no text was added (filtered out), update cursor position
             promptLocation = textView.string.count
             textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
         }
@@ -541,6 +550,23 @@ class TerminalViewController: NSViewController {
 
     // MARK: - Public Methods
 
+    /// Escape a string for safe use in shell commands.
+    /// Escapes all shell metacharacters to prevent command injection.
+    private static func escapeShellArgument(_ arg: String) -> String {
+        // If the string is empty, return empty quotes
+        if arg.isEmpty { return "''" }
+        
+        // Check if string contains any special characters
+        let allowedCharacters = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.~/:@")
+        if arg.unicodeScalars.allSatisfy({ allowedCharacters.contains($0) }) {
+            return arg
+        }
+        
+        // Escape by wrapping in single quotes and replacing single quotes with '\"'\"'
+        // This is the safest approach: close quote, add escaped quote, open quote
+        return "'" + arg.replacingOccurrences(of: "'", with: "'\"'\"'") + "'"
+    }
+
     func changeDirectory(to path: String) {
         if path == lastSyncedDirectory { return }
         lastSyncedDirectory = path
@@ -548,9 +574,9 @@ class TerminalViewController: NSViewController {
         debugLog("TerminalViewController: changeDirectory to \(path)")
         // Send cd command without echoing to the terminal and drop any echoed text until sentinel arrives
         suppressOutputUntilSentinel = true
-        // Escape single quotes in the path for the shell.
-        let escapedPath = path.replacingOccurrences(of: "'", with: "'\"'\"'")
-        let command = "cd '\(escapedPath)' 2>/dev/null; printf \"\(sentinelEcho)\\n\"\n"
+        // Properly escape path for shell execution
+        let escapedPath = Self.escapeShellArgument(path)
+        let command = "cd \(escapedPath) 2>/dev/null; printf \"\(sentinelEcho)\\n\"\n"
         writeToShell(command)
     }
 
@@ -580,7 +606,7 @@ class TerminalViewController: NSViewController {
         updateScrollVisibility()
     }
 
-    @objc private func closeButtonClicked(_ sender: Any) {
+    @objc func closeButtonClicked(_ sender: Any) {
         delegate?.terminalViewControllerDidRequestClose(self)
     }
 

@@ -54,7 +54,7 @@ class FavoritesViewController: NSViewController {
         
         tableView.registerForDraggedTypes([.string, .fileURL])
         tableView.setDraggingSourceOperationMask(.move, forLocal: true)
-        tableView.accessibilityIdentifier = "FavoritesTable"
+        tableView.setAccessibilityIdentifier("FavoritesTable")
         
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("FavoritesColumn"))
         column.width = 180
@@ -124,13 +124,12 @@ class FavoritesViewController: NSViewController {
     
     func saveFavorites() {
         let favoritePaths = favoriteItems.map { $0.url.path }
-        // Use injected settings
-        var mutableSettings = settings
-        mutableSettings.sidebarFavorites = favoritePaths
+        // Update settings directly (already references the same object)
+        settings.sidebarFavorites = favoritePaths
     }
 
              func addFavorite(item: FileItem) {
-        let sidebarItem = SidebarItem(name: item.name, url: item.url, icon: item.icon)
+        let sidebarItem = SidebarItem(name: item.name, url: item.url, icon: item.icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons))
         if !favoriteItems.contains(where: { $0.url == sidebarItem.url }) {
             favoriteItems.append(sidebarItem)
             tableView.reloadData()

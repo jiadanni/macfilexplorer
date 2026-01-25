@@ -4,6 +4,7 @@ import XCTest
 /// Comprehensive test suite for FileBrowserDataSource
 ///
 /// Tests data loading, sorting, filtering, and search functionality
+@MainActor
 class FileBrowserDataSourceTests: XCTestCase {
     
     var sut: FileBrowserDataSource!
@@ -220,22 +221,31 @@ class FileBrowserDataSourceTests: XCTestCase {
     
     func testFilterCriteria_ByFileType() {
         // Given
+        let loadExpectation = expectation(description: "Initial load")
+        mockDelegate.onDataLoaded = { _ in
+            loadExpectation.fulfill()
+        }
         sut.navigate(to: tempDirectory)
-        Thread.sleep(forTimeInterval: 0.5)
+        wait(for: [loadExpectation], timeout: 2.0)
+        
+        // Reset delegate for filter test
+        mockDelegate.onDataLoaded = nil
         
         var criteria = FilterCriteria()
         criteria.fileTypes = ["pdf"]
         
-        let expectation = expectation(description: "Filter applied")
+        let filterExpectation = expectation(description: "Filter applied")
         mockDelegate.onDataLoaded = { items in
-            expectation.fulfill()
+            if items.allSatisfy({ $0.url.pathExtension == "pdf" }) && items.count == 1 {
+                filterExpectation.fulfill()
+            }
         }
         
         // When
         sut.filterCriteria = criteria
         
         // Then
-        wait(for: [expectation], timeout: 2.0)
+        wait(for: [filterExpectation], timeout: 2.0)
         let children = sut.rootItem?.children ?? []
         XCTAssertEqual(children.count, 1, "Should match only .pdf file")
         XCTAssertEqual(children.first?.url.pathExtension, "pdf")

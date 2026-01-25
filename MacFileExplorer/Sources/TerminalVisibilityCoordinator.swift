@@ -1,27 +1,36 @@
 import Foundation
 
-/// Observer protocol for terminal visibility changes
-protocol TerminalVisibilityObserver: AnyObject {
+/// Delegate protocol for terminal visibility changes
+protocol TerminalVisibilityDelegate: AnyObject {
     func terminalVisibilityDidChange(isVisible: Bool)
 }
 
 /// Single source of truth for terminal visibility state.
 /// This coordinator manages terminal visibility, persists state to SettingsStore,
-/// and notifies observers of visibility changes.
+/// and notifies delegates of visibility changes.
 class TerminalVisibilityCoordinator {
     // MARK: - Properties
 
     private let settingsStore: SettingsStoreProtocol
 
-    weak var observer: TerminalVisibilityObserver?
+    weak var delegate: TerminalVisibilityDelegate?
 
     /// Whether the terminal is currently visible.
-    /// Setting this property triggers a SettingsStore update and observer notification.
     var isVisible: Bool {
         didSet {
             if isVisible != oldValue {
                 updateSettingsStore()
-                observer?.terminalVisibilityDidChange(isVisible: isVisible)
+                postNotification()
+                delegate?.terminalVisibilityDidChange(isVisible: isVisible)
+            }
+        }
+    }
+
+    /// The current directory the terminal should be at.
+    var currentDirectory: URL? {
+        didSet {
+            if currentDirectory != oldValue {
+                postNotification()
             }
         }
     }
@@ -32,6 +41,7 @@ class TerminalVisibilityCoordinator {
         self.settingsStore = settingsStore
         // Initialize from persistent settings
         self.isVisible = settingsStore.terminalIsVisible
+        self.currentDirectory = nil
     }
 
     // MARK: - Public Methods
@@ -41,8 +51,11 @@ class TerminalVisibilityCoordinator {
         isVisible = !isVisible
     }
 
-    /// Set terminal visibility to a specific state
-    func setVisibility(_ visible: Bool) {
+    /// Set terminal visibility and optionally a path
+    func setVisibility(_ visible: Bool, at path: URL? = nil) {
+        if let path = path {
+            currentDirectory = path
+        }
         isVisible = visible
     }
 
@@ -50,5 +63,16 @@ class TerminalVisibilityCoordinator {
 
     private func updateSettingsStore() {
         settingsStore.terminalIsVisible = isVisible
+    }
+
+    private func postNotification() {
+        NotificationCenter.default.post(
+            name: NSNotification.Name("TerminalStateDidChange"),
+            object: self,
+            userInfo: [
+                "isVisible": isVisible,
+                "currentDirectory": currentDirectory as Any
+            ]
+        )
     }
 }

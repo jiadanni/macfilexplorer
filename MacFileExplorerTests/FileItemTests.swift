@@ -83,7 +83,7 @@ class FileItemTests: XCTestCase {
     
     func testFileIcon() throws {
         let fileItem = FileItem(url: tempFileURL)
-        XCTAssertNotNil(fileItem.icon, "File should have an icon")
+        XCTAssertNotNil(fileItem.icon(useGrayscale: false), "File should have an icon")
     }
     
     func testFileSize() throws {

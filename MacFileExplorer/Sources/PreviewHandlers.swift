@@ -105,7 +105,6 @@ class ImagePreviewHandler: PreviewHandler {
         guard let imageSource = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         
         let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailOne: true,
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceThumbnailMaxPixelSize: maxDimension
         ]
@@ -219,14 +218,14 @@ class GenericPreviewHandler: PreviewHandler {
         iconNameStack.alignment = .centerY
 
         let iconView = NSImageView()
-        iconView.image = file.icon
+        iconView.image = file.icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons)
         iconView.imageScaling = .scaleProportionallyDown
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.widthAnchor.constraint(equalToConstant: 64).isActive = true
         iconView.heightAnchor.constraint(equalToConstant: 64).isActive = true
         iconNameStack.addArrangedSubview(iconView)
 
-        let nameLabel = NSTextField(labelWithString: file.displayName)
+        let nameLabel = NSTextField(labelWithString: file.displayName(showExtensions: SettingsStore.shared.showFileExtensions))
         nameLabel.font = NSFont.boldSystemFont(ofSize: 14)
         nameLabel.lineBreakMode = .byTruncatingTail
         iconNameStack.addArrangedSubview(nameLabel)

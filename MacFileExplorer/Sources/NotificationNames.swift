@@ -12,6 +12,8 @@ extension Notification.Name {
     static let didChangeWindowControlAppearance = Notification.Name("didChangeWindowControlAppearance")
     static let zoomDidChangeNotification = Notification.Name("zoomDidChangeNotification")
     static let tabDidChangeNotification = Notification.Name("tabDidChangeNotification")
+    static let settingsDidChange = Notification.Name("settingsDidChange")
+    static let previewPaneCloseRequested = Notification.Name("previewPaneCloseRequested")
 }
 
 import Cocoa

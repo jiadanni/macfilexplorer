@@ -262,8 +262,8 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
             setupUI()
         }
 
-        myImageView?.image = fileItem.icon
-        myTextField?.stringValue = fileItem.displayName
+        myImageView?.image = fileItem.icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons)
+        myTextField?.stringValue = fileItem.displayName(showExtensions: SettingsStore.shared.showFileExtensions)
 
         // Apply custom folder color if set
         if fileItem.isDirectory,
@@ -273,7 +273,7 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
             myImageView?.contentTintColor = nil // Reset tint color
         }
 
-        view.setAccessibilityLabel(fileItem.displayName)
+        view.setAccessibilityLabel(fileItem.displayName(showExtensions: SettingsStore.shared.showFileExtensions))
 
         // Apply dimmed appearance for cut files
         if isFileCut(fileItem.url) {
