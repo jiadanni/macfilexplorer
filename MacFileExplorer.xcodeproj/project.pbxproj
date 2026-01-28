@@ -52,6 +52,7 @@
 		705A63EB2E077C705A6F2ABB /* FileBrowserDragDropHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ECCD8AED13C7753EF4D2613 /* FileBrowserDragDropHandler.swift */; };
 		731ADAEB562AE887A6B1E8B0 /* NSColor+CustomAccentColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B1FADE6425CA28DEED521D3 /* NSColor+CustomAccentColor.swift */; };
 		745071C3419A40EA9CE70FBA /* StorageProgressViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EE3071256D14F848904E873 /* StorageProgressViewController.swift */; };
+		756E816CA38B2EE3F1B13E6E /* FileBrowserActionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C08084D0711B04C4A193557 /* FileBrowserActionHandler.swift */; };
 		75E502CAE4064D98B4DC278B /* StartViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8597653ABC94615B0186203 /* StartViewController.swift */; };
 		774DEAE20156EAD3D3E020FD /* AccentColorControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B971B3759F927A8101D61E /* AccentColorControls.swift */; };
 		77F59CBBE25241F78535867F /* GettingStartedWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FFE03C491D474790704210 /* GettingStartedWidgetView.swift */; };
@@ -114,6 +115,7 @@
 		C3E3E8DF3B3B49068B6DD9C8 /* StorageCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A698595D0B4CF89651A85B /* StorageCategory.swift */; };
 		C4A6E222371DE7B849D2EA9A /* SettingsStoreProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD25000CB3988F34F6C2DB32 /* SettingsStoreProtocol.swift */; };
 		C4F1E8A3831726DD68683ABE /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 536E7006B83B9250EEBC9F98 /* L10n.swift */; };
+		CA8A864612DDF0D2C3A1088A /* FileBrowserStateHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33D2DC3BF776FDDF0DB0D2C4 /* FileBrowserStateHandler.swift */; };
 		CBDEDEC686D96E5691A0455A /* FileBrowserNavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F46AEEDB309A87AEB40CEBE /* FileBrowserNavigationCoordinator.swift */; };
 		CCCBA794A1A1D994A87C8115 /* PreviewPaneViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65E9B8A3D560CC7CD32E7587 /* PreviewPaneViewController.swift */; };
 		D1F884BA491944349930279B /* StartDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67FC3670FEF34117B1EA37F4 /* StartDesignSystem.swift */; };
@@ -142,6 +144,7 @@
 		0330B936510D968B8821EE52 /* StorageSettingsViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StorageSettingsViewController.swift; sourceTree = "<group>"; };
 		0375E31551A39394DACA077C /* SettingsUserDefaultsKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Storage/SettingsUserDefaultsKeys.swift; sourceTree = "<group>"; };
 		08B971B3759F927A8101D61E /* AccentColorControls.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccentColorControls.swift; sourceTree = "<group>"; };
+		0C08084D0711B04C4A193557 /* FileBrowserActionHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FileBrowserActionHandler.swift; path = FileBrowser/Handlers/FileBrowserActionHandler.swift; sourceTree = "<group>"; };
 		1398E63F539453FA294B5877 /* BannerNotificationManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = BannerNotificationManager.swift; path = FileBrowser/BannerNotificationManager.swift; sourceTree = "<group>"; };
 		16F13AFA7D36527FAC1CEC06 /* Help */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; path = Help; sourceTree = "<group>"; };
 		1972F8A5DEE3441298641AFC /* StorageListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageListViewController.swift; sourceTree = "<group>"; };
@@ -153,6 +156,7 @@
 		1FBDDCAF9FC944D889F88AB7 /* FavoritesWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesWidgetView.swift; sourceTree = "<group>"; };
 		2EE3071256D14F848904E873 /* StorageProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageProgressViewController.swift; sourceTree = "<group>"; };
 		313C281B1524A427D6E39CD0 /* GeneralSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsViewController.swift; sourceTree = "<group>"; };
+		33D2DC3BF776FDDF0DB0D2C4 /* FileBrowserStateHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FileBrowserStateHandler.swift; path = FileBrowser/Handlers/FileBrowserStateHandler.swift; sourceTree = "<group>"; };
 		37016D72CD8E53ED39337E9B /* KeychainStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Core/Services/KeychainStore.swift; sourceTree = "<group>"; };
 		3CC9FC164EB649DC8E794014 /* QuickActionsWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsWidgetView.swift; sourceTree = "<group>"; };
 		3DF128936A56C674C582D9CD /* TabsSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabsSettingsViewController.swift; sourceTree = "<group>"; };
@@ -433,6 +437,8 @@
 				CD6B737170425A3A6175D91A /* FileBrowserGestureHandler.swift */,
 				FEEEE432A44A5514DCDF043F /* FileBrowserKeyboardHandler.swift */,
 				9369570556C1EF2AB9C150DB /* URLValidation.swift */,
+				33D2DC3BF776FDDF0DB0D2C4 /* FileBrowserStateHandler.swift */,
+				0C08084D0711B04C4A193557 /* FileBrowserActionHandler.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -662,6 +668,8 @@
 				61B6DC462D0767EA0F95884A /* FileBrowserGestureHandler.swift in Sources */,
 				5742F43F233C91EF8BBC5D5F /* FileBrowserKeyboardHandler.swift in Sources */,
 				04290E0E685F8FB6EB5491E2 /* URLValidation.swift in Sources */,
+				CA8A864612DDF0D2C3A1088A /* FileBrowserStateHandler.swift in Sources */,
+				756E816CA38B2EE3F1B13E6E /* FileBrowserActionHandler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

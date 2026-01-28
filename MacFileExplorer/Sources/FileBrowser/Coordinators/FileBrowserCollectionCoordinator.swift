@@ -31,6 +31,7 @@ final class FileBrowserCollectionCoordinator: NSObject, NSCollectionViewDataSour
         let items = collectionItems()
         if let fileItem = items.safe(at: indexPath.item) {
             item.fileItem = fileItem
+            item.representedObject = fileItem
         }
         item.isListMode = (delegate?.currentViewMode == .windowsList)
         item.zoomLevel = delegate?.zoomLevel ?? 1.0

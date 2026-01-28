@@ -107,7 +107,8 @@ class FolderOutlineViewController: NSViewController {
         outlineView.expandItem(item)
 
         if item.needsChildLoading && !isUserHomeFolder {
-            item.loadChildren(showsHiddenFiles: false) { _ in
+            let success = item.loadChildren(showsHiddenFiles: false)
+            if success {
                 Task { @MainActor [weak self] in
                     self?.outlineView.reloadItem(item, reloadChildren: true)
                     self?.outlineView.expandItem(item)
@@ -122,7 +123,8 @@ class FolderOutlineViewController: NSViewController {
     private func continueExpandingPath(pathComponents: [URL], currentItem: FileItem, targetURL: URL, index: Int) {
         if let children = currentItem.children {
             for child in children {
-                if child.url == targetURL {
+                // Handle potential symlink mismatches (e.g. /var vs /private/var)
+                if child.url == targetURL || child.url.resolvingSymlinksInPath() == targetURL.resolvingSymlinksInPath() {
                     expandAndSelectPath(pathComponents: pathComponents, currentItem: child, index: index + 1)
                     return
                 }

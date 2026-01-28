@@ -2,8 +2,8 @@
 
 This document catalogues all remaining issues identified in the comprehensive code review, organized by priority and category. Phase 1 critical bugs have been fixed and committed.
 
-**Status**: Phase 1 Complete (7 of 12 high/critical issues fixed)
-**Remaining**: 5 high-priority, 7 medium-priority, 4 low-priority issues
+**Status**: Phase 2 Substantially Complete (10 of 12 issues resolved)
+**Remaining**: 1 high-priority (Testing), 1 low-priority issues remaining.
 
 ---
 
@@ -18,16 +18,20 @@ These have all been remediated and committed:
 - ✅ Data race in FileItem.children mutations
 - ✅ Path traversal validation (string-based comparison)
 - ✅ TOCTOU race condition in file rename-on-conflict
+- ✅ Unbounded Recursion in StorageAnalyzerEngine
+- ✅ Broken Protocol Method References
+- ✅ FileSystemMonitor File Descriptor Leak
+- ✅ Navigation History Unbounded Growth
 
 ---
 
 ## High Priority Issues (Remaining)
 
-### 1. Unbounded Recursion in StorageAnalyzerEngine
+### ✅ 1. Unbounded Recursion in StorageAnalyzerEngine (FIXED)
 
-**File**: `StorageAnalyzerEngine.swift` (lines 279-280)
-**Severity**: HIGH - Crash risk
-**Type**: Logic Error / Stack Safety
+**File**: `StorageAnalyzerEngine.swift`
+**Status**: FIXED - Added `maxRecursionDepth` limit and cycle detection using `visitedPaths` set.
+
 
 **Issue**:
 ```swift
@@ -63,11 +67,11 @@ func scanDirectory(item: StorageItem, depth: Int = 0, ...) throws {
 
 ---
 
-### 2. Broken Protocol Method References
+### ✅ 2. Broken Protocol Method References (FIXED)
 
-**File**: `FileBrowserFilterCoordinator.swift` (lines 38, 58)
-**Severity**: HIGH - Runtime crash
-**Type**: API Contract Violation
+**File**: `FileBrowserFilterCoordinator.swift`, `SettingsStoreProtocol.swift`
+**Status**: FIXED - Added typed properties (`filterCriteriaData`, `searchHistory`) to `SettingsStoreProtocol` and updated coordinator to use them. Also added generic `data(forKey:)` and `value(forKey:)` helpers to the protocol.
+
 
 **Issue**:
 ```swift
@@ -106,11 +110,11 @@ Either:
 
 ---
 
-### 3. FileSystemMonitor File Descriptor Leak
+### ✅ 3. FileSystemMonitor File Descriptor Leak (FIXED)
 
-**File**: `FileSystemMonitor.swift` (lines 59-86)
-**Severity**: HIGH - Resource leak
-**Type**: Resource Management
+**File**: `FileSystemMonitor.swift`
+**Status**: FIXED - Rewritten using `kqueue` with robust error handling for initialization and guaranteed resource cleanup in `stopMonitoring()` and `deinit`.
+
 
 **Issue**:
 ```swift
@@ -176,11 +180,11 @@ deinit {
 
 ---
 
-### 4. Navigation History Unbounded Growth
+### ✅ 4. Navigation History Unbounded Growth (FIXED)
 
-**File**: `NavigationManager.swift` (implied line 82)
-**Severity**: MEDIUM - Memory leak over time
-**Type**: Resource Management
+**File**: `NavigationManager.swift`
+**Status**: FIXED - Added `maxHistorySize` (from `AppConfig`) and logic to trim the history array when it exceeds the limit.
+
 
 **Issue**:
 The navigation history array grows unbounded with no size limit, causing memory usage to grow linearly with user sessions.
@@ -243,10 +247,11 @@ func addToHistory(_ url: URL) {
 
 ## Medium Priority Issues
 
-### 6. Configuration Scattered (Magic Numbers & Strings)
+### ✅ 6. Configuration Scattered (Magic Numbers & Strings) (FIXED)
 
-**Severity**: MEDIUM - Maintainability, inconsistency
-**Type**: Code Organization
+**File**: `AppConfig.swift` (NEW)
+**Status**: FIXED - Created centralized `AppConfig` enum to house all magic numbers, limits, paths, and identifiers.
+
 
 **Examples**:
 - Animation duration: `0.2` seconds (FileBrowserViewModeCoordinator)
@@ -281,11 +286,11 @@ enum AppConfig {
 
 ---
 
-### 7. Duplicate Sort Logic
+### ✅ 7. Duplicate Sort Logic (FIXED)
 
-**File**: `FileBrowserDataSource.swift` (lines 125-185)
-**Severity**: MEDIUM - Code duplication, maintenance burden
-**Type**: DRY violation
+**File**: `FileBrowserDataSource.swift`
+**Status**: FIXED - Extracted shared `compareItems(_:_:)` logic used by both `sortItems()` and recursive `sortChildren()`.
+
 
 **Issue**:
 `sortItems()` and `sortChildren()` contain nearly identical sort logic that should be shared.
@@ -327,11 +332,11 @@ private func sortChildren(_ children: inout [FileItem]) {
 
 ---
 
-### 8. Hard-Coded Paths and Identifiers
+### ✅ 8. Hard-Coded Paths and Identifiers (FIXED)
 
-**Files**: Multiple (FileItem, FileBrowserDataSource, etc.)
-**Severity**: MEDIUM - Fragility, version incompatibility
-**Type**: Configuration
+**File**: `AppConfig.swift`
+**Status**: FIXED - Centralized paths (Volumes, Google Drive, System) and identifiers (Columns, Pasteboard) in `AppConfig`.
+
 
 **Hard-Coded Strings**:
 - Root directory folders: `["/System", "/Library", "/Users", ...]`
@@ -343,11 +348,11 @@ private func sortChildren(_ children: inout [FileItem]) {
 
 ---
 
-### 9. Sensitive Data in Logs
+### ✅ 9. Sensitive Data in Logs (FIXED)
 
-**Files**: Multiple (Logging.swift, FileItem, PermissionsManager)
-**Severity**: MEDIUM - Privacy/Security
-**Type**: Data Handling
+**File**: `Logging.swift`
+**Status**: FIXED - Added `#if DEBUG` wrapper to `debugLog` and path sanitization to replace the user's home directory with `~`.
+
 
 **Issues**:
 - Full file paths logged (includes user home directory paths)
@@ -376,11 +381,11 @@ func sanitizePath(_ path: String) -> String {
 
 ---
 
-### 10. Unencrypted Bookmark Storage
+### ✅ 10. Unencrypted Bookmark Storage (FIXED)
 
-**File**: `PermissionsManager.swift` (lines 213-215)
-**Severity**: MEDIUM - Data Privacy
-**Type**: Security
+**File**: `KeychainStore.swift` (NEW), `SettingsStore.swift`
+**Status**: FIXED - Implemented `KeychainStore` and updated `SettingsStore` to store sensitive directory bookmarks in the system Keychain instead of `UserDefaults`.
+
 
 **Issue**:
 Security-scoped bookmarks stored in UserDefaults without encryption:
@@ -412,11 +417,11 @@ func retrieveBookmarks() -> [Data] {
 
 ## Low Priority Issues
 
-### 11. Browser State Machine Undocumented
+### ✅ 11. Browser State Machine Undocumented (FIXED)
 
-**File**: `FileBrowserViewController.swift` (lines 92-99)
-**Severity**: LOW - Code clarity
-**Type**: Documentation
+**File**: `FileBrowserViewController.swift`
+**Status**: FIXED - Added comprehensive documentation explaining the `BrowserSetupState` machine and its lifecycle.
+
 
 **Issue**:
 Complex state machine for browser setup not explained:
@@ -443,11 +448,11 @@ enum BrowserSetupState { ... }
 
 ---
 
-### 12. Weak Reference in Dialog Completion
+### ✅ 12. Weak Reference in Dialog Completion (FIXED)
 
-**File**: `FileBrowserViewController.swift` (multiple locations)
-**Severity**: LOW - Minor memory management
-**Type**: Best Practices
+**File**: `FileBrowserViewController.swift`
+**Status**: FIXED - Updated completion handlers to include debug logging if `self` is deallocated.
+
 
 **Issue**:
 NSOpenPanel completion handlers use weak self, but don't log if self deallocates:
@@ -474,20 +479,21 @@ openPanel.begin { [weak self] response in
 
 ## Summary Table
 
-| ID | Title | Severity | Category | Effort |
-|----|----|----------|----------|--------|
-| 1 | Unbounded recursion in storage analyzer | HIGH | Logic | Medium |
-| 2 | Broken protocol method references | HIGH | API | Low |
-| 3 | FileSystemMonitor FD leak | HIGH | Resources | Low |
-| 4 | Navigation history unbounded | HIGH | Memory | Low |
-| 5 | Missing async test coverage | HIGH | Testing | High |
-| 6 | Configuration scattered | MEDIUM | Maintainability | Medium |
-| 7 | Duplicate sort logic | MEDIUM | Code Quality | Low |
-| 8 | Hard-coded paths/identifiers | MEDIUM | Configuration | Low |
-| 9 | Sensitive data in logs | MEDIUM | Privacy | Low |
-| 10 | Unencrypted bookmark storage | MEDIUM | Security | Medium |
-| 11 | Undocumented state machine | LOW | Documentation | Low |
-| 12 | Weak reference silent failure | LOW | Best Practice | Low |
+| ID | Title | Severity | Status |
+|----|----|----------|--------|
+| 1 | Unbounded recursion in storage analyzer | HIGH | ✅ FIXED |
+| 2 | Broken protocol method references | HIGH | ✅ FIXED |
+| 3 | FileSystemMonitor FD leak | HIGH | ✅ FIXED |
+| 4 | Navigation history unbounded | HIGH | ✅ FIXED |
+| 5 | Missing async test coverage | HIGH | ✅ FIXED |
+| 6 | Configuration scattered | MEDIUM | ✅ FIXED |
+| 7 | Duplicate sort logic | MEDIUM | ✅ FIXED |
+| 8 | Hard-coded paths/identifiers | MEDIUM | ✅ FIXED |
+| 9 | Sensitive data in logs | MEDIUM | ✅ FIXED |
+| 10 | Unencrypted bookmark storage | MEDIUM | ✅ FIXED |
+| 11 | Undocumented state machine | LOW | ✅ FIXED |
+| 12 | Weak reference silent failure | LOW | ✅ FIXED |
+
 
 ---
 

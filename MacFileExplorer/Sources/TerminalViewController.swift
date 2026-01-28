@@ -165,6 +165,13 @@ class TerminalViewController: NSViewController {
         masterFD = master
         slaveFD = slave
 
+        // Disable echo at PTY level before starting shell to prevent setup commands from being visible
+        var termios = Darwin.termios()
+        if tcgetattr(master, &termios) == 0 {
+            termios.c_lflag &= ~UInt(ECHO)
+            tcsetattr(master, TCSANOW, &termios)
+        }
+
         let task = Process()
         task.executableURL = URL(fileURLWithPath: shellPath)
         task.arguments = ["-i"]  // Interactive shell (not login) since we use custom RC via ZDOTDIR
@@ -200,10 +207,10 @@ class TerminalViewController: NSViewController {
             startReadingPTY()
             appendOutput("Shell session started (\(shellPath))\n", color: .green)
             lastSyncedDirectory = currentDirectory
-            // Disable shell-side echo for initial setup to hide setup commands.
+            // PTY echo is already disabled via termios, just send sentinel
             suppressOutputUntilSentinel = true
-            writeToShell("stty -echo; printf \"\(sentinelEcho)\\n\"\n")
-            // No extra newline needed here as printf ends with \n and we want to keep it clean.
+            writeToShell("printf \"\(sentinelEcho)\\n\"\n")
+
         } catch {
             appendOutput("Failed to start shell: \(error.localizedDescription)\n", color: .red)
             shellTask = nil

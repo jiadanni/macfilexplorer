@@ -1,7 +1,7 @@
 import Cocoa
 import Quartz
 
-class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureRecognizerDelegate, StatusBarDelegate, FileBrowserPreviewPaneObserver, HiddenFilesVisibilityDelegate, SettingsStoreDelegate, FileBrowserFilterDelegate, FileBrowserContextMenuDelegate, FileBrowserDragDropDelegate, FileBrowserOutlineCoordinatorDelegate, FileBrowserCollectionCoordinatorDelegate, FileBrowserColumnCoordinatorDelegate, FileBrowserQuickLookDelegate, FileBrowserInteractionDelegate, FileBrowserStatusBarCoordinatorDelegate {
+class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureRecognizerDelegate, StatusBarDelegate, FileBrowserFilterDelegate, FileBrowserContextMenuDelegate, FileBrowserDragDropDelegate, FileBrowserOutlineCoordinatorDelegate, FileBrowserCollectionCoordinatorDelegate, FileBrowserColumnCoordinatorDelegate, FileBrowserStatusBarCoordinatorDelegate {
 
     weak var delegate: FileBrowserDelegate?
     
@@ -123,6 +123,16 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     lazy var dragDropCoordinator = FileBrowserDragDropCoordinator()
     
     // Controllers for focused responsibilities
+    private var _cachedFilterPanel: FilterPanelViewController?
+    var filterPanel: FilterPanelViewController {
+        if let existing = _cachedFilterPanel { return existing }
+        let panel = FilterPanelViewController(currentFilter: filterCoordinator.getFilterCriteria()) { [weak self] newFilter in
+            self?.filterCoordinator.applyFilterCriteria(newFilter)
+        }
+        _cachedFilterPanel = panel
+        return panel
+    }
+    
     lazy var displayController = FileBrowserDisplayController(viewController: self)
     lazy var uiSetupController = FileBrowserUISetupController(viewController: self)
     lazy var contextMenuProvider: FileBrowserContextMenuProvider = {
@@ -130,6 +140,9 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         provider.delegate = self
         return provider
     }()
+    lazy var stateHandler = FileBrowserStateHandler(viewController: self)
+    lazy var actionHandler = FileBrowserActionHandler(viewController: self)
+    
     lazy var dragDropHandler: FileBrowserDragDropHandler = {
         return FileBrowserDragDropHandler(delegate: self)
     }()
@@ -194,10 +207,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         zoomCoordinator.delegate = self
 
         // Setup preview pane coordinator delegate
-        previewPaneCoordinator.delegate = self
+        previewPaneCoordinator.delegate = stateHandler
 
         // Setup hidden files coordinator delegate
-        hiddenFilesCoordinator.delegate = self
+        hiddenFilesCoordinator.delegate = stateHandler
         
         // Setup new coordinators
         outlineCoordinator.delegate = self
@@ -212,8 +225,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         columnCoordinator.selectionCoordinator = selectionCoordinator
         columnCoordinator.dragDropHandler = dragDropHandler
         
-        quickLookCoordinator.delegate = self
-        interactionCoordinator.delegate = self
+        quickLookCoordinator.delegate = actionHandler
+        interactionCoordinator.delegate = actionHandler
         statusBarCoordinator.delegate = self
         dragDropCoordinator.dragDropHandler = dragDropHandler
         
@@ -231,11 +244,11 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         filterCriteria = filterCoordinator.getFilterCriteria()
         
         // Register as delegate
-        settings.addDelegate(self)
+        settings.addDelegate(stateHandler)
     }
 
     deinit {
-        settings.removeDelegate(self)
+        settings.removeDelegate(stateHandler)
     }
 
     override func loadView() {
@@ -254,7 +267,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     override func keyDown(with event: NSEvent) {
-        keyboardHandler.delegate = self
+        keyboardHandler.delegate = actionHandler
         if !keyboardHandler.handleKeyDown(event) {
             super.keyDown(with: event)
         }
@@ -271,7 +284,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         }
     }
     
-    private func duplicateSelection() {
+    func duplicateSelection() {
         let items = selectionCoordinator.selectedItems()
         guard !items.isEmpty else { return }
         
@@ -377,19 +390,14 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
     
     @objc func handleCollectionViewDoubleClick(_ sender: NSClickGestureRecognizer) {
-        gestureHandler.delegate = self
+        gestureHandler.delegate = actionHandler
         gestureHandler.handleCollectionViewDoubleClick(sender)
     }
     
     // MARK: - Gesture Recognition (delegated to FileBrowserGestureHandler)
     
-    func gestureRecognizerShouldBegin(_ gestureRecognizer: NSGestureRecognizer) -> Bool {
-        gestureHandler.delegate = self
-        return gestureHandler.gestureRecognizerShouldBegin(gestureRecognizer)
-    }
-    
     @objc func handleIconDrag(_ sender: NSPanGestureRecognizer) {
-        gestureHandler.delegate = self
+        gestureHandler.delegate = actionHandler
         gestureHandler.handleIconDrag(sender)
     }
 
@@ -398,7 +406,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         dataSource.reload()
     }
 
-    private func toggleQuickLook() {
+    func toggleQuickLook() {
         quickLookCoordinator.toggleQuickLook()
     }
 
@@ -577,92 +585,6 @@ extension FileBrowserViewController: FileBrowserDataSourceDelegate {
     }
 }
 
-// MARK: - Filter Delegate Support
-// MARK: - SettingsStoreDelegate
-extension FileBrowserViewController {
-    func settingsStore(_ settingsStore: SettingsStoreProtocol, previewPaneVisibilityDidChange isVisible: Bool) {
-        // Handled by previewPaneCoordinator mostly, but if we need direct action:
-        // previewPaneCoordinator updates itself via its own logic if it observes, 
-        // OR we manually trigger.
-        // Current logic: previewPaneCoordinator is the SSOT for this VC. 
-        // If external change happens, we should update our coordinator.
-        previewPaneCoordinator.setPreviewPaneVisible(isVisible)
-    }
-    
-    func settingsStore(_ settingsStore: SettingsStoreProtocol, hiddenFilesStateDidChange isVisible: Bool) {
-        hiddenFilesCoordinator.setVisibility(isVisible)
-    }
-    
-    func settingsStoreDidUpdateGlobalFolderColor(_ settingsStore: SettingsStoreProtocol) {
-        refreshCurrentDirectory()
-    }
-    
-    func settingsStore(_ settingsStore: SettingsStoreProtocol, showFileExtensionsDidChange show: Bool) {
-        refreshCurrentDirectory()
-    }
-    
-    func settingsStore(_ settingsStore: SettingsStoreProtocol, easySelectDidChange enabled: Bool) {
-        refreshCurrentDirectory()
-    }
-}
-
-extension FileBrowserViewController {
-    var filterPanel: FilterPanelViewController! {
-        FilterPanelViewController(currentFilter: filterCoordinator.getFilterCriteria()) { [weak self] newFilter in
-            self?.filterCoordinator.applyFilterCriteria(newFilter)
-        }
-    }
-
-    var settingsStore: SettingsStoreProtocol! {
-        get { settings }
-        set {
-            guard let newValue else { return }
-            settings = newValue
-        }
-    }
-
-    func setFilterCriteria(_ criteria: FilterCriteria) {
-        filterCriteria = criteria
-    }
-    
-    func reloadBrowserData() {
-        refreshCurrentDirectory()
-    }
-}
-
-// MARK: - FileBrowserPreviewPaneObserver
-
-extension FileBrowserViewController {
-    /// Called when preview pane visibility changes
-    func previewPaneVisibilityDidChange(_ isVisible: Bool) {
-        // Update toolbar to reflect current state
-        toolbarViewController?.updatePreviewPaneDisplay(showing: isVisible)
-    }
-    
-    /// Called when preview pane position changes ("right" or "bottom")
-    /// Position is stored by coordinator; can be overridden here if layout changes needed
-    func previewPanePositionDidChange(_ position: String) {
-        // Currently a no-op as position is managed by coordinator
-    }
-    
-    /// Called when preview pane width changes
-    /// Width is persisted automatically; can be overridden if UI response needed
-    func previewPaneWidthDidChange(_ width: CGFloat) {
-        // Currently a no-op as width is managed by coordinator
-    }
-}
-
-// MARK: - HiddenFilesVisibilityDelegate
-
-extension FileBrowserViewController {
-    func hiddenFilesVisibilityDidChange(isVisible: Bool) {
-        // Update dataSource to trigger reload
-        dataSource.showsHiddenFiles = isVisible
-        
-        // Update toolbar to reflect current state
-        toolbarViewController?.updateHiddenFilesDisplay(showing: isVisible)
-    }
-}
 
 // MARK: - FileBrowserContextMenuDelegate
 extension FileBrowserViewController {
@@ -670,13 +592,23 @@ extension FileBrowserViewController {
         performFileOperation(operation, items: items, destination: destination, sourcePane: nil)
     }
     
-    func getSelectedItems() -> [FileItem] {
-        return selectionCoordinator.selectedItems()
-    }
+
 
     func getAllFolders() -> [URL] {
         // Return potentially relevant folders for move/copy
         return [FileManager.default.homeDirectoryForCurrentUser]
+    }
+    
+    func getSelectedItems() -> [FileItem] {
+        return selectionCoordinator.selectedItems()
+    }
+    
+    func reloadBrowserData() {
+        refreshCurrentDirectory()
+    }
+    
+    func setFilterCriteria(_ criteria: FilterCriteria) {
+        filterCriteria = criteria
     }
 
     func refreshDirectory() {
@@ -720,71 +652,3 @@ extension FileBrowserViewController {
 // Note: Methods implemented directly in main class body; extension conforms to protocol only
 extension FileBrowserViewController {}
 
-// MARK: - FileBrowserKeyboardHandlerDelegate
-extension FileBrowserViewController: FileBrowserKeyboardHandler.FileBrowserKeyboardHandlerDelegate {
-    var deleteWithBackspaceOnly: Bool {
-        return settings.deleteWithBackspaceOnly
-    }
-    
-    func handleCut() {
-        cutSelection()
-    }
-    
-    func handleCopy() {
-        copySelection()
-    }
-    
-    func handlePaste() {
-        pasteSelection()
-    }
-    
-    func handleGetInfo() {
-        contextMenuGetInfo(self)
-    }
-    
-    func handleNewFolder() {
-        contextMenuNewFolder(self)
-    }
-    
-    func handleDuplicate() {
-        duplicateSelection()
-    }
-    
-    func handleNavigateToParent() {
-        navigationCoordinator.navigateToParent()
-    }
-    
-    func handleOpenSelection() {
-        openSelection()
-    }
-    
-    func handleDelete() {
-        contextMenuDelete(self)
-    }
-    
-    func handleToggleQuickLook() {
-        toggleQuickLook()
-    }
-    
-    func handleClearSelection() {
-        selectionCoordinator.clearSelection()
-    }
-    
-    func handleRenameFirstSelected() {
-        let items = selectionCoordinator.selectedItems()
-        if let item = items.first, items.count == 1 {
-            contextMenuRename(item)
-        }
-    }
-}
-
-// MARK: - FileBrowserGestureHandlerDelegate
-extension FileBrowserViewController: FileBrowserGestureHandler.FileBrowserGestureHandlerDelegate {
-    func recordInteractionClick(row: Int) {
-        interactionCoordinator.recordClick(row: row)
-    }
-    
-    func handleInteractionDoubleClick() {
-        interactionCoordinator.handleDoubleClick()
-    }
-}

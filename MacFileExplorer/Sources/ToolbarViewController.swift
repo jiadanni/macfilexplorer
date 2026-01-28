@@ -44,6 +44,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
     private var searchField: NSSearchField!
     private var searchButton: NSButton!
     private var isSearchFieldVisible = false
+    private var searchFieldWidthConstraint: NSLayoutConstraint!
     private var leftButtonsStackView: NSStackView!
     private var overflowButton: NSButton!
     private var overflowMenu: NSMenu!
@@ -420,12 +421,15 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         searchField.setAccessibilityLabel(L10n.text("Search files"))
         searchField.setAccessibilityRole(.textField)
         view.addSubview(searchField)
+
+        searchFieldWidthConstraint = searchField.widthAnchor.constraint(equalToConstant: 30)
         
         // Filter button
         filterButton = NSButton()
         filterButton.translatesAutoresizingMaskIntoConstraints = false
         filterButton.bezelStyle = .texturedRounded
         filterButton.image = NSImage.mfeSymbol(named: "line.3.horizontal.decrease.circle", accessibilityDescription: "Filter")
+        filterButton.imagePosition = .imageOnly
         filterButton.target = self
         filterButton.action = #selector(filterButtonClicked(_:))
         filterButton.toolTip = L10n.text("Filter Files")
@@ -474,7 +478,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
             overflowButton.heightAnchor.constraint(equalToConstant: 26),
 
             // Keep sort/search area at the right side as before
-            sortButton.trailingAnchor.constraint(equalTo: searchButton.leadingAnchor, constant: -8),
+            sortButton.trailingAnchor.constraint(equalTo: searchField.leadingAnchor, constant: -8),
             sortButton.topAnchor.constraint(equalTo: view.topAnchor, constant: 7),
             sortButton.widthAnchor.constraint(equalToConstant: 44),
             sortButton.heightAnchor.constraint(equalToConstant: 26),
@@ -484,7 +488,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
             searchButton.widthAnchor.constraint(equalToConstant: 30),
             searchButton.heightAnchor.constraint(equalToConstant: 26),
 
-            searchField.leadingAnchor.constraint(equalTo: sortButton.trailingAnchor, constant: 8),
+            searchFieldWidthConstraint,
             searchField.trailingAnchor.constraint(equalTo: filterButton.leadingAnchor, constant: -8),
             searchField.topAnchor.constraint(equalTo: view.topAnchor, constant: 9),
             searchField.heightAnchor.constraint(equalToConstant: 22),
@@ -669,63 +673,72 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
     }
 
     private func adjustOverflowIfNeeded() {
-        // Determine available horizontal space for left buttons
+        // Determine available horizontal space for left-hand buttons
         let leftInset: CGFloat = 12
+        let spacing = leftButtonsStackView.spacing
         
-        var rightHandControlsMinX: CGFloat = view.bounds.width - 8 // Start with trailing padding
+        // Calculate the leftmost boundary of the right-hand controls
+        var rightHandControlsMinX: CGFloat = view.bounds.width - 8
         if !closePaneButton.isHidden { rightHandControlsMinX = min(rightHandControlsMinX, closePaneButton.frame.minX) }
         if !filterButton.isHidden { rightHandControlsMinX = min(rightHandControlsMinX, filterButton.frame.minX) }
-        if isSearchFieldVisible, !searchField.isHidden {
+        
+        if isSearchFieldVisible && !searchField.isHidden {
              rightHandControlsMinX = min(rightHandControlsMinX, searchField.frame.minX)
         } else if !searchButton.isHidden {
              rightHandControlsMinX = min(rightHandControlsMinX, searchButton.frame.minX)
         }
+        
         if !sortButton.isHidden { rightHandControlsMinX = min(rightHandControlsMinX, sortButton.frame.minX) }
 
-        let rightEdge = rightHandControlsMinX - 8 // 8px padding
-
+        let rightEdge = rightHandControlsMinX - 8 // 8px padding before right-hand controls
         var usedX: CGFloat = leftInset
 
-        // Handle segmented control visibility first
-        let showViewMode = settings.showViewModeButton
-        if showViewMode {
-            let segmentWidth = viewModeSegmentedControl.frame.width
-            if usedX + segmentWidth <= rightEdge {
-                viewModeSegmentedControl.isHidden = false
-                usedX += segmentWidth + leftButtonsStackView.spacing
-            } else {
-                viewModeSegmentedControl.isHidden = true
-            }
-        } else {
-            viewModeSegmentedControl.isHidden = true
-        }
-
-        // Decide which buttons fit; move extras into overflow
+        // Process subviews in the leftButtonsStackView in order
         var overflowItems: [NSButton] = []
-        let allButtons: [NSButton?] = [hiddenFilesButton, splitVerticalButton, splitHorizontalButton, previewPaneButton, newFolderButton, storageAnalyzerButton, openTerminalButton]
-
-        for btn in allButtons {
-            guard let b = btn else { continue }
-
-            let userWantsVisible = isButtonVisible(b)
-
+        
+        // We iterate through all views in the stack and decide visibility based on available space
+        // Some items (like back/forward buttons) are prioritized.
+        for subview in leftButtonsStackView.arrangedSubviews {
+            if subview == overflowButton { continue }
+            
+            // Skip views that are hidden by user preference or logic (other than overflow)
+            let userWantsVisible: Bool
+            if let btn = subview as? NSButton {
+                userWantsVisible = isButtonVisible(btn)
+            } else if subview === viewModeSegmentedControl {
+                userWantsVisible = settings.showViewModeButton
+            } else {
+                // Separators or other views
+                userWantsVisible = true // We'll hide separators if their neighbor is hidden
+            }
+            
             if !userWantsVisible {
-                if !b.isHidden { b.isHidden = true }
+                subview.isHidden = true
                 continue
             }
-
-            let w = b.frame.width
-            if usedX + w > rightEdge {
-                // hide and move to overflow
-                b.isHidden = true
-                overflowItems.append(b)
+            
+            let width = subview.intrinsicContentSize.width
+            
+            // Always keep back/forward buttons if possible
+            let isEssential = (subview === backButton || subview === forwardButton)
+            
+            if !isEssential && usedX + width > rightEdge {
+                // Doesn't fit, hide it
+                subview.isHidden = true
+                if let btn = subview as? NSButton {
+                    overflowItems.append(btn)
+                }
             } else {
-                b.isHidden = false
-                usedX += w + leftButtonsStackView.spacing
+                // Fits, show it
+                subview.isHidden = false
+                usedX += width + spacing
             }
         }
-
-        // Show or hide overflow button depending on items
+        
+        // Final pass to hide separators that have no visible neighbor to their right or are redundant
+        // (Simplified: just hiding them if they were marked hidden by the overlap logic)
+        
+        // Update overflow button
         if overflowItems.isEmpty {
             overflowButton.isHidden = true
             overflowMenu.removeAllItems()
@@ -733,7 +746,9 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
             overflowButton.isHidden = false
             overflowMenu.removeAllItems()
             for b in overflowItems {
-                let item = NSMenuItem(title: b.toolTip ?? b.title, action: b.action, keyEquivalent: "")
+                let title = b.toolTip ?? b.title
+                if title.isEmpty { continue }
+                let item = NSMenuItem(title: title, action: b.action, keyEquivalent: "")
                 item.target = b.target
                 overflowMenu.addItem(item)
             }
@@ -928,11 +943,18 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         searchButton.isHidden = true
         searchButton.isEnabled = false
         searchButton.alphaValue = 0
-        // Keep sort button visible; instead expand search into available space without covering neighbors.
-        searchField.isHidden = false
-        view.window?.makeFirstResponder(searchField)
-        view.layoutSubtreeIfNeeded()
-        adjustOverflowIfNeeded()
+        
+        // Expand search field width and layout
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            searchFieldWidthConstraint.animator().constant = 250
+            searchField.isHidden = false
+            view.layoutSubtreeIfNeeded()
+        } completionHandler: {
+            self.view.window?.makeFirstResponder(self.searchField)
+            self.adjustOverflowIfNeeded()
+        }
     }
 
     @objc private func backButtonClicked(_ sender: NSButton) {
@@ -1106,7 +1128,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         delegate?.toolbarDidSearchTextChange(sender.stringValue)
     }
     
-    @objc private func filterButtonClicked(_ sender: Any) {
+    @objc func filterButtonClicked(_ sender: Any) {
+        debugLog("ToolbarViewController: filterButtonClicked")
         delegate?.toolbarDidRequestShowFilter()
     }
 }
@@ -1131,15 +1154,23 @@ extension ToolbarViewController {
         // This is called when the search field loses focus
         if isSearchFieldVisible {
             isSearchFieldVisible = false
-            searchButton.isHidden = false
-            searchButton.isEnabled = true
-            searchButton.alphaValue = 1
-            searchField.isHidden = true
-            if searchField.stringValue != "" {
-                searchField.stringValue = ""
-                delegate?.toolbarDidSearchTextChange("")
+            
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                searchFieldWidthConstraint.animator().constant = 30
+                searchField.isHidden = true
+                searchButton.isHidden = false
+                searchButton.isEnabled = true
+                searchButton.alphaValue = 1
+                view.layoutSubtreeIfNeeded()
+            } completionHandler: {
+                if self.searchField.stringValue != "" {
+                    self.searchField.stringValue = ""
+                    self.delegate?.toolbarDidSearchTextChange("")
+                }
+                self.adjustOverflowIfNeeded()
             }
-            adjustOverflowIfNeeded()
         }
     }
 

@@ -16,10 +16,11 @@ final class FileBrowserSelectionManager {
             return outlineView.selectedRowIndexes.compactMap { idx in
                 outlineView.item(atRow: idx) as? FileItem
             }
-        case .icons:
-            guard let collectionView else { return [] }
+        case .icons, .windowsList:
+            guard let collectionView, let children = rootItem?.children else { return [] }
             return collectionView.selectionIndexes.compactMap { index in
-                collectionView.item(at: index)?.representedObject as? FileItem
+                guard index >= 0, index < children.count else { return nil }
+                return children[index]
             }
         case .columns:
             guard
@@ -42,17 +43,6 @@ final class FileBrowserSelectionManager {
             }
             return items
 
-        case .windowsList:
-            guard let browserRoot = rootItem else { return [] }
-            // Fall back to current column selection logic: only return single selection if present.
-            if let outlineView, outlineView.selectedRow >= 0, let selected = outlineView.item(atRow: outlineView.selectedRow) as? FileItem {
-                return [selected]
-            }
-            if let collectionView, let index = collectionView.selectionIndexes.first,
-               let item = collectionView.item(at: index)?.representedObject as? FileItem {
-                return [item]
-            }
-            return [browserRoot]
         }
     }
 }

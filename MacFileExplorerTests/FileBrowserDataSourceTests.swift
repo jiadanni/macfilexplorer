@@ -135,12 +135,15 @@ class FileBrowserDataSourceTests: XCTestCase {
     
     func testSortColumn_ByName_Descending() {
         // Given
-        let expectation = expectation(description: "Data loaded")
+        let loadExpectation = expectation(description: "Initial load")
         mockDelegate.onDataLoaded = { _ in
-            expectation.fulfill()
+            loadExpectation.fulfill()
         }
         sut.navigate(to: tempDirectory)
-        wait(for: [expectation], timeout: 2.0)
+        wait(for: [loadExpectation], timeout: 2.0)
+        
+        // Reset delegate callback for sort test to avoid multiple fulfills
+        mockDelegate.onDataLoaded = nil
         
         // When
         sut.sortColumn = AppConfig.ColumnID.name
@@ -158,19 +161,24 @@ class FileBrowserDataSourceTests: XCTestCase {
     
     func testSortColumn_BySize() {
         // Given
-        let expectation = expectation(description: "Data loaded")
+        let loadExpectation = expectation(description: "Initial load")
         mockDelegate.onDataLoaded = { _ in
-            expectation.fulfill()
+            loadExpectation.fulfill()
         }
         sut.navigate(to: tempDirectory)
-        wait(for: [expectation], timeout: 2.0)
+        wait(for: [loadExpectation], timeout: 2.0)
+        
+        // Reset delegate callback
+        mockDelegate.onDataLoaded = nil
         
         // When
+        sut.sortColumn = AppConfig.ColumnID.name // Set to name first to ensure change triggers
         sut.sortColumn = AppConfig.ColumnID.size
         sut.sortAscending = false // Largest first
         
         // Then
         let children = sut.rootItem?.children ?? []
+        XCTAssertTrue(children.count >= 2)
         if children.count >= 2,
            let first = children.safe(at: 0),
            let second = children.safe(at: 1) {

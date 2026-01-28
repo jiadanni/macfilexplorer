@@ -176,7 +176,8 @@ class StorageAnalyzerWindowController: NSWindowController {
         alert.addButton(withTitle: "Choose Different Folder")
         alert.addButton(withTitle: "Cancel")
 
-        alert.beginSheetModal(for: window!) { response in
+        guard let window = window else { return }
+        alert.beginSheetModal(for: window) { response in
             if response == .alertFirstButtonReturn {
                 PermissionsManager.shared.openSystemPreferences(for: .fullDiskAccess)
             } else if response == .alertSecondButtonReturn {
@@ -207,7 +208,8 @@ class StorageAnalyzerWindowController: NSWindowController {
         alert.informativeText = "Export functionality coming soon!"
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
-        alert.beginSheetModal(for: window!)
+        guard let window = window else { return }
+        alert.beginSheetModal(for: window)
     }
 }
 
@@ -324,7 +326,8 @@ extension StorageAnalyzerWindowController: StorageListViewDelegate {
         alert.addButton(withTitle: "Move to Trash")
         alert.addButton(withTitle: "Cancel")
 
-        alert.beginSheetModal(for: window!) { response in
+        guard let window = window else { return }
+        alert.beginSheetModal(for: window) { response in
             if response == .alertFirstButtonReturn {
                 for item in items {
                     do {

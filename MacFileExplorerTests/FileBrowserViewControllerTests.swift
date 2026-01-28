@@ -40,6 +40,9 @@ class FileBrowserViewControllerTests: XCTestCase {
 
         // Initialize FileBrowserViewController with test settings
         fileBrowserVC = FileBrowserViewController(settings: testSettingsStore)
+        
+        // Trigger loadView() and setupUI() by accessing the view
+        _ = fileBrowserVC.view
     }
 
     override func tearDownWithError() throws {
@@ -225,5 +228,24 @@ class FileBrowserViewControllerTests: XCTestCase {
 
         fileBrowserVC.sortAscending = false
         XCTAssertFalse(fileBrowserVC.sortAscending)
+    }
+
+    // MARK: - Context Menu Tests
+
+    func testContextMenuTargets() {
+        let menu = fileBrowserVC.createContextMenu()
+        let provider = fileBrowserVC.contextMenuProvider
+        
+        // Test standard items
+        let openItem = menu.items.first(where: { $0.title == "Open" })
+        XCTAssertNotNil(openItem, "Open item should exist")
+        XCTAssertTrue(openItem?.target === provider, "Open item target should be the provider")
+        
+        let copyItem = menu.items.first(where: { $0.title == "Copy" })
+        XCTAssertNotNil(copyItem, "Copy item should exist")
+        XCTAssertTrue(copyItem?.target === provider, "Copy item target should be the provider")
+        
+        // Tags submenu is populated dynamically on 'menuNeedsUpdate' with valid selection.
+        // Skipping Tags check in this static test.
     }
 }

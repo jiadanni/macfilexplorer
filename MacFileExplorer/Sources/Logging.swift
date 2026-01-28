@@ -4,7 +4,7 @@ import Foundation
 func debugLog(_ items: Any..., separator: String = " ", terminator: String = "\n") {
 #if DEBUG
     let message = items.map { "\($0)" }.joined(separator: separator)
-    NSLog("%@", sanitizeLogMessage(message))
+    print("DEBUG: \(sanitizeLogMessage(message))", terminator: terminator)
 #endif
 }
 
@@ -30,16 +30,10 @@ func measureTime<T>(_ label: String, block: () -> T) -> T {
 /// Use this instead of direct localizedStandardCompare calls.
 extension String {
     func safeLocalizedCompare(_ other: String) -> ComparisonResult {
-        // Wrap in autoreleasepool to prevent memory buildup
-        autoreleasepool {
-            self.localizedStandardCompare(other)
-        }
+        self.localizedStandardCompare(other)
     }
     
     func safeLocalizedCaseInsensitiveCompare(_ other: String) -> ComparisonResult {
-        // Wrap in autoreleasepool to prevent memory buildup
-        autoreleasepool {
-            self.localizedCaseInsensitiveCompare(other)
-        }
+        self.localizedCaseInsensitiveCompare(other)
     }
 }

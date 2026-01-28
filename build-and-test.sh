@@ -53,8 +53,11 @@ if [ $? -eq 0 ]; then
         echo "🚀 Launching MacFileExplorer..."
         echo ""
 
-        # Launch the app
-        open "$APP_PATH"
+        # Launch the app binary directly to inherit Terminal permissions (avoids repeated TCC prompts)
+        # NOTE: This is for local development convenience only.
+        # For production/distribution, the app should be launched normally via Finder/Launchpad
+        # or distributed as a signed .app/.dmg where it will request its own permissions.
+        "$APP_PATH/Contents/MacOS/MacFileExplorer" &
 
         echo "======================================"
         echo "Test the following features:"

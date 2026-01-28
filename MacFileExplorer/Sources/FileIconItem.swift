@@ -11,8 +11,8 @@ class SelectableItemView: NSView {
     override func mouseDown(with event: NSEvent) {
         // Notify delegate immediately on mouse down for instant visual feedback
         itemDelegate?.itemViewDidReceiveMouseDown()
-        // Pass the event to super to maintain normal selection behavior
-        super.mouseDown(with: event)
+        // Pass to next responder to ensure selection works in NSCollectionView
+        self.nextResponder?.mouseDown(with: event)
     }
 }
 

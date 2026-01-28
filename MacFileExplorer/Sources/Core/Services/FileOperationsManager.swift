@@ -66,23 +66,47 @@ final class FileOperationsManager {
         // If confirmation is enabled, show the dialog first
         let confirmOps = settings.confirmFileOperations
         
-        if confirmOps && operation != .delete {
-            let opType: FileCopyMoveDialog.OperationType = (operation == .copy) ? .copy : .move
-            let confirmationDialog = FileCopyMoveDialog(operationType: opType, sourceFiles: items, destination: destination ?? currentDirectory)
-            
-            confirmationDialog.onCompletion = { [weak self] in
-                guard let self else { return }
-                self.delegate?.fileOperationsManagerDidRequestRefresh(self)
-                if operation == .move, let sourcePane {
-                    self.delegate?.fileOperationsManagerDidRequestRefreshSource(self, sourcePane: sourcePane)
+        if confirmOps {
+            if operation == .delete {
+                Task { @MainActor in
+                    let alert = NSAlert()
+                    alert.messageText = "Delete \(items.count) item(s)?"
+                    alert.informativeText = "Are you sure you want to move \(items.count) item(s) to the Trash? This action can be undone from the Trash."
+                    alert.addButton(withTitle: "Delete")
+                    alert.addButton(withTitle: "Cancel")
+                    alert.alertStyle = .warning
+                    
+                    let response: NSApplication.ModalResponse
+                    if let window = self.delegate?.window {
+                        response = await window.beginSheet(alert)
+                    } else {
+                        response = alert.runModal()
+                    }
+                    
+                    if response == .alertFirstButtonReturn {
+                        // Proceed with delete
+                        // Note: Auto-rename is irrelevant for delete (uses Trash)
+                        self.execute(operation, items: items, destination: destination, sourcePane: sourcePane, autoRename: false)
+                    }
                 }
-            }
-            
-            if let hostWindow = delegate?.window, let sheet = confirmationDialog.window {
-                hostWindow.beginSheet(sheet, completionHandler: nil)
             } else {
-                // Fallback if no window available (shouldn't happen in normal flow)
-                confirmationDialog.showWindow(nil)
+                let opType: FileCopyMoveDialog.OperationType = (operation == .copy) ? .copy : .move
+                let confirmationDialog = FileCopyMoveDialog(operationType: opType, sourceFiles: items, destination: destination ?? currentDirectory)
+                
+                confirmationDialog.onCompletion = { [weak self] in
+                    guard let self else { return }
+                    self.delegate?.fileOperationsManagerDidRequestRefresh(self)
+                    if operation == .move, let sourcePane {
+                        self.delegate?.fileOperationsManagerDidRequestRefreshSource(self, sourcePane: sourcePane)
+                    }
+                }
+                
+                if let hostWindow = delegate?.window, let sheet = confirmationDialog.window {
+                    hostWindow.beginSheet(sheet, completionHandler: nil)
+                } else {
+                    // Fallback if no window available (shouldn't happen in normal flow)
+                    confirmationDialog.showWindow(nil)
+                }
             }
         } else {
             // Execute immediately without confirmation

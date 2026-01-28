@@ -18,38 +18,47 @@ class FileBrowserDataSource {
     private var loadGeneration: Int = 0
     private var loadTask: Task<Void, Never>?
     private var unfilteredItems: [FileItem] = []
-    
+    private var isUpdatingSilently = false
+
     var showsHiddenFiles: Bool = false {
-        didSet { if oldValue != showsHiddenFiles { reload() } }
+        didSet { 
+            if !isUpdatingSilently && oldValue != showsHiddenFiles { reload() } 
+        }
     }
     
     var sortColumn: String = AppConfig.ColumnID.name {
-        didSet { if oldValue != sortColumn { sortItems() } }
+        didSet { 
+            if !isUpdatingSilently && oldValue != sortColumn { sortItems() } 
+        }
     }
     
     var sortAscending: Bool = true {
-        didSet { if oldValue != sortAscending { sortItems() } }
+        didSet { 
+            if !isUpdatingSilently && oldValue != sortAscending { sortItems() } 
+        }
     }
     
     var searchFilter: String? {
-        didSet { if oldValue != searchFilter { applySearchFilter() } }
+        didSet { 
+            if !isUpdatingSilently && oldValue != searchFilter { applySearchFilter() } 
+        }
     }
     
     var filterCriteria: FilterCriteria = FilterCriteria() {
-        didSet { applySearchFilter() }
+        didSet { 
+            if !isUpdatingSilently { applySearchFilter() } 
+        }
     }
     
     // MARK: - Init
     
     init(currentDirectory: URL) {
         self.currentDirectory = currentDirectory
-        // Initial setup similar to what was in VC, but we defer loading until requested
     }
     
     // MARK: - Data Loading
     
     func navigate(to url: URL, isSearch: Bool = false) {
-        // Special handling for Google Drive CloudStorage root - redirect to "My Drive"
         var targetURL = url
         if let googleDriveURL = googleDrivePreferredRoot(for: url) {
              targetURL = googleDriveURL
@@ -57,16 +66,17 @@ class FileBrowserDataSource {
         
         self.currentDirectory = targetURL
         
-        // Clear search filter when navigating to a new directory (unless it IS a search)
         if !isSearch {
+            isUpdatingSilently = true
             self.searchFilter = nil
+            isUpdatingSilently = false
         }
         
         loadData(isSearch: isSearch)
     }
     
     func reload() {
-        loadData(isSearch: false)
+        loadData(isSearch: searchFilter != nil && !searchFilter!.isEmpty)
     }
     
     private func loadData(isSearch: Bool) {
@@ -80,7 +90,6 @@ class FileBrowserDataSource {
         loadStateLock.unlock()
         
         loadTask = Task {
-            // Background loading
             let result = await Task.detached(priority: .userInitiated) {
                 let item = FileItem(url: url)
                 var errorToReport: Error?
@@ -101,12 +110,9 @@ class FileBrowserDataSource {
             }.value
             
             if Task.isCancelled { return }
-            
-            // Back on MainActor
             guard self.isCurrentLoad(generation) else { return }
             
             let (item, error) = result
-            
             if let error = error {
                 self.delegate?.dataSource(self, didFailToLoad: error)
             }
@@ -114,11 +120,11 @@ class FileBrowserDataSource {
             self.rootItem = item
             self.unfilteredItems = item.children ?? []
             
+            isUpdatingSilently = true
             self.applyStoredSortPreferences()
-            self.sortItems()
+            isUpdatingSilently = false
             
-            let finalItems = self.rootItem?.children ?? []
-            self.delegate?.dataSource(self, didLoadItems: finalItems)
+            self.sortItems() // This will call applySearchFilter and notify delegate ONCE
         }
     }
     
@@ -127,9 +133,7 @@ class FileBrowserDataSource {
     private func applyStoredSortPreferences() {
         if let stored = SettingsStore.shared.folderSortPreferences[currentDirectory.path] {
             let parts = stored.components(separatedBy: "|")
-            if parts.count >= 2,
-               parts[0].count > 0,
-               parts[1].count > 0 {
+            if parts.count >= 2, !parts[0].isEmpty {
                 self.sortColumn = parts[0]
                 self.sortAscending = (parts[1] == "asc")
             }

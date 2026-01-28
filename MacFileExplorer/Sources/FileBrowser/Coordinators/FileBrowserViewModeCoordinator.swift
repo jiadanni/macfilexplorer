@@ -27,6 +27,8 @@ final class FileBrowserViewModeCoordinator {
 
             // Perform setup on main thread
             DispatchQueue.main.async {
+                owner.currentViewMode = viewMode
+                
                 // Handle view mode switching based on mode type
                 switch viewMode {
                 case .list:
@@ -46,32 +48,36 @@ final class FileBrowserViewModeCoordinator {
     private func displayListView() {
         guard let owner = owner else { return }
 
+        guard let scrollView = owner.scrollView else { return }
+        
         // Ensure the scroll view is added to container
-        if owner.scrollView.superview == nil {
-            owner.containerView.addSubview(owner.scrollView)
+        if let containerView = owner.containerView, scrollView.superview == nil {
+            containerView.addSubview(scrollView)
         }
 
         // Hide other views
         owner.collectionViewScrollView?.isHidden = true
         owner.browserView?.isHidden = true
-        owner.scrollView.isHidden = false
+        scrollView.isHidden = false
 
         // Setup constraints for list view
         NSLayoutConstraint.deactivate(owner.activeConstraints)
         owner.activeConstraints.removeAll()
 
-        if !owner.previewVisible {
-            owner.activeConstraints = [
-                owner.scrollView.topAnchor.constraint(equalTo: owner.containerView.topAnchor),
-                owner.scrollView.bottomAnchor.constraint(equalTo: owner.containerView.bottomAnchor),
-                owner.scrollView.leadingAnchor.constraint(equalTo: owner.containerView.leadingAnchor),
-                owner.scrollView.trailingAnchor.constraint(equalTo: owner.containerView.trailingAnchor)
-            ]
-            NSLayoutConstraint.activate(owner.activeConstraints)
+        if let containerView = owner.containerView {
+            if !owner.previewVisible {
+                owner.activeConstraints = [
+                    scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                    scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+                    scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                    scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor)
+                ]
+                NSLayoutConstraint.activate(owner.activeConstraints)
+            }
         }
 
         // Reload data
-        owner.outlineView.reloadData()
+        owner.outlineView?.reloadData()
     }
 
     private func displayCollectionView(for viewMode: ViewMode) {
@@ -82,32 +88,33 @@ final class FileBrowserViewModeCoordinator {
         }
 
         guard let collectionView = owner.collectionView,
-              let collectionViewScrollView = owner.collectionViewScrollView else {
+              let _ = owner.collectionViewScrollView else {
             debugLog("Error: CollectionView not properly initialized")
-            owner.currentViewMode = .list
-            displayFiles(for: .list)
             return
         }
 
         NSLayoutConstraint.deactivate(owner.activeConstraints)
         owner.activeConstraints.removeAll()
 
-        owner.scrollView.isHidden = true
+        owner.scrollView?.isHidden = true
         owner.browserView?.isHidden = true
 
-        if collectionViewScrollView.superview == nil && !owner.previewVisible {
-            owner.containerView.addSubview(collectionViewScrollView)
-        }
-        collectionViewScrollView.isHidden = false
+        if let collectionViewScrollView = owner.collectionViewScrollView, 
+           let containerView = owner.containerView {
+            if collectionViewScrollView.superview == nil && !owner.previewVisible {
+                containerView.addSubview(collectionViewScrollView)
+            }
+            collectionViewScrollView.isHidden = false
 
-        if !owner.previewVisible {
-            owner.activeConstraints = [
-                collectionViewScrollView.topAnchor.constraint(equalTo: owner.containerView.topAnchor),
-                collectionViewScrollView.leadingAnchor.constraint(equalTo: owner.containerView.leadingAnchor),
-                collectionViewScrollView.trailingAnchor.constraint(equalTo: owner.containerView.trailingAnchor),
-                collectionViewScrollView.bottomAnchor.constraint(equalTo: owner.containerView.bottomAnchor)
-            ]
-            NSLayoutConstraint.activate(owner.activeConstraints)
+            if !owner.previewVisible {
+                owner.activeConstraints = [
+                    collectionViewScrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                    collectionViewScrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                    collectionViewScrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                    collectionViewScrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+                ]
+                NSLayoutConstraint.activate(owner.activeConstraints)
+            }
         }
 
         configureCollectionViewLayout(for: viewMode, collectionView: collectionView)
@@ -168,29 +175,34 @@ final class FileBrowserViewModeCoordinator {
         
         guard let browserView = owner.browserView else {
             debugLog("Error: BrowserView not properly initialized, falling back to list view")
-            owner.currentViewMode = .list
             return
         }
 
         NSLayoutConstraint.deactivate(owner.activeConstraints)
         owner.activeConstraints.removeAll()
 
-        owner.scrollView.isHidden = true
-        owner.collectionViewScrollView?.isHidden = true
-
-        if browserView.superview == nil && !owner.previewVisible {
-            owner.containerView.addSubview(browserView)
+        if let scrollView = owner.scrollView {
+            scrollView.isHidden = true
         }
-        browserView.isHidden = false
+        if let collectionViewScrollView = owner.collectionViewScrollView {
+            collectionViewScrollView.isHidden = true
+        }
 
-        if !owner.previewVisible {
-            owner.activeConstraints = [
-                browserView.topAnchor.constraint(equalTo: owner.containerView.topAnchor),
-                browserView.leadingAnchor.constraint(equalTo: owner.containerView.leadingAnchor),
-                browserView.trailingAnchor.constraint(equalTo: owner.containerView.trailingAnchor),
-                browserView.bottomAnchor.constraint(equalTo: owner.containerView.bottomAnchor)
-            ]
-            NSLayoutConstraint.activate(owner.activeConstraints)
+        if let containerView = owner.containerView {
+            if browserView.superview == nil && !owner.previewVisible {
+                containerView.addSubview(browserView)
+            }
+            browserView.isHidden = false
+
+            if !owner.previewVisible {
+                owner.activeConstraints = [
+                    browserView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                    browserView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                    browserView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                    browserView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+                ]
+                NSLayoutConstraint.activate(owner.activeConstraints)
+            }
         }
 
         debugLog("displayFiles: Setting up browser view, rootItem has \(owner.rootItem?.children?.count ?? 0) children")

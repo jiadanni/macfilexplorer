@@ -130,9 +130,11 @@ class FileBrowserPreviewPaneCoordinatorTests: XCTestCase {
     
     /// Verify no state update on redundant changes
     func testNoStateUpdateOnRedundantChanges() {
-        mockSettings.previewPaneVisible = true
-        
+        // Ensure coordinator is in a known state first
+        sut.setPreviewPaneVisible(true)
         let firstCallCount = mockDelegate.visibilityChangeCount
+        
+        // Redundant call
         sut.setPreviewPaneVisible(true)
         let secondCallCount = mockDelegate.visibilityChangeCount
         
