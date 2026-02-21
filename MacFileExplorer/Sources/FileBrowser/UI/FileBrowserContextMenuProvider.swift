@@ -85,6 +85,7 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
         let tagsMenuItem = NSMenuItem(title: "Tags", action: nil, keyEquivalent: "")
         let tagsMenu = NSMenu()
         tagsMenuItem.submenu = tagsMenu
+        tagsMenu.addItem(withTitle: "Add New Tag...", action: #selector(handleAddNewTag(_:)), keyEquivalent: "")
         menu.addItem(tagsMenuItem)
         menu.addItem(NSMenuItem.separator())
         
@@ -185,12 +186,7 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
     @objc func handleOpen(_ sender: Any) {
         guard let delegate = delegate else { return }
         let items = delegate.getSelectedItems()
-        for item in items {
-            if item.isDirectory {
-                delegate.performFileOperation(.move, items: [item.url], destination: item.url) // Wait, open is not an operation.
-                // Just use the delegate's open logic
-            }
-        }
+
         // Actually, let's keep it simple: delegate handles the actual implementation
         if items.count == 1, let item = items.first {
             if item.isDirectory {

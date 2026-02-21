@@ -7,6 +7,14 @@ import Foundation
 /// - Directory access permission tracking
 /// - System permission status checking
 ///
+/// Represents a resolved granted directory entry with its validation state.
+struct ResolvedGrantedDirectoryEntry {
+    let url: URL?
+    let path: String
+    let isStale: Bool
+    let isValid: Bool
+}
+
 /// **Thread Safety:** Implementations must be thread-safe.
 protocol PermissionsManaging: AnyObject {
     
@@ -79,6 +87,12 @@ protocol PermissionsManaging: AnyObject {
     ///
     /// - Parameter type: The permission type to configure.
     func openSystemPreferences(for type: PermissionType)
+
+    /// Returns resolved directory entries with validation status.
+    func resolvedGrantedDirectoryEntries() -> [ResolvedGrantedDirectoryEntry]
+
+    /// Checks if the app is running in a sandbox environment.
+    func isSandboxed() -> Bool
 }
 
 /// Default implementation bridge for the singleton.
