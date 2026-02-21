@@ -452,11 +452,6 @@ class FileItem: Hashable {
         }
     }
 
-    @available(*, deprecated, message: "Use icon(useGrayscale:) with explicit preference for better testability")
-    var icon: NSImage {
-        return icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons)
-    }
-
     var isImage: Bool {
         let imageExtensions = ["png", "jpg", "jpeg", "gif", "bmp", "tiff", "heic"]
         return imageExtensions.contains(url.pathExtension.lowercased())
