@@ -226,6 +226,15 @@ class FileItem: Hashable {
     /// Override this in tests to provide a mock implementation.
     static var permissionsManager: PermissionsManaging = PermissionsManager.shared
 
+    /// Shared date formatter for consistent and performant date string generation.
+    /// Initializing DateFormatter is expensive, so we use a static instance.
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
+
     // MARK: - Public Methods
 
     @discardableResult
@@ -529,18 +538,12 @@ class FileItem: Hashable {
 
     var formattedDate: String {
         guard let date = modificationDate else { return "--" }
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        return FileItem.dateFormatter.string(from: date)
     }
 
     var formattedCreationDate: String {
         guard let date = creationDate else { return "--" }
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        return FileItem.dateFormatter.string(from: date)
     }
 
     var formattedPermissions: String {
