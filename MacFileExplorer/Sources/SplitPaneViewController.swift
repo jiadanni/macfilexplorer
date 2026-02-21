@@ -48,6 +48,10 @@ class SplitPaneViewController: NSSplitViewController, FileBrowserDelegate {
         // Per-pane preview visibility restored when each pane is created
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     private func setupUI() {
         // Configure the split view itself
         splitView.isVertical = true // Main split is vertical (panes side-by-side)
