@@ -13,7 +13,7 @@ import Cocoa
 /// let item = FileItem(url: URL(fileURLWithPath: "/Users/username/Documents"))
 /// item.loadChildren()  // Load subdirectories and files
 /// for child in item.children ?? [] {
-///     print(child.displayName)
+///     print(child.displayName(showExtensions: settings.showFileExtensions))
 /// }
 /// ```
 ///
@@ -86,8 +86,8 @@ class FileItem: Hashable {
 
     /// Returns display name with explicitly provided extension visibility preference.
     ///
-    /// This method breaks the circular dependency on SettingsStore and allows
-    /// testability by passing the extension preference directly.
+    /// This method avoids circular dependency on SettingsStore and enables testability
+    /// by passing the extension preference directly.
     ///
     /// - Parameter showExtensions: Whether to show file extensions
     /// - Returns: The display name for this file item
@@ -98,18 +98,6 @@ class FileItem: Hashable {
             // Hide extension for files
             return (name as NSString).deletingPathExtension
         }
-    }
-
-    /// Display name respecting user's file extension preference.
-    ///
-    /// If user has disabled file extensions (via SettingsStore), this returns
-    /// the name without extension for files. Directories always show full name.
-    ///
-    /// **Note**: Uses dependency injection pattern. Pass showExtensions explicitly
-    /// from SettingsStore when available. Defaults to showing extensions if unavailable.
-    @available(*, deprecated, renamed: "displayName(showExtensions:)", message: "Pass showExtensions explicitly for better testability")
-    var displayName: String {
-        return displayName(showExtensions: SettingsStore.shared.showFileExtensions)
     }
 
     init(url: URL) {
@@ -232,6 +220,12 @@ class FileItem: Hashable {
         }
     }
 
+    // MARK: - Dependency Injection
+    
+    /// Permissions manager for security-scoped resource access.
+    /// Override this in tests to provide a mock implementation.
+    static var permissionsManager: PermissionsManaging = PermissionsManager.shared
+
     // MARK: - Public Methods
 
     @discardableResult
@@ -245,7 +239,7 @@ class FileItem: Hashable {
         }
 
         // Ensure security-scoped access for sandboxed builds when folder is already granted.
-        _ = PermissionsManager.shared.ensureAccess(for: url)
+        _ = FileItem.permissionsManager.ensureAccess(for: url)
 
         let fileManager = FileManager.default
         let resolvedURL = url.resolvingSymlinksInPath()

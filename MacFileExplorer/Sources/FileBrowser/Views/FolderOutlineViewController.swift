@@ -76,9 +76,13 @@ class FolderOutlineViewController: NSViewController {
     }
     
     // Auto-expansion logic (simplified from SidebarViewController)
-    func expandToCurrentDirectory(url: URL) {
-        // Use injected settings
-        guard settings.expandSidebarToCurrentDirectory else { return }
+    /// Expands the folder outline to show the specified directory.
+    /// - Parameters:
+    ///   - url: The directory URL to expand to
+    ///   - force: If true, bypasses the expandSidebarToCurrentDirectory setting check
+    func expandToCurrentDirectory(url: URL, force: Bool = false) {
+        // Use injected settings unless force is true
+        guard force || settings.expandSidebarToCurrentDirectory else { return }
         var pathComponents: [URL] = []
         var currentURL = url
         while currentURL.path != "/" && currentURL.path != rootItem.url.path {
@@ -107,8 +111,7 @@ class FolderOutlineViewController: NSViewController {
         outlineView.expandItem(item)
 
         if item.needsChildLoading && !isUserHomeFolder {
-            let success = item.loadChildren(showsHiddenFiles: false)
-            if success {
+            item.loadChildren(showsHiddenFiles: false) { _ in
                 Task { @MainActor [weak self] in
                     self?.outlineView.reloadItem(item, reloadChildren: true)
                     self?.outlineView.expandItem(item)
@@ -123,8 +126,7 @@ class FolderOutlineViewController: NSViewController {
     private func continueExpandingPath(pathComponents: [URL], currentItem: FileItem, targetURL: URL, index: Int) {
         if let children = currentItem.children {
             for child in children {
-                // Handle potential symlink mismatches (e.g. /var vs /private/var)
-                if child.url == targetURL || child.url.resolvingSymlinksInPath() == targetURL.resolvingSymlinksInPath() {
+                if child.url == targetURL {
                     expandAndSelectPath(pathComponents: pathComponents, currentItem: child, index: index + 1)
                     return
                 }
@@ -215,7 +217,7 @@ extension FolderOutlineViewController: NSOutlineViewDataSource, NSOutlineViewDel
         let imageView = NSImageView()
         imageView.imageScaling = .scaleProportionallyDown
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.image = fileItem.icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons)
+        imageView.image = fileItem.icon(useGrayscale: settings.useGrayscaleIcons)
         
         let textField = NSTextField()
         textField.isBordered = false
@@ -224,7 +226,7 @@ extension FolderOutlineViewController: NSOutlineViewDataSource, NSOutlineViewDel
         textField.font = NSFont.systemFont(ofSize: 13)
         textField.lineBreakMode = .byTruncatingTail
         textField.translatesAutoresizingMaskIntoConstraints = false
-        textField.stringValue = fileItem.displayName(showExtensions: SettingsStore.shared.showFileExtensions)
+        textField.stringValue = fileItem.displayName(showExtensions: settings.showFileExtensions)
         
         cellView.addSubview(imageView)
         cellView.addSubview(textField)

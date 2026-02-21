@@ -196,7 +196,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         let startupPath = settings.startupFolder ?? NSHomeDirectory()
         let startUrl = URL(fileURLWithPath: startupPath)
         
-        self.dataSource = FileBrowserDataSource(currentDirectory: startUrl)
+        self.dataSource = FileBrowserDataSource(currentDirectory: startUrl, settings: settings)
         self.dataSource.delegate = self
 
         navigationCoordinator = FileBrowserNavigationCoordinator()

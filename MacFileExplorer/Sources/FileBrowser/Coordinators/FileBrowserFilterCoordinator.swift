@@ -38,8 +38,11 @@ class FileBrowserFilterCoordinator: NSObject {
     /// Loads persisted filter criteria from settings.
     private func loadFilterCriteria() {
         if let savedCriteria = settingsStore.filterCriteriaData {
-            if let decoded = try? JSONDecoder().decode(FilterCriteria.self, from: savedCriteria) {
-                currentFilterCriteria = decoded
+            do {
+                currentFilterCriteria = try JSONDecoder().decode(FilterCriteria.self, from: savedCriteria)
+            } catch {
+                debugLog("[FilterCoordinator] Failed to decode saved filter criteria: \(error.localizedDescription). Using defaults.")
+                currentFilterCriteria = FilterCriteria()
             }
         }
     }

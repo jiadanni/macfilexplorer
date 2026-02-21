@@ -18,7 +18,8 @@
       "Bash(ls:*)",
       "Bash(for file in /Users/daniel.jatto/Source/mine/macfilexplorer/MacFileExplorerTests/*.swift)",
       "Bash(done)",
-      "Bash(sort:*)"
+      "Bash(sort:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

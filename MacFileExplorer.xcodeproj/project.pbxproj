@@ -15,6 +15,7 @@
 		0DDF66BAFC0DE43688298BF8 /* SidebarSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8690B54BDD6E20E612FF536C /* SidebarSupport.swift */; };
 		119BB274982CF04409B900CB /* AdvancedSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C10E33E57143492B991CF25 /* AdvancedSettingsViewController.swift */; };
 		125A6BB5684CD548ECBE83C5 /* FileBrowserQuickLookCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A238D08CA21829F4316AD59 /* FileBrowserQuickLookCoordinator.swift */; };
+		13AC31D6C591E2853E5B2786 /* ColorManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A5343017034A91D5DAA036 /* ColorManaging.swift */; };
 		17E66C936B874320BEA2DBA4 /* StorageAnalyzerWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3664633C5874840B264CBF1 /* StorageAnalyzerWindowController.swift */; };
 		18D3389E48E88CAA67D21780 /* FileSystemHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49269EEC959CEBC6D857DB66 /* FileSystemHelpers.swift */; };
 		1A32872CC5AFF8F96B3E40AC /* SettingsStoreGroups.swift in Sources */ = {isa = PBXBuildFile; fileRef = C037F8CDCD304468C6C897E3 /* SettingsStoreGroups.swift */; };
@@ -100,6 +101,7 @@
 		AF0B1C2D3E4F567890123461 /* NSImage+Symbols.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0B1C2D3E4F567890123460 /* NSImage+Symbols.swift */; };
 		ARR0001000200030004000501 /* Array+Safe.swift in Sources */ = {isa = PBXBuildFile; fileRef = ARR0001000200030004000500 /* Array+Safe.swift */; };
 		B2FC970F2EFFE9E57BFB995B /* FileBrowserViewController+ContextMenuShim.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC66049370B0803F21D93D6 /* FileBrowserViewController+ContextMenuShim.swift */; };
+		B36D90983A6BFD11FFEAD870 /* PermissionsManaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FF66B751B289B61A2A6AF1A /* PermissionsManaging.swift */; };
 		B463D291D24015C3949708E5 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 4F42A041AC2EE71E4CDDECBC /* Localizable.strings */; };
 		BA3148F27927A4CD8F8172BE /* FileBrowserViewController+NavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C7B9208F6406E999DE8AF15 /* FileBrowserViewController+NavigationCoordinator.swift */; };
 		BA4A84D968741E01649CACEB /* FileBrowserOutlineCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0569955DDF6C54A9D3A3B3 /* FileBrowserOutlineCoordinator.swift */; };
@@ -155,6 +157,7 @@
 		1F74C22C3ADD41E2A27FBABA /* ContextualPermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Services/ContextualPermissionManager.swift; sourceTree = "<group>"; };
 		1FBDDCAF9FC944D889F88AB7 /* FavoritesWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesWidgetView.swift; sourceTree = "<group>"; };
 		2EE3071256D14F848904E873 /* StorageProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageProgressViewController.swift; sourceTree = "<group>"; };
+		2FF66B751B289B61A2A6AF1A /* PermissionsManaging.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PermissionsManaging.swift; path = Core/Services/PermissionsManaging.swift; sourceTree = "<group>"; };
 		313C281B1524A427D6E39CD0 /* GeneralSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsViewController.swift; sourceTree = "<group>"; };
 		33D2DC3BF776FDDF0DB0D2C4 /* FileBrowserStateHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FileBrowserStateHandler.swift; path = FileBrowser/Handlers/FileBrowserStateHandler.swift; sourceTree = "<group>"; };
 		37016D72CD8E53ED39337E9B /* KeychainStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Core/Services/KeychainStore.swift; sourceTree = "<group>"; };
@@ -263,6 +266,7 @@
 		F0B10C20D30E40F50A60B70C /* FileOperationsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Services/FileOperationsManager.swift; sourceTree = "<group>"; };
 		F10C67119FFA854FFDD15227 /* FileBrowserCollectionCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FileBrowserCollectionCoordinator.swift; path = FileBrowser/Coordinators/FileBrowserCollectionCoordinator.swift; sourceTree = "<group>"; };
 		F1BABEAB45538AC5CA749C92 /* FileBrowserInteractionCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FileBrowserInteractionCoordinator.swift; path = FileBrowser/Coordinators/FileBrowserInteractionCoordinator.swift; sourceTree = "<group>"; };
+		F3A5343017034A91D5DAA036 /* ColorManaging.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ColorManaging.swift; path = Core/Services/ColorManaging.swift; sourceTree = "<group>"; };
 		F4A1271B67D753466BF6A75A /* FolderOutlineViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FolderOutlineViewController.swift; path = FileBrowser/Views/FolderOutlineViewController.swift; sourceTree = "<group>"; };
 		F9410711140846533B4EE97F /* PendingSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Storage/PendingSettings.swift; sourceTree = "<group>"; };
 		FB1A2B3C4D5E6F708192A1B4 /* FileBrowserDataSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileBrowser/DataSource/FileBrowserDataSource.swift; sourceTree = "<group>"; };
@@ -439,6 +443,8 @@
 				9369570556C1EF2AB9C150DB /* URLValidation.swift */,
 				33D2DC3BF776FDDF0DB0D2C4 /* FileBrowserStateHandler.swift */,
 				0C08084D0711B04C4A193557 /* FileBrowserActionHandler.swift */,
+				F3A5343017034A91D5DAA036 /* ColorManaging.swift */,
+				2FF66B751B289B61A2A6AF1A /* PermissionsManaging.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -670,6 +676,8 @@
 				04290E0E685F8FB6EB5491E2 /* URLValidation.swift in Sources */,
 				CA8A864612DDF0D2C3A1088A /* FileBrowserStateHandler.swift in Sources */,
 				756E816CA38B2EE3F1B13E6E /* FileBrowserActionHandler.swift in Sources */,
+				13AC31D6C591E2853E5B2786 /* ColorManaging.swift in Sources */,
+				B36D90983A6BFD11FFEAD870 /* PermissionsManaging.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

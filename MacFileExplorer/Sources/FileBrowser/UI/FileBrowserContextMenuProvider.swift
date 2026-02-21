@@ -37,73 +37,51 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
         let showHotkeys = settings.showContextMenuHotkeys
         
         // Open section
-        let openItem = menu.addItem(withTitle: "Open", action: #selector(handleOpen(_:)), keyEquivalent: showHotkeys ? "\r" : "")
-        openItem.target = self
-        
-        let newTabItem = menu.addItem(withTitle: "Open in New Tab", action: #selector(handleOpenInNewTab(_:)), keyEquivalent: "")
-        newTabItem.target = self
-        
-        let openWithItem = menu.addItem(withTitle: "Open With...", action: #selector(handleOpenWith(_:)), keyEquivalent: "")
-        openWithItem.target = self
-        
+        menu.addItem(withTitle: "Open", action: #selector(handleOpen(_:)), keyEquivalent: showHotkeys ? "\r" : "")
+        menu.addItem(withTitle: "Open in New Tab", action: #selector(handleOpenInNewTab(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Open With...", action: #selector(handleOpenWith(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         
         // Info section
         let getInfoItem = NSMenuItem(title: "Get Info", action: #selector(handleGetInfo(_:)), keyEquivalent: showHotkeys ? "i" : "")
-        getInfoItem.target = self
         if showHotkeys { getInfoItem.keyEquivalentModifierMask = .command }
         menu.addItem(getInfoItem)
         menu.addItem(NSMenuItem.separator())
         
         // Clipboard section
         let copyItem = NSMenuItem(title: "Copy", action: #selector(handleCopy(_:)), keyEquivalent: showHotkeys ? "c" : "")
-        copyItem.target = self
         if showHotkeys { copyItem.keyEquivalentModifierMask = .command }
         menu.addItem(copyItem)
-        
-        let copyToItem = menu.addItem(withTitle: "Copy To...", action: #selector(handleCopyTo(_:)), keyEquivalent: "")
-        copyToItem.target = self
+        menu.addItem(withTitle: "Copy To...", action: #selector(handleCopyTo(_:)), keyEquivalent: "")
         
         let cutItem = NSMenuItem(title: "Cut", action: #selector(handleCut(_:)), keyEquivalent: showHotkeys ? "x" : "")
-        cutItem.target = self
         if showHotkeys { cutItem.keyEquivalentModifierMask = .command }
         menu.addItem(cutItem)
-        
-        let moveToItem = menu.addItem(withTitle: "Move To...", action: #selector(handleMoveTo(_:)), keyEquivalent: "")
-        moveToItem.target = self
+        menu.addItem(withTitle: "Move To...", action: #selector(handleMoveTo(_:)), keyEquivalent: "")
         
         let pasteItem = NSMenuItem(title: "Paste", action: #selector(handlePaste(_:)), keyEquivalent: showHotkeys ? "v" : "")
-        pasteItem.target = self
         if showHotkeys { pasteItem.keyEquivalentModifierMask = .command }
         menu.addItem(pasteItem)
         menu.addItem(NSMenuItem.separator())
         
         // File operations section
         let renameItem = NSMenuItem(title: "Rename", action: #selector(handleRename(_:)), keyEquivalent: "")
-        renameItem.target = self
         menu.addItem(renameItem)
         
         let deleteItem = NSMenuItem(title: "Move to Trash", action: #selector(handleDelete(_:)), keyEquivalent: showHotkeys ? String(UnicodeScalar(NSDeleteCharacter)!) : "")
-        deleteItem.target = self
         if showHotkeys { deleteItem.keyEquivalentModifierMask = .command }
         menu.addItem(deleteItem)
         menu.addItem(NSMenuItem.separator())
         
         // Creation section
         let newFolderItem = NSMenuItem(title: "New Folder", action: #selector(handleNewFolder(_:)), keyEquivalent: showHotkeys ? "n" : "")
-        newFolderItem.target = self
         if showHotkeys { newFolderItem.keyEquivalentModifierMask = .command }
         menu.addItem(newFolderItem)
-        
-        let newFileItem = menu.addItem(withTitle: "New File", action: #selector(handleNewFile(_:)), keyEquivalent: "")
-        newFileItem.target = self
-        
+        menu.addItem(withTitle: "New File", action: #selector(handleNewFile(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         
         // Favorites & tags
-        let favItem = menu.addItem(withTitle: "Add to Favorites", action: #selector(handleAddToFavorites(_:)), keyEquivalent: "")
-        favItem.target = self
-        
+        menu.addItem(withTitle: "Add to Favorites", action: #selector(handleAddToFavorites(_:)), keyEquivalent: "")
         let tagsMenuItem = NSMenuItem(title: "Tags", action: nil, keyEquivalent: "")
         let tagsMenu = NSMenu()
         tagsMenuItem.submenu = tagsMenu
@@ -111,20 +89,21 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
         menu.addItem(NSMenuItem.separator())
         
         // Utility section
-        let showInFinderItem = menu.addItem(withTitle: "Show in Finder", action: #selector(handleShowInFinder(_:)), keyEquivalent: "")
-        showInFinderItem.target = self
-        
-        let terminalItem = menu.addItem(withTitle: "Open in Terminal", action: #selector(handleOpenInTerminal(_:)), keyEquivalent: "")
-        terminalItem.target = self
-        
+        menu.addItem(withTitle: "Show in Finder", action: #selector(handleShowInFinder(_:)), keyEquivalent: "")
+        menu.addItem(withTitle: "Open in Terminal", action: #selector(handleOpenInTerminal(_:)), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         
         // Pane management
-        let closePaneItem = menu.addItem(withTitle: "Close Pane", action: #selector(handleClosePane(_:)), keyEquivalent: "")
-        closePaneItem.target = self
+        menu.addItem(withTitle: "Close Pane", action: #selector(handleClosePane(_:)), keyEquivalent: "")
         
         // Clean up separators
         cleanupMenu(menu)
+        
+        for item in menu.items {
+            if item.action != nil {
+                item.target = self
+            }
+        }
         
         menu.delegate = self
         return menu
@@ -198,8 +177,7 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
         }
 
         tagsMenu.addItem(NSMenuItem.separator())
-        let addTagItem = tagsMenu.addItem(withTitle: "Add New Tag...", action: #selector(handleAddNewTag(_:)), keyEquivalent: "")
-        addTagItem.target = self
+        tagsMenu.addItem(withTitle: "Add New Tag...", action: #selector(handleAddNewTag(_:)), keyEquivalent: "")
     }
     
     // MARK: - Menu Item Actions
@@ -477,5 +455,55 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
         if let last = cleaned.last, last.isSeparatorItem { cleaned.removeLast() }
         menu.removeAllItems()
         cleaned.forEach { menu.addItem($0) }
+    }
+}
+
+// MARK: - NSMenuItemValidation
+extension FileBrowserContextMenuProvider: NSMenuItemValidation {
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        guard let delegate = delegate else { return false }
+        let selectedItems = delegate.getSelectedItems()
+        
+        // Handle items with specific actions
+        switch menuItem.action {
+        case #selector(handleOpen(_:)),
+             #selector(handleGetInfo(_:)),
+             #selector(handleCopy(_:)),
+             #selector(handleCopyTo(_:)),
+             #selector(handleCut(_:)),
+             #selector(handleMoveTo(_:)),
+             #selector(handleDelete(_:)),
+             #selector(handleAddToFavorites(_:)),
+             #selector(handleShowInFinder(_:)):
+            return !selectedItems.isEmpty
+            
+        case #selector(handleOpenInNewTab(_:)):
+            return selectedItems.count == 1 && selectedItems.first!.isDirectory
+            
+        case #selector(handleOpenWith(_:)):
+            return selectedItems.count == 1 && !selectedItems.first!.isDirectory
+            
+        case #selector(handleRename(_:)):
+            return selectedItems.count == 1
+            
+        case #selector(handlePaste(_:)):
+            let canReadPasteboard = NSPasteboard.general.canReadObject(forClasses: [NSURL.self], options: nil)
+            return canReadPasteboard
+            
+        case #selector(handleNewFolder(_:)),
+             #selector(handleNewFile(_:)),
+             #selector(handleOpenInTerminal(_:)),
+             #selector(handleClosePane(_:)),
+             #selector(handleToggleColumn(_:)),
+             #selector(handleResetColumns(_:)):
+            return true
+            
+        case #selector(handleToggleTag(_:)),
+             #selector(handleAddNewTag(_:)):
+            return !selectedItems.isEmpty
+            
+        default:
+            return true
+        }
     }
 }

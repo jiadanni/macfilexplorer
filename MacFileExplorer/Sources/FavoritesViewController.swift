@@ -250,30 +250,19 @@ extension FavoritesViewController: NSTableViewDataSource, NSTableViewDelegate {
     }
     
     func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int, proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation {
-        // Internal Reordering
-        if info.draggingPasteboard.types?.contains(.string) == true {
-             if dropOperation == .above { return .move }
-        }
-        
-        // File Drop (Adding to favorites or copying into existing favorite)
         if info.draggingPasteboard.types?.contains(.fileURL) == true {
-             // If dropping ON an item, it's a file copy operation to that destination
              if dropOperation == .on && row >= 0 { return .copy }
-             
-             // If dropping ABOVE (between items), it's adding to favorites
-             if dropOperation == .above { return .copy }
         }
-        
+        if dropOperation == .above { return .move }
         return []
     }
     
     func tableView(_ tableView: NSTableView, acceptDrop info: NSDraggingInfo, row: Int, dropOperation: NSTableView.DropOperation) -> Bool {
          // Reordering
-         if dropOperation == .above, 
-            let data = info.draggingPasteboard.data(forType: .string),
-            let rowIndexes = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [NSIndexSet.self], from: data) as? IndexSet {
-             
-             guard let draggedRow = rowIndexes.first else { return false }
+         if dropOperation == .above {
+             guard let data = info.draggingPasteboard.data(forType: .string),
+                   let rowIndexes = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [NSIndexSet.self], from: data) as? IndexSet,
+                   let draggedRow = rowIndexes.first else { return false }
              
              let item = favoriteItems[draggedRow]
              favoriteItems.remove(at: draggedRow)
@@ -286,53 +275,26 @@ extension FavoritesViewController: NSTableViewDataSource, NSTableViewDelegate {
          }
          
          // File drop
-         if let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] {
-             // Handle adding to favorites (inserting)
-             if dropOperation == .above {
-                 let workspace = NSWorkspace.shared
-                 var newItems: [SidebarItem] = []
-                 
-                 for url in urls {
-                     let icon = workspace.icon(forFile: url.path)
-                     let name = url.lastPathComponent
-                     let newItem = SidebarItem(name: name, url: url, icon: icon)
-                     // Avoid duplicates
-                     if !favoriteItems.contains(where: { $0.url == newItem.url }) {
-                         newItems.append(newItem)
-                     }
-                 }
-                 
-                 if !newItems.isEmpty {
-                     favoriteItems.insert(contentsOf: newItems, at: row)
-                     tableView.reloadData()
-                     saveFavorites()
-                     return true
-                 }
-                 return false
-             }
+         if dropOperation == .on, let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] {
+              guard row < favoriteItems.count else { return false }
+              let destinationInfo = favoriteItems[row]
+              let destination = destinationInfo.url
+              
+             let fileManager = FileManager.default
+             var allSucceeded = true
              
-              // Handle copying INTO existing favorite
-              if dropOperation == .on {
-                   guard row < favoriteItems.count else { return false }
-                   let destinationInfo = favoriteItems[row]
-                   let destination = destinationInfo.url
-                   
-                  let fileManager = FileManager.default
-                  var allSucceeded = true
-                  
-                  for sourceURL in urls {
-                      let fileName = sourceURL.lastPathComponent
-                      let targetURL = destination.appendingPathComponent(fileName)
-                      if sourceURL == targetURL { continue }
-                      do {
-                          try fileManager.moveItem(at: sourceURL, to: targetURL)
-                      } catch {
-                          debugLog("Failed to move \(sourceURL) to \(targetURL): \(error)")
-                          allSucceeded = false
-                      }
-                  }
-                  return allSucceeded
-              }
+             for sourceURL in urls {
+                 let fileName = sourceURL.lastPathComponent
+                 let targetURL = destination.appendingPathComponent(fileName)
+                 if sourceURL == targetURL { continue }
+                 do {
+                     try fileManager.moveItem(at: sourceURL, to: targetURL)
+                 } catch {
+                     debugLog("Failed to move \(sourceURL) to \(targetURL): \(error)")
+                     allSucceeded = false
+                 }
+             }
+             return allSucceeded
          }
          
          return false

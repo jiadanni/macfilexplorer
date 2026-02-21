@@ -1,0 +1,1605 @@
+MacFileExplorer Test Runner
+============================
+
+Creating temporary test environment in: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/tmp.W7PgqQ2ksn
+Running tests...
+
+warning: 'tmp.w7pgqq2ksn': found 2 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    /private/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/tmp.W7PgqQ2ksn/MacFileExplorerTests/Info.plist
+    /private/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/tmp.W7PgqQ2ksn/MacFileExplorerTests/README.md
+warning: 'tmp.w7pgqq2ksn': found 1 file(s) which are unhandled; explicitly declare them as resources or exclude from the target
+    /private/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/tmp.W7PgqQ2ksn/Sources/review.md
+Building for debugging...
+[0/7] /private/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/tmp.W7PgqQ2ksn/.build/arm64-apple-macosx/debug/MacFileExplorerPackageTests.derived/runner.swift
+[1/7] Write sources
+[4/7] Write swift-version--58304C5D6DBC2206.txt
+[6/120] Compiling MacFileExplorer AboutWindowController.swift
+[7/120] Compiling MacFileExplorer AccentColorControls.swift
+[8/120] Compiling MacFileExplorer AdvancedSettingsViewController.swift
+[9/120] Compiling MacFileExplorer AppConfig.swift
+[10/120] Compiling MacFileExplorer MainWindowController.swift
+[11/120] Compiling MacFileExplorer AppearanceSettingsViewController.swift
+[12/120] Compiling MacFileExplorer Array+Safe.swift
+[13/120] Compiling MacFileExplorer Atomic.swift
+[14/120] Compiling MacFileExplorer ContextMenuSettingsViewController.swift
+[15/120] Compiling MacFileExplorer FileItem.swift
+[16/120] Compiling MacFileExplorer SettingsTypes.swift
+[17/120] Compiling MacFileExplorer StorageCategory.swift
+[18/120] Compiling MacFileExplorer ViewOptions.swift
+[19/132] Compiling MacFileExplorer StartWidgetView.swift
+[20/132] Compiling MacFileExplorer StatusBarViewController.swift
+[21/132] Compiling MacFileExplorer StorageAnalyzerEngine.swift
+[22/132] Compiling MacFileExplorer StorageAnalyzerTabViewController.swift
+[23/132] Compiling MacFileExplorer StorageAnalyzerWindowController.swift
+[24/132] Compiling MacFileExplorer StorageItem.swift
+[25/132] Compiling MacFileExplorer StorageListViewController.swift
+[26/132] Compiling MacFileExplorer StorageOverviewWidgetView.swift
+[27/132] Compiling MacFileExplorer StorageProgressViewController.swift
+[28/132] Compiling MacFileExplorer StorageScopeSelectionViewController.swift
+[29/132] Compiling MacFileExplorer StorageSettingsViewController.swift
+[30/132] Compiling MacFileExplorer StorageSummaryViewController.swift
+[31/132] Emitting module MacFileExplorer
+[32/132] Compiling MacFileExplorer FileBrowserPreviewPaneCoordinator.swift
+[33/132] Compiling MacFileExplorer FileBrowserQuickLookCoordinator.swift
+[34/132] Compiling MacFileExplorer FileBrowserSelectionCoordinator.swift
+[35/132] Compiling MacFileExplorer FileBrowserStatusBarCoordinator.swift
+[36/132] Compiling MacFileExplorer FileBrowserViewModeCoordinator.swift
+[37/132] Compiling MacFileExplorer FileBrowserZoomCoordinator.swift
+[38/132] Compiling MacFileExplorer BrowserFactory.swift
+[39/132] Compiling MacFileExplorer FileBrowserDataSource.swift
+[40/132] Compiling MacFileExplorer FileBrowserSelectionManager.swift
+[41/132] Compiling MacFileExplorer FileBrowserViewController+ContextMenuShim.swift
+[42/132] Compiling MacFileExplorer FileBrowserViewController+CoordinatorDelegates.swift
+[43/132] Compiling MacFileExplorer FileBrowserViewController+FileOperations.swift
+[44/132] Compiling MacFileExplorer FileBrowserViewController+NavigationCoordinator.swift
+[45/132] Compiling MacFileExplorer FileBrowserViewController+SelectionCoordinator.swift
+[46/132] Compiling MacFileExplorer FileBrowserViewController+Toolbar.swift
+[47/132] Compiling MacFileExplorer FileBrowserGestureHandler.swift
+[48/132] Compiling MacFileExplorer FileBrowserKeyboardHandler.swift
+[49/132] Compiling MacFileExplorer FileBrowserActionHandler.swift
+[50/132] Compiling MacFileExplorer FileBrowserStateHandler.swift
+[51/132] Compiling MacFileExplorer FileBrowserActionHelper.swift
+[52/132] Compiling MacFileExplorer FileBrowserContextMenuProvider.swift
+[53/132] Compiling MacFileExplorer FileBrowserDialogHelper.swift
+[54/132] Compiling MacFileExplorer FileBrowserDragDropHandler.swift
+[55/132] Compiling MacFileExplorer FileBrowserSupportTypes.swift
+[56/132] Compiling MacFileExplorer FreeFormCollectionViewLayout.swift
+[57/132] Compiling MacFileExplorer FilterPanelViewController.swift
+[58/132] Compiling MacFileExplorer FolderOutlineViewController.swift
+[59/132] Compiling MacFileExplorer FileBrowserViewController.swift
+[60/132] Compiling MacFileExplorer FileCopyMoveDialog.swift
+[61/132] Compiling MacFileExplorer FileIconItem.swift
+[62/132] Compiling MacFileExplorer FileOperationsSettingsViewController.swift
+[63/132] Compiling MacFileExplorer GeneralSettingsViewController.swift
+[64/132] Compiling MacFileExplorer GettingStartedWidgetView.swift
+[65/132] Compiling MacFileExplorer GoMenuSettingsViewController.swift
+[66/132] Compiling MacFileExplorer HiddenFilesVisibilityCoordinator.swift
+[67/132] Compiling MacFileExplorer L10n.swift
+[68/132] Compiling MacFileExplorer LocationsViewController.swift
+[69/132] Compiling MacFileExplorer Logging.swift
+[70/132] Compiling MacFileExplorer NSColor+CustomAccentColor.swift
+[71/132] Compiling MacFileExplorer NSImage+Grayscale.swift
+[72/132] Compiling MacFileExplorer NSImage+Symbols.swift
+[73/132] Compiling MacFileExplorer NotificationNames.swift
+[74/132] Compiling MacFileExplorer PermissionsSettingsViewController.swift
+[75/132] Compiling MacFileExplorer PreviewHandler.swift
+[76/132] Compiling MacFileExplorer PreviewHandlers.swift
+[77/132] Compiling MacFileExplorer PreviewPaneViewController.swift
+[78/132] Compiling MacFileExplorer PreviewViewController.swift
+[79/132] Compiling MacFileExplorer ProgressViewController.swift
+[80/132] Compiling MacFileExplorer QuickActionsWidgetView.swift
+[81/132] Compiling MacFileExplorer ColorManager.swift
+[82/132] Compiling MacFileExplorer ContextualPermissionManager.swift
+[83/132] Compiling MacFileExplorer FileOperationsManager.swift
+[84/132] Compiling MacFileExplorer FileSystemHelpers.swift
+[85/132] Compiling MacFileExplorer FileSystemMonitor.swift
+[86/132] Compiling MacFileExplorer KeychainStore.swift
+[87/132] Compiling MacFileExplorer NavigationManager.swift
+[88/132] Compiling MacFileExplorer PermissionsManager.swift
+[89/132] Compiling MacFileExplorer PendingSettings.swift
+[90/132] Compiling MacFileExplorer SettingsStore.swift
+[91/132] Compiling MacFileExplorer SettingsStoreGroups.swift
+[92/132] Compiling MacFileExplorer SettingsStoreProtocol.swift
+[93/132] Compiling MacFileExplorer SettingsUserDefaultsKeys.swift
+[94/132] Compiling MacFileExplorer FavoritesViewController.swift
+[95/132] Compiling MacFileExplorer FavoritesWidgetView.swift
+[96/132] Compiling MacFileExplorer BannerNotificationManager.swift
+[97/132] Compiling MacFileExplorer FileBrowserDisplayController.swift
+[98/132] Compiling MacFileExplorer FileBrowserStatusBarManager.swift
+[99/132] Compiling MacFileExplorer FileBrowserUISetupController.swift
+[100/132] Compiling MacFileExplorer FileBrowserCollectionCoordinator.swift
+[101/132] Compiling MacFileExplorer FileBrowserColumnCoordinator.swift
+[102/132] Compiling MacFileExplorer FileBrowserDragDropCoordinator.swift
+[103/132] Compiling MacFileExplorer FileBrowserFilterCoordinator.swift
+[104/132] Compiling MacFileExplorer FileBrowserInteractionCoordinator.swift
+[105/132] Compiling MacFileExplorer FileBrowserNavigationCoordinator.swift
+[106/132] Compiling MacFileExplorer FileBrowserOutlineCoordinator.swift
+[107/132] Compiling MacFileExplorer SettingsSidebarCellView.swift
+[108/132] Compiling MacFileExplorer SettingsSidebarViewController.swift
+[109/132] Compiling MacFileExplorer SettingsSplitPaneViewController.swift
+[110/132] Compiling MacFileExplorer SettingsViewController.swift
+[111/132] Compiling MacFileExplorer SettingsWindowController.swift
+[112/132] Compiling MacFileExplorer SidebarSettingsViewController.swift
+[113/132] Compiling MacFileExplorer SidebarSupport.swift
+[114/132] Compiling MacFileExplorer SidebarViewController.swift
+[115/132] Compiling MacFileExplorer SplitPaneViewController.swift
+[116/132] Compiling MacFileExplorer SplitViewController.swift
+[117/132] Compiling MacFileExplorer StartDesignSystem.swift
+[118/132] Compiling MacFileExplorer StartViewController.swift
+[119/132] Compiling MacFileExplorer TabBarController.swift
+[120/132] Compiling MacFileExplorer TabButtonContainerView.swift
+[121/132] Compiling MacFileExplorer TabsSettingsViewController.swift
+[122/132] Compiling MacFileExplorer TerminalSettingsViewController.swift
+[123/132] Compiling MacFileExplorer TerminalViewController.swift
+[124/132] Compiling MacFileExplorer TerminalVisibilityCoordinator.swift
+[125/132] Compiling MacFileExplorer ToolbarSettingsViewController.swift
+[126/132] Compiling MacFileExplorer ToolbarViewController.swift
+[127/132] Compiling MacFileExplorer URLValidation.swift
+[128/132] Compiling MacFileExplorer ViewOptionsViewController.swift
+[129/132] Compiling MacFileExplorer WelcomeWidgetView.swift
+[130/132] Compiling MacFileExplorer WindowTrafficLightManager.swift
+[131/152] Compiling MacFileExplorerTests FileBrowserViewControllerTests.swift
+[132/152] Compiling MacFileExplorerTests FileBrowserViewModeCoordinatorTests.swift
+[133/152] Compiling MacFileExplorerTests StorageAnalyzerEngineTests.swift
+[134/152] Compiling MacFileExplorerTests MockSettingsStore.swift
+[135/152] Compiling MacFileExplorerTests FileBrowserNavigationCoordinatorTests.swift
+[136/152] Compiling MacFileExplorerTests FileBrowserPreviewPaneCoordinatorTests.swift
+[137/152] Compiling MacFileExplorerTests NewSettingsViewControllerTests.swift
+[138/152] Compiling MacFileExplorerTests PermissionsManagerTests.swift
+[139/152] Compiling MacFileExplorerTests SecurityIntegrationTests.swift
+[140/152] Compiling MacFileExplorerTests SettingsStoreTests.swift
+[141/152] Compiling MacFileExplorerTests FileBrowserFilterCoordinatorIntegrationTests.swift
+[142/152] Compiling MacFileExplorerTests FileBrowserInteractionCoordinatorTests.swift
+[143/154] Compiling MacFileExplorerTests FileOperationsManagerTests.swift
+[144/154] Compiling MacFileExplorerTests ModelTests.swift
+[145/154] Compiling MacFileExplorerTests FileBrowserZoomCoordinatorTests.swift
+[146/154] Compiling MacFileExplorerTests FileItemTests.swift
+[147/154] Emitting module MacFileExplorerTests
+[148/154] Compiling MacFileExplorerTests ColorManagerAndMonitorTests.swift
+[149/154] Compiling MacFileExplorerTests FileBrowserAsyncTests.swift
+[150/154] Compiling MacFileExplorerTests FileBrowserDataSourceTests.swift
+[151/154] Compiling MacFileExplorerTests TerminalViewControllerTests.swift
+[152/154] Compiling MacFileExplorerTests ToolbarViewControllerTests.swift
+[153/156] Compiling MacFileExplorerPackageTests runner.swift
+[154/156] Emitting module MacFileExplorerPackageTests
+[154/156] Write Objects.LinkFileList
+[155/156] Linking MacFileExplorerPackageTests
+Build complete! (27.24s)
+Test Suite 'All tests' started at 2026-01-27 09:58:11.034.
+Test Suite 'MacFileExplorerPackageTests.xctest' started at 2026-01-27 09:58:11.036.
+Test Suite 'ColorManagerTests' started at 2026-01-27 09:58:11.036.
+Test Case '-[MacFileExplorerTests.ColorManagerTests testClearGlobalFolderColor]' started.
+Test Case '-[MacFileExplorerTests.ColorManagerTests testClearGlobalFolderColor]' passed (0.004 seconds).
+Test Case '-[MacFileExplorerTests.ColorManagerTests testColorToHexAndBack]' started.
+Test Case '-[MacFileExplorerTests.ColorManagerTests testColorToHexAndBack]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.ColorManagerTests testConcurrentColorAccess]' started.
+Test Case '-[MacFileExplorerTests.ColorManagerTests testConcurrentColorAccess]' passed (0.005 seconds).
+Test Case '-[MacFileExplorerTests.ColorManagerTests testGetFolderColorForFolderName]' started.
+Test Case '-[MacFileExplorerTests.ColorManagerTests testGetFolderColorForFolderName]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.ColorManagerTests testGetGlobalFolderColorDefaultsToNil]' started.
+Test Case '-[MacFileExplorerTests.ColorManagerTests testGetGlobalFolderColorDefaultsToNil]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.ColorManagerTests testSetGlobalFolderColor]' started.
+Test Case '-[MacFileExplorerTests.ColorManagerTests testSetGlobalFolderColor]' passed (0.001 seconds).
+Test Suite 'ColorManagerTests' passed at 2026-01-27 09:58:11.047.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.010 (0.011) seconds
+Test Suite 'FileBrowserAsyncTests' started at 2026-01-27 09:58:11.047.
+Test Case '-[MacFileExplorerTests.FileBrowserAsyncTests testHistoryLimit_TruncatesOldEntries]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserAsyncTests testHistoryLimit_TruncatesOldEntries]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserAsyncTests testRapidNavigation_UpdatesStateCorrectly]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserAsyncTests testRapidNavigation_UpdatesStateCorrectly]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserAsyncTests testUnboundedRecursionFailure_Simulated]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserAsyncTests testUnboundedRecursionFailure_Simulated]' passed (0.000 seconds).
+Test Suite 'FileBrowserAsyncTests' passed at 2026-01-27 09:58:11.048.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'FileBrowserDataSourceTests' started at 2026-01-27 09:58:11.048.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testFilterCriteria_ByFileType]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testFilterCriteria_ByFileType]' passed (0.009 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testFilterCriteria_BySize]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testFilterCriteria_BySize]' passed (0.509 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testNavigate_GoogleDrivePath_RedirectsToMyDrive]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testNavigate_GoogleDrivePath_RedirectsToMyDrive]' passed (0.003 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testNavigate_LoadsDirectoryContents]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testNavigate_LoadsDirectoryContents]' passed (0.005 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testNavigate_NonexistentPath_CallsErrorDelegate]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testNavigate_NonexistentPath_CallsErrorDelegate]' passed (0.003 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testNavigate_WithShowHiddenFiles_LoadsHiddenFiles]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testNavigate_WithShowHiddenFiles_LoadsHiddenFiles]' passed (0.005 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testReload_RefreshesCurrentDirectory]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testReload_RefreshesCurrentDirectory]' passed (0.514 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testSearchFilter_MatchingText_FiltersResults]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testSearchFilter_MatchingText_FiltersResults]' passed (0.506 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testSearchFilter_NoMatches_ReturnsEmpty]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testSearchFilter_NoMatches_ReturnsEmpty]' passed (0.508 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testSortColumn_ByName_Ascending]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testSortColumn_ByName_Ascending]' passed (0.004 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testSortColumn_ByName_Descending]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testSortColumn_ByName_Descending]' passed (0.004 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testSortColumn_BySize]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserDataSourceTests testSortColumn_BySize]' passed (0.004 seconds).
+Test Suite 'FileBrowserDataSourceTests' passed at 2026-01-27 09:58:13.122.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 2.073 (2.075) seconds
+Test Suite 'FileBrowserFilterCoordinatorIntegrationTests' started at 2026-01-27 09:58:13.122.
+Test Case '-[MacFileExplorerTests.FileBrowserFilterCoordinatorIntegrationTests testApplyFilterPersistsCriteria]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserFilterCoordinatorIntegrationTests testApplyFilterPersistsCriteria]' passed (0.124 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserFilterCoordinatorIntegrationTests testClearFiltersResetsCriteria]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserFilterCoordinatorIntegrationTests testClearFiltersResetsCriteria]' passed (0.018 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserFilterCoordinatorIntegrationTests testLoadsPersistedFilterCriteriaOnInit]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserFilterCoordinatorIntegrationTests testLoadsPersistedFilterCriteriaOnInit]' passed (0.017 seconds).
+Test Suite 'FileBrowserFilterCoordinatorIntegrationTests' passed at 2026-01-27 09:58:13.281.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.159 (0.159) seconds
+Test Suite 'FileBrowserInteractionCoordinatorTests' started at 2026-01-27 09:58:13.282.
+Test Case '-[MacFileExplorerTests.FileBrowserInteractionCoordinatorTests testClearClickTracking]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserInteractionCoordinatorTests testClearClickTracking]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserInteractionCoordinatorTests testClickTracking]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserInteractionCoordinatorTests testClickTracking]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserInteractionCoordinatorTests testHandleDoubleClick]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserInteractionCoordinatorTests testHandleDoubleClick]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserInteractionCoordinatorTests testRenameEligibilityDelay]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserInteractionCoordinatorTests testRenameEligibilityDelay]' passed (0.612 seconds).
+Test Suite 'FileBrowserInteractionCoordinatorTests' passed at 2026-01-27 09:58:13.895.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.613 (0.613) seconds
+Test Suite 'FileBrowserNavigationCoordinatorTests' started at 2026-01-27 09:58:13.895.
+Test Case '-[MacFileExplorerTests.FileBrowserNavigationCoordinatorTests testGetBreadcrumbs]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserNavigationCoordinatorTests testGetBreadcrumbs]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserNavigationCoordinatorTests testGoBackAndForward]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserNavigationCoordinatorTests testGoBackAndForward]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserNavigationCoordinatorTests testLoadDirectory]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserNavigationCoordinatorTests testLoadDirectory]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserNavigationCoordinatorTests testNavigateToParent]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserNavigationCoordinatorTests testNavigateToParent]' passed (0.000 seconds).
+Test Suite 'FileBrowserNavigationCoordinatorTests' passed at 2026-01-27 09:58:13.896.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'FileBrowserPreviewPaneCoordinatorTests' started at 2026-01-27 09:58:13.896.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testCoordinatorOwnsPositionState]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testCoordinatorOwnsPositionState]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testCoordinatorOwnsVisibilityState]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testCoordinatorOwnsVisibilityState]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testCoordinatorOwnsWidthState]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testCoordinatorOwnsWidthState]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testInitializationLoadsFromSettings]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testInitializationLoadsFromSettings]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testInvalidWidthIsRejected]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testInvalidWidthIsRejected]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testMultipleStateChangesAreConsistent]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testMultipleStateChangesAreConsistent]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testNoStateUpdateOnRedundantChanges]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testNoStateUpdateOnRedundantChanges]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testPositionChangeNotifiesDelegate]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testPositionChangeNotifiesDelegate]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testPositionChangePersistsToSettingsStore]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testPositionChangePersistsToSettingsStore]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testPositionValidation]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testPositionValidation]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testRapidTogglesDontCauseInconsistency]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testRapidTogglesDontCauseInconsistency]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testVisibilityChangeNotifiesDelegate]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testVisibilityChangeNotifiesDelegate]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testVisibilityChangePersistsToSettingsStore]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testVisibilityChangePersistsToSettingsStore]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testWidthChangeNotifiesDelegate]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testWidthChangeNotifiesDelegate]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testWidthChangePersistsToSettingsStore]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserPreviewPaneCoordinatorTests testWidthChangePersistsToSettingsStore]' passed (0.000 seconds).
+Test Suite 'FileBrowserPreviewPaneCoordinatorTests' passed at 2026-01-27 09:58:13.898.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'FileBrowserViewControllerTests' started at 2026-01-27 09:58:13.898.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testContextMenuTargets]' started.
+/private/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/tmp.W7PgqQ2ksn/MacFileExplorerTests/FileBrowserViewControllerTests.swift:264: error: -[MacFileExplorerTests.FileBrowserViewControllerTests testContextMenuTargets] : XCTAssertNotNil failed - Add New Tag item should exist
+/private/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/tmp.W7PgqQ2ksn/MacFileExplorerTests/FileBrowserViewControllerTests.swift:265: error: -[MacFileExplorerTests.FileBrowserViewControllerTests testContextMenuTargets] : XCTAssertTrue failed - Add New Tag item target should be the provider
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testContextMenuTargets]' failed (0.171 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testDefaultSortColumn]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testDefaultSortColumn]' passed (0.017 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testHiddenFilesPersistence]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testHiddenFilesPersistence]' passed (0.018 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testHiddenFilesToggle]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testHiddenFilesToggle]' passed (0.018 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testInitialization]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testInitialization]' passed (0.018 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testInitializationWithCustomSettings]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testInitializationWithCustomSettings]' passed (0.017 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testNavigateToDirectory]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testNavigateToDirectory]' passed (0.021 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testNavigateToParent]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testNavigateToParent]' passed (0.023 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testNavigationHistory]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testNavigationHistory]' passed (0.025 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testPreviewPanePersistence]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testPreviewPanePersistence]' passed (0.019 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testPreviewPaneVisibility]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testPreviewPaneVisibility]' passed (0.019 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testSortColumnChange]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testSortColumnChange]' passed (0.018 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testSortDirection]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testSortDirection]' passed (0.018 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testViewModeSwitch_ListToColumns]' started.
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/4AC5CC00-47B3-45C4-8298-D1E7D66566BC
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/4AC5CC00-47B3-45C4-8298-D1E7D66566BC
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 3 items from contentsOfDirectory
+DEBUG:       [0] banana.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] apple.txt
+DEBUG:    Final children count: 3
+DEBUG: ⏱️ DataSource: sortItems took 0.0001s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/8E47181A-38A7-4345-89B5-FAB81E7A27FB
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/8E47181A-38A7-4345-89B5-FAB81E7A27FB
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 3 items from contentsOfDirectory
+DEBUG:       [0] banana.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] apple.txt
+DEBUG:    Final children count: 3
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: 🔍 FileItem init: CloudStorage
+DEBUG:    Path: /Users/test/Google Drive/CloudStorage
+DEBUG:    isDirectory: false
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/5880FABB-5E39-4BDC-9506-DA8629597CC8
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/5880FABB-5E39-4BDC-9506-DA8629597CC8
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 3 items from contentsOfDirectory
+DEBUG:       [0] banana.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] apple.txt
+DEBUG:    Final children count: 3
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/D4C9ADFD-891C-4672-B48A-CAAB608D4A8B
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/D4C9ADFD-891C-4672-B48A-CAAB608D4A8B
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/D4C9ADFD-891C-4672-B48A-CAAB608D4A8B
+DEBUG:    showsHiddenFiles: true
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/D4C9ADFD-891C-4672-B48A-CAAB608D4A8B
+DEBUG:    showsHiddenFiles: true
+DEBUG:    isReadable: true
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 4 items from contentsOfDirectory
+DEBUG:       [0] banana.txt
+DEBUG:    ✅ Got 4 items from contentsOfDirectory
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] apple.txt
+DEBUG:       [0] banana.txt
+DEBUG:       [3] .hidden.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] apple.txt
+DEBUG:       [3] .hidden.txt
+DEBUG:    Final children count: 4
+DEBUG:    Final children count: 4
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/F0EB11C4-0DBD-4A61-818D-1FF4B178E948
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/F0EB11C4-0DBD-4A61-818D-1FF4B178E948
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/F0EB11C4-0DBD-4A61-818D-1FF4B178E948
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/F0EB11C4-0DBD-4A61-818D-1FF4B178E948
+DEBUG:    showsHiddenFiles: false
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 4 items from contentsOfDirectory
+DEBUG:    ✅ Got 4 items from contentsOfDirectory
+DEBUG:       [0] banana.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] delta.txt
+DEBUG:       [0] banana.txt
+DEBUG:       [3] apple.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] delta.txt
+DEBUG:       [3] apple.txt
+DEBUG:    Final children count: 4
+DEBUG:    Final children count: 4
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/8525194B-713A-452D-8A67-5032DE308149
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/8525194B-713A-452D-8A67-5032DE308149
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 3 items from contentsOfDirectory
+DEBUG:       [0] banana.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] apple.txt
+DEBUG:    Final children count: 3
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0001s
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/313A0A07-4D9D-4E74-A892-719A13F5A9BD
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/313A0A07-4D9D-4E74-A892-719A13F5A9BD
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 3 items from contentsOfDirectory
+DEBUG:       [0] banana.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] apple.txt
+DEBUG:    Final children count: 3
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/EA5FB04A-04AF-4C51-AD0D-B3B0D19C11D7
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/EA5FB04A-04AF-4C51-AD0D-B3B0D19C11D7
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 3 items from contentsOfDirectory
+DEBUG:       [0] banana.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] apple.txt
+DEBUG:    Final children count: 3
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/09028B8D-CD04-4F26-85C1-C1CD3F4A5F48
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/09028B8D-CD04-4F26-85C1-C1CD3F4A5F48
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 3 items from contentsOfDirectory
+DEBUG:       [0] banana.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] apple.txt
+DEBUG:    Final children count: 3
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/3D9C1A4C-C089-49D7-80FF-71047BBB9437
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/3D9C1A4C-C089-49D7-80FF-71047BBB9437
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 3 items from contentsOfDirectory
+DEBUG:       [0] banana.txt
+DEBUG:       [1] cherry.pdf
+DEBUG:       [2] apple.txt
+DEBUG:    Final children count: 3
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileBrowserFilterCoordinatorTests_D15E624B-ED58-4192-80B5-D3FF6410BCA0
+DEBUG: Refreshing current directory
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileBrowserFilterCoordinatorTests_041EC638-F897-4D41-90C1-D19E1E6AA56B
+DEBUG: Refreshing current directory
+DEBUG: Refreshing current directory
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileBrowserFilterCoordinatorTests_9A29F372-377B-4621-8977-95FF1430DCCF
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileBrowserVCTests-D889FF86-8ADA-406E-8E05-7FB8CAD73F39/Documents
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileBrowserVCTests-22839E04-B649-494E-84E3-F39195A3B955/Documents/Subfolder
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileBrowserVCTests-22839E04-B649-494E-84E3-F39195A3B955/Documents
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileBrowserVCTests-1A1288E3-9626-4AAD-B870-899AC2AFEACF/Documents
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileBrowserVCTests-1A1288E3-9626-4AAD-B870-899AC2AFEACF/Downloads
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileBrowserVCTests-1A1288E3-9626-4AAD-B870-899AC2AFEACF/Documents
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: columns
+DEBUG: 📂 loadChildren called for: ~
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: true
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    isReadable: true
+DEBUG:    isReadable: true
+DEBUG: 📂 loadChildren called for: ~
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG: 📂 loadChildren called for: ~
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    isReadable: true
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: true
+DEBUG:    resolvedURL: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    showsHiddenFiles: false
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    isReadable: true
+DEBUG:    isReadable: true
+DEBUG:    isReadable: true
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 97 items from contentsOfDirectory
+DEBUG:       [0] .utcp_config.json
+DEBUG:       [1] .claude.json.backup
+DEBUG:       [2] .claude-worktrees
+DEBUG:       [3] .config
+DEBUG:       [4] .junie
+DEBUG:       ... and 92 more
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG: BrowserView setup completed with minColumnWidth: 180
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG: displayFiles: Setting up browser view, rootItem has 0 children
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG:       ... and 20 more
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG:       ... and 20 more
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG:    ✅ Got 97 items from contentsOfDirectory
+DEBUG:       [0] .utcp_config.json
+DEBUG:       [1] .claude.json.backup
+DEBUG:       [2] .claude-worktrees
+DEBUG:       [3] .config
+DEBUG:       [4] .junie
+DEBUG:       ... and 92 more
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Resource isSymlink: true
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    Content Type: public.symlinTest Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testViewModeSwitch_ListToColumns]' passed (0.229 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testViewModeSwitch_ListToIcons]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewControllerTests testViewModeSwitch_ListToIcons]' passed (0.229 seconds).
+Test Suite 'FileBrowserViewControllerTests' failed at 2026-01-27 09:58:14.759.
+	 Executed 15 tests, with 2 failures (0 unexpected) in 0.859 (0.860) seconds
+Test Suite 'FileBrowserViewModeCoordinatorTests' started at 2026-01-27 09:58:14.759.
+Test Case '-[MacFileExplorerTests.FileBrowserViewModeCoordinatorTests testDisplayColumnsView]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewModeCoordinatorTests testDisplayColumnsView]' passed (0.120 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewModeCoordinatorTests testDisplayIconsView]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserViewModeCoordinatorTests testDisplayIconsView]' passed (0.126 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserViewModeCoordinatorTests testDisplayListView]' started.
+k
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Content Type: public.symlink
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:       [4] Pictures
+DEBUG:    resolvedURL: ~
+DEBUG:       ... and 20 more
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    isReadable: true
+DEBUG:    showsHiddenFiles: false
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [1] Apple.class
+DEBUG:       [0] Music
+DEBUG:       [2] sd
+DEBUG:       [1] Apple.class
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [2] sd
+DEBUG:       [4] Pictures
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       ... and 20 more
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [2] sd
+DEBUG:       [0] Music
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [1] Apple.class
+DEBUG:       [4] Pictures
+DEBUG:       [2] sd
+DEBUG:       ... and 20 more
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Resource isSymlink: true
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Content Type: public.symlink
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG:    Final children count: 25
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    Resource isDirectory: false
+DEBUG:    isDirectory: true
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG:    Final children count: 97
+DEBUG:    Final children count: 97
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0001s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0002s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: ⏱️ DataSource: sortItems took 0.0001s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: FileBrowserDataSource: didLoadItems - refreshed views
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: icons
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG:    Final children count: 25
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: FileBrowserDataSource: didLoadItems - refreshed views
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: columns
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG: BrowserView setup completed with minColumnWidth: 180
+DEBUG: displayFiles: Setting up browser view, rootItem has 0 children
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG:    Final children count: 25
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: FileBrowserDataSource: didLoadItems - refreshed views
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: icons
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xlsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG:    Final children count: 25
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: FileBrowserDataSource: didLoadItems - refreshed views
+DEBUG: Displaying files for view mode: list
+DEBUG: FileBrowserViewController: loadDirectory - Loading URL: ~
+DEBUG: Displaying files for view mode: list
+DEBUG: 📂 loadChildren called for: ~
+DEBUG:    resolvedURL: ~
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 25 items from contentsOfDirectory
+DEBUG:       [0] Music
+DEBUG:       [1] Apple.class
+DEBUG:       [2] sd
+DEBUG:       [3] escontrol_instances.xTest Case '-[MacFileExplorerTests.FileBrowserViewModeCoordinatorTests testDisplayListView]' passed (0.120 seconds).
+Test Suite 'FileBrowserViewModeCoordinatorTests' passed at 2026-01-27 09:58:15.126.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.366 (0.367) seconds
+Test Suite 'FileBrowserZoomCoordinatorTests' started at 2026-01-27 09:58:15.126.
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testActualSize]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testActualSize]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testAreZoomControlsEnabled]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testAreZoomControlsEnabled]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testInitialZoomLevel]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testInitialZoomLevel]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testResetZoom]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testResetZoom]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testToggleFreeFormPositioning]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testToggleFreeFormPositioning]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testZoomBounds]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testZoomBounds]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testZoomInIncreasesLevel]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testZoomInIncreasesLevel]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testZoomOutDecreasesLevel]' started.
+Test Case '-[MacFileExplorerTests.FileBrowserZoomCoordinatorTests testZoomOutDecreasesLevel]' passed (0.000 seconds).
+Test Suite 'FileBrowserZoomCoordinatorTests' passed at 2026-01-27 09:58:15.127.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'FileItemTests' started at 2026-01-27 09:58:15.127.
+Test Case '-[MacFileExplorerTests.FileItemTests testDirectoryChildren]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testDirectoryChildren]' passed (0.004 seconds).
+Test Case '-[MacFileExplorerTests.FileItemTests testDirectoryItemInitialization]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testDirectoryItemInitialization]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.FileItemTests testDirectoryLazyLoadingFlag]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testDirectoryLazyLoadingFlag]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.FileItemTests testFileIcon]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testFileIcon]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.FileItemTests testFileItemInitialization]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testFileItemInitialization]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.FileItemTests testFileItemName]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testFileItemName]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.FileItemTests testFileItemPath]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testFileItemPath]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.FileItemTests testFileSize]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testFileSize]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.FileItemTests testFileType]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testFileType]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.FileItemTests testHiddenFileDetection]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testHiddenFileDetection]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.FileItemTests testModificationDate]' started.
+Test Case '-[MacFileExplorerTests.FileItemTests testModificationDate]' passed (0.001 seconds).
+Test Suite 'FileItemTests' passed at 2026-01-27 09:58:15.144.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.016 (0.017) seconds
+Test Suite 'FileOperationsManagerTests' started at 2026-01-27 09:58:15.144.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testIsValidDestination_DestinationIsChildOfSource_ReturnsFalse]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testIsValidDestination_DestinationIsChildOfSource_ReturnsFalse]' passed (0.024 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testIsValidDestination_MultipleSourcesOneInvalid_ReturnsFalse]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testIsValidDestination_MultipleSourcesOneInvalid_ReturnsFalse]' passed (0.004 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testIsValidDestination_PathTraversalAttempt_ReturnsFalse]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testIsValidDestination_PathTraversalAttempt_ReturnsFalse]' passed (0.003 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testIsValidDestination_SameDestination_ReturnsFalse]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testIsValidDestination_SameDestination_ReturnsFalse]' passed (0.003 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testIsValidDestination_ValidDestination_ReturnsTrue]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testIsValidDestination_ValidDestination_ReturnsTrue]' passed (0.003 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPerform_EmptyItems_DoesNothing]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPerform_EmptyItems_DoesNothing]' passed (0.004 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPerform_WithConfirmationDisabled_ExecutesDirectly]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPerform_WithConfirmationDisabled_ExecutesDirectly]' passed (0.005 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPerform_WithConfirmationEnabled_ShowsDialog]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPerform_WithConfirmationEnabled_ShowsDialog]' passed (0.412 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPreferredDragOperation_NoModifiers_ReturnsMove]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPreferredDragOperation_NoModifiers_ReturnsMove]' passed (0.006 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPreferredDragOperation_NoOperationsAllowed_ReturnsNil]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPreferredDragOperation_NoOperationsAllowed_ReturnsNil]' passed (0.004 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPreferredDragOperation_OnlyCopyAllowed_ReturnsCopy]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPreferredDragOperation_OnlyCopyAllowed_ReturnsCopy]' passed (0.003 seconds).
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPreferredDragOperation_OptionKey_ReturnsCopy]' started.
+Test Case '-[MacFileExplorerTests.FileOperationsManagerTests testPreferredDragOperation_OptionKey_ReturnsCopy]' passed (0.003 seconds).
+Test Suite 'FileOperationsManagerTests' passed at 2026-01-27 09:58:15.621.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.475 (0.477) seconds
+Test Suite 'FileSystemMonitorTests' started at 2026-01-27 09:58:15.621.
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMonitorDetectsFileCreation]' started.
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMonitorDetectsFileCreation]' passed (0.106 seconds).
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMonitorDetectsFileDeletion]' started.
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMonitorDetectsFileDeletion]' passed (0.104 seconds).
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMonitorDetectsFileModification]' started.
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMonitorDetectsFileModification]' passed (0.104 seconds).
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMonitorInitialization]' started.
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMonitorInitialization]' passed (0.017 seconds).
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMonitorStopsOnDeinit]' started.
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMonitorStopsOnDeinit]' passed (0.505 seconds).
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMultipleSimultaneousMonitors]' started.
+Test Case '-[MacFileExplorerTests.FileSystemMonitorTests testMultipleSimultaneousMonitors]' passed (0.111 seconds).
+Test Suite 'FileSystemMonitorTests' passed at 2026-01-27 09:58:16.569.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.948 (0.948) seconds
+Test Suite 'NewSettingsViewControllerTests' started at 2026-01-27 09:58:16.569.
+Test Case '-[MacFileExplorerTests.NewSettingsViewControllerTests testGeneralSettings]' started.
+Test Case '-[MacFileExplorerTests.NewSettingsViewControllerTests testGeneralSettings]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.NewSettingsViewControllerTests testSidebarSettings]' started.
+Test Case '-[MacFileExplorerTests.NewSettingsViewControllerTests testSidebarSettings]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.NewSettingsViewControllerTests testTabsSettings]' started.
+Test Case '-[MacFileExplorerTests.NewSettingsViewControllerTests testTabsSettings]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.NewSettingsViewControllerTests testTerminalSettings]' started.
+Test Case '-[MacFileExplorerTests.NewSettingsViewControllerTests testTerminalSettings]' passed (0.000 seconds).
+Test Suite 'NewSettingsViewControllerTests' passed at 2026-01-27 09:58:16.571.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'PermissionsManagerTests' started at 2026-01-27 09:58:16.571.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testAddGrantedDirectory]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testAddGrantedDirectory]' passed (0.010 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testCheckCameraPermission]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testCheckCameraPermission]' passed (0.032 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testCheckFullDiskAccessPermission]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testCheckFullDiskAccessPermission]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testCheckMicrophonePermission]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testCheckMicrophonePermission]' passed (0.015 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testCheckPhotosPermission]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testCheckPhotosPermission]' passed (0.025 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testConcurrentAccessChecks]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testConcurrentAccessChecks]' passed (0.005 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testConcurrentAddRemoveDirectories]' started.
+lsx
+DEBUG:       [4] Pictures
+DEBUG:       ... and 20 more
+DEBUG: 🔍 FileItem init: daniel.jatto@instructure.com - Google Drive
+DEBUG:    Path: ~/daniel.jatto@instructure.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG: 🔍 FileItem init: danieljatto@gmail.com - Google Drive
+DEBUG:    Path: ~/danieljatto@gmail.com - Google Drive
+DEBUG:    isDirectory: true
+DEBUG:    Resource isDirectory: false
+DEBUG:    Resource isSymlink: true
+DEBUG:    Content Type: public.symlink
+DEBUG:    Final children count: 25
+DEBUG: ⏱️ DataSource: sortItems took 0.0000s
+DEBUG: ⏱️ DataSource: applySearchFilter took 0.0000s
+DEBUG: FileBrowserDataSource: didLoadItems - refreshed views
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileItemTests_EE332F19-702E-47C1-BE2E-C5686A69F980
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileItemTests_EE332F19-702E-47C1-BE2E-C5686A69F980
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 3 items from contentsOfDirectory
+DEBUG:       [0] file2.txt
+DEBUG:       [1] file1.txt
+DEBUG:       [2] test.txt
+DEBUG:    Final children count: 3
+DEBUG: 📂 loadChildren called for: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileItemTests_EE946C95-8EB3-40AF-8B7C-0F02A72D3BA3
+DEBUG:    resolvedURL: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/FileItemTests_EE946C95-8EB3-40AF-8B7C-0F02A72D3BA3
+DEBUG:    showsHiddenFiles: false
+DEBUG:    isReadable: true
+DEBUG:    ✅ Got 1 items from contentsOfDirectory
+DEBUG:       [0] test.txt
+DEBUG:    Final children count: 1
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_02D5374C-394D-4A8D-8E4B-0E9F4785E022
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_02D5374C-394D-4A8D-8E4B-0E9F4785E022
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_02D5374C-394D-4A8D-8E4B-0E9F4785E022"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_A4C5B87A-3886-4AF6-BA65-2D2DA728072F
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_A4C5B87A-3886-4AF6-BA65-2D2DA728072F
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_A4C5B87A-3886-4AF6-BA65-2D2DA728072F"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8"]
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0"]
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6"]
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6"]
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1Test Case '-[MacFileExplorerTests.PermissionsManagerTests testConcurrentAddRemoveDirectories]' passed (0.008 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testEnsureAccessForSubpath]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testEnsureAccessForSubpath]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testHasGrantedDirectory]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testHasGrantedDirectory]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testPermissionStatusColors]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testPermissionStatusColors]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testPermissionStatusDisplayText]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testPermissionStatusDisplayText]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testPermissionTypeAllCases]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testPermissionTypeAllCases]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testPermissionTypeDescriptions]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testPermissionTypeDescriptions]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testPermissionTypeIcons]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testPermissionTypeIcons]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testRemoveGrantedDirectory]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testRemoveGrantedDirectory]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testReplaceGrantedDirectory]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testReplaceGrantedDirectory]' passed (0.003 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testResolvedGrantedDirectoryEntries]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testResolvedGrantedDirectoryEntries]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testStartStopAccessingSecurityScoped]' started.
+Test Case '-[MacFileExplorerTests.PermissionsManagerTests testStartStopAccessingSecurityScoped]' passed (0.002 seconds).
+Test Suite 'PermissionsManagerTests' passed at 2026-01-27 09:58:16.689.
+	 Executed 18 tests, with 0 failures (0 unexpected) in 0.116 (0.117) seconds
+Test Suite 'SecurityIntegrationTests' started at 2026-01-27 09:58:16.689.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testArraySafeAccess_EmptyArray]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testArraySafeAccess_EmptyArray]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testArraySafeAccess_InvalidIndices]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testArraySafeAccess_InvalidIndices]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testArraySafeAccess_ValidIndices]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testArraySafeAccess_ValidIndices]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testFileIDValidation_ModifiedFile]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testFileIDValidation_ModifiedFile]' passed (0.103 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testFileIDValidation_ReplacedFile]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testFileIDValidation_ReplacedFile]' passed (0.105 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testFileIDValidation_SameFile]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testFileIDValidation_SameFile]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testSymlinkChainDepthLimit_ExcessiveChains]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testSymlinkChainDepthLimit_ExcessiveChains]' passed (0.005 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testSymlinkChainDepthLimit_LegitimateChains]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testSymlinkChainDepthLimit_LegitimateChains]' passed (0.004 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testSymlinkCircularReference_Detection]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testSymlinkCircularReference_Detection]' passed (0.003 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testSymlinkToNonExistentTarget]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testSymlinkToNonExistentTarget]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testTOCTOUDetection_ConcurrentOperations]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testTOCTOUDetection_ConcurrentOperations]' passed (0.006 seconds).
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testTOCTOUDetection_FileIdentityChange]' started.
+Test Case '-[MacFileExplorerTests.SecurityIntegrationTests testTOCTOUDetection_FileIdentityChange]' passed (0.003 seconds).
+Test Suite 'SecurityIntegrationTests' passed at 2026-01-27 09:58:16.930.
+	 Executed 12 tests, with 0 failures (0 unexpected) in 0.240 (0.241) seconds
+Test Suite 'SettingsStoreTests' started at 2026-01-27 09:58:16.930.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testAccentColorSetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testAccentColorSetAndGet]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testAutoRenameOnConflictDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testAutoRenameOnConflictDefault]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testConcurrentReadWrite]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testConcurrentReadWrite]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testConfirmFileOperationsDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testConfirmFileOperationsDefault]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testDefaultSortAscending]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testDefaultSortAscending]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testDefaultSortColumn]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testDefaultSortColumn]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testDefaultViewModeDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testDefaultViewModeDefault]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testDefaultViewModeSetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testDefaultViewModeSetAndGet]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testDismissedWelcomeDefaultAndSet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testDismissedWelcomeDefaultAndSet]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testFavoriteWidgetFoldersSetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testFavoriteWidgetFoldersSetAndGet]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testGoMenuDefaults]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testGoMenuDefaults]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testHasCompletedOnboardingDefaultAndSet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testHasCompletedOnboardingDefaultAndSet]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testHiddenFilesStateDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testHiddenFilesStateDefault]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testHiddenFilesStateSetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testHiddenFilesStateSetAndGet]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testMaximumPanesClamping]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testMaximumPanesClamping]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testMaximumPanesDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testMaximumPanesDefault]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testMulticastDelegatesReceiveChanges]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testMulticastDelegatesReceiveChanges]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testOperationMetricsLogDataSetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testOperationMetricsLogDataSetAndGet]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testPreviewPanePositionDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testPreviewPanePositionDefault]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testPreviewPaneVisibleDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testPreviewPaneVisibleDefault]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testPreviewPaneWidthDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testPreviewPaneWidthDefault]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testPreviewPaneWidthSetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testPreviewPaneWidthSetAndGet]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testResetToDefaults]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testResetToDefaults]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testSettingsPersistAcrossInstances]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testSettingsPersistAcrossInstances]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowBackForwardButtonsDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowBackForwardButtonsDefault]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowFavoritesDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowFavoritesDefault]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowFileExtensionsDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowFileExtensionsDefault]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowFileExtensionsSetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowFileExtensionsSetAndGet]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowLocationsDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowLocationsDefault]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowOperationProgressDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowOperationProgressDefault]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowRecentsDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowRecentsDefault]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowViewModeButtonDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testShowViewModeButtonDefault]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testSidebarFixedWidthSetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testSidebarFixedWidthSetAndGet]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testSidebarOrderDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testSidebarOrderDefault]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testStartupFolder]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testStartupFolder]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testStorageAnalyzerLastScanPathSetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testStorageAnalyzerLastScanPathSetAndGet]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testTerminalVisibilitySetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testTerminalVisibilitySetAndGet]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testUseGrayscaleIconsDefault]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testUseGrayscaleIconsDefault]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testUseGrayscaleIconsSetAndGet]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testUseGrayscaleIconsSetAndGet]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testViewOptionsRoundTrip]' started.
+Test Case '-[MacFileExplorerTests.SettingsStoreTests testViewOptionsRoundTrip]' passed (0.003 seconds).
+Test Suite 'SettingsStoreTests' passed at 2026-01-27 09:58:16.981.
+	 Executed 40 tests, with 0 failures (0 unexpected) in 0.047 (0.051) seconds
+Test Suite 'SplitOrientationTests' started at 2026-01-27 09:58:16.981.
+Test Case '-[MacFileExplorerTests.SplitOrientationTests testSplitOrientations]' started.
+Test Case '-[MacFileExplorerTests.SplitOrientationTests testSplitOrientations]' passed (0.000 seconds).
+Test Suite 'SplitOrientationTests' passed at 2026-01-27 09:58:16.981.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'StorageAnalyzerEngineTests' started at 2026-01-27 09:58:16.981.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testCache_StoresAndRetrievesResults]' started.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testCache_StoresAndRetrievesResults]' passed (1.037 seconds).
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testCancel_StopsScanning]' started.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testCancel_StopsScanning]' passed (1.060 seconds).
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testFindDuplicates_IdentifiesDuplicates]' started.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testFindDuplicates_IdentifiesDuplicates]' passed (0.002 seconds).
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testFindLargeFiles_FiltersCorrectly]' started.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testFindLargeFiles_FiltersCorrectly]' passed (0.017 seconds).
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testRootProperties_SetAfterScan]' started.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testRootProperties_SetAfterScan]' passed (1.037 seconds).
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testScan_EmptyDirectory]' started.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testScan_EmptyDirectory]' passed (0.507 seconds).
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testScan_NestedDirectories]' started.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testScan_NestedDirectories]' passed (1.053 seconds).
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testScan_SingleFile]' started.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testScan_SingleFile]' passed (1.035 seconds).
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testScanOptions_SkipHiddenFiles]' started.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testScanOptions_SkipHiddenFiles]' passed (1.031 seconds).
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testStartScan_NotifiesDelegate]' started.
+Test Case '-[MacFileExplorerTests.StorageAnalyzerEngineTests testStartScan_NotifiesDelegate]' passed (1.033 seconds).
+Test Suite 'StorageAnalyzerEngineTests' passed at 2026-01-27 09:58:24.796.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 7.812 (7.815) seconds
+Test Suite 'TerminalViewControllerTests' started at 2026-01-27 09:58:24.796.
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testChangeDirectory_SetsCurrentDirectory]' started.
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testChangeDirectory_SetsCurrentDirectory]' passed (0.001 seconds).
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testChangeDirectory_SkipsDuplicateChanges]' started.
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testChangeDirectory_SkipsDuplicateChanges]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testChangeDirectory_WithSpaces]' started.
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testChangeDirectory_WithSpaces]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testChangeDirectory_WithSpecialCharacters]' started.
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testChangeDirectory_WithSpecialCharacters]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testCloseButton_NotifiesDelegate]' started.
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testCloseButton_NotifiesDelegate]' passed (0.015 seconds).
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testDeinit_CleanupShellSession]' started.
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testDeinit_CleanupShellSession]' passed (0.007 seconds).
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testFocusInput_WithInvalidWindow]' started.
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testFocusInput_WithInvalidWindow]' passed (0.003 seconds).
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testViewDidAppear_FocusesInput]' started.
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testViewDidAppear_FocusesInput]' passed (0.006 seconds).
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testViewDidLoad_InitializesShellSession]' started.
+Test Case '-[MacFileExplorerTests.TerminalViewControllerTests testViewDidLoad_InitializesShellSession]' passed (0.007 seconds).
+Test Suite 'TerminalViewControllerTests' passed at 2026-01-27 09:58:24.837.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.039 (0.041) seconds
+Test Suite 'ToolbarViewControllerTests' started at 2026-01-27 09:58:24.837.
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testHiddenFilesDisplay]' started.
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testHiddenFilesDisplay]' passed (0.012 seconds).
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testSettingsCallbacksUpdateToolbarButtons]' started.
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testSettingsCallbacksUpdateToolbarButtons]' passed (0.025 seconds).
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testSortDisplay]' started.
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testSortDisplay]' passed (0.010 seconds).
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testUpdatePath]' started.
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testUpdatePath]' passed (0.011 seconds).
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testViewControllerInitialization]' started.
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testViewControllerInitialization]' passed (0.009 seconds).
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testViewModeDisplay]' started.
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testViewModeDisplay]' passed (0.010 seconds).
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testViewSize]' started.
+Test Case '-[MacFileExplorerTests.ToolbarViewControllerTests testViewSize]' passed (0.009 seconds).
+Test Suite 'ToolbarViewControllerTests' passed at 2026-01-27 09:58:24.924.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.086 (0.087) seconds
+Test Suite 'ViewModeTests' started at 2026-01-27 09:58:24.924.
+Test Case '-[MacFileExplorerTests.ViewModeTests testAllViewModes]' started.
+Test Case '-[MacFileExplorerTests.ViewModeTests testAllViewModes]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.ViewModeTests testViewModeInitFromRawValue]' started.
+Test Case '-[MacFileExplorerTests.ViewModeTests testViewModeInitFromRawValue]' passed (0.000 seconds).
+Test Case '-[MacFileExplorerTests.ViewModeTests testViewModeRawValues]' started.
+Test Case '-[MacFileExplorerTests.ViewModeTests testViewModeRawValues]' passed (0.000 seconds).
+Test Suite 'ViewModeTests' passed at 2026-01-27 09:58:24.925.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'MacFileExplorerPackageTests.xctest' failed at 2026-01-27 09:58:24.925.
+	 Executed 206 tests, with 2 failures (0 unexpected) in 13.866 (13.889) seconds
+Test Suite 'All tests' failed at 2026-01-27 09:58:24.925.
+	 Executed 206 tests, with 2 failures (0 unexpected) in 13.866 (13.891) seconds
+-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6"]
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2"]
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Path already exists: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test8
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2"]
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6"]
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Existing paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4"]
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test6"]
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test2", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test4", "/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_0AAD8390-B7C7-43D1-B142-C33F0781B5FF/test0"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_3603B952-39D9-4ADA-B2E5-307B4EF5CC78
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_3603B952-39D9-4ADA-B2E5-307B4EF5CC78
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_3603B952-39D9-4ADA-B2E5-307B4EF5CC78"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_8E5D809E-9891-490D-A059-5222BDC806AA
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_8E5D809E-9891-490D-A059-5222BDC806AA
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_8E5D809E-9891-490D-A059-5222BDC806AA"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_945AC1A3-93F8-4A88-A79F-9BF2418B1FF1
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_945AC1A3-93F8-4A88-A79F-9BF2418B1FF1
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_945AC1A3-93F8-4A88-A79F-9BF2418B1FF1"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_26E6705A-4C0A-4C8E-A719-303FCA96380F
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_26E6705A-4C0A-4C8E-A719-303FCA96380F
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_26E6705A-4C0A-4C8E-A719-303FCA96380F"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_26E6705A-4C0A-4C8E-A719-303FCA96380F/subfolder
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_26E6705A-4C0A-4C8E-A719-303FCA96380F/subfolder
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_26E6705A-4C0A-4C8E-A719-303FCA96380F/subfolder"]
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_5E15EAC2-532E-478F-B2AD-96CFA3C1DA7D
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_5E15EAC2-532E-478F-B2AD-96CFA3C1DA7D
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_5E15EAC2-532E-478F-B2AD-96CFA3C1DA7D"]
+DEBUG: [PermissionsManager] resolvedGrantedDirectoryEntries called
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Found 1 granted directories (from paths)
+DEBUG: [PermissionsManager] Returning 1 entries
+DEBUG: [PermissionsManager]   - /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_5E15EAC2-532E-478F-B2AD-96CFA3C1DA7D (valid: true)
+DEBUG: [PermissionsManager] Adding granted directory: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_BE150B3A-026E-4BC0-82EC-EB12CBDA1BE7
+DEBUG: [PermissionsManager] Is sandboxed: false
+DEBUG: [PermissionsManager] Existing paths: []
+DEBUG: [PermissionsManager] Added path: /var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_BE150B3A-026E-4BC0-82EC-EB12CBDA1BE7
+DEBUG: [PermissionsManager] Updated paths: ["/var/folders/h4/3d269tgd1g37sls1kqhzf19h0000gp/T/PermissionsTests_BE150B3A-026E-4BC0-82EC-EB12CBDA1BE7"]
+DEBUG: TerminalViewController: changeDirectory to /Users/test
+DEBUG: TerminalViewController: changeDirectory to /Users/test
+DEBUG: TerminalViewController: changeDirectory to /Users/My Documents/Test
+DEBUG: TerminalViewController: changeDirectory to /Users/test$user
+DEBUG: TerminalViewController: focusInput called
+DEBUG:   Window not ready for focus, deferring
+◇ Test run started.
+↳ Testing Library Version: 1501
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+/Users/daniel.jatto/Source/mine/macfilexplorer
+
+❌ Tests failed with exit code: 1

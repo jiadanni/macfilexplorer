@@ -4,6 +4,7 @@ protocol FileBrowserCollectionCoordinatorDelegate: AnyObject {
     var rootItem: FileItem? { get }
     var currentViewMode: ViewMode { get }
     var zoomLevel: Double { get }
+    var settings: SettingsStoreProtocol { get }
     func fileBrowserDidBecomeActive()
 }
 
@@ -11,6 +12,10 @@ final class FileBrowserCollectionCoordinator: NSObject, NSCollectionViewDataSour
     weak var delegate: FileBrowserCollectionCoordinatorDelegate?
     weak var selectionCoordinator: FileBrowserSelectionCoordinator?
     weak var dragDropHandler: FileBrowserDragDropHandler?
+    
+    private var settings: SettingsStoreProtocol {
+        delegate?.settings ?? SettingsStore.shared
+    }
     
     private func collectionItems() -> [FileItem] {
         return delegate?.rootItem?.children ?? []
@@ -35,7 +40,7 @@ final class FileBrowserCollectionCoordinator: NSObject, NSCollectionViewDataSour
         }
         item.isListMode = (delegate?.currentViewMode == .windowsList)
         item.zoomLevel = delegate?.zoomLevel ?? 1.0
-        item.showCheckbox = SettingsStore.shared.enableEasySelect
+        item.showCheckbox = settings.enableEasySelect
         return item
     }
     

@@ -12,6 +12,9 @@ class FileBrowserDataSource {
     
     weak var delegate: FileBrowserDataSourceDelegate?
     
+    /// Injected settings store for folder sort preferences
+    private let settings: SettingsStoreProtocol
+    
     private(set) var currentDirectory: URL
     private(set) var rootItem: FileItem?
     private let loadStateLock = NSLock()
@@ -52,8 +55,9 @@ class FileBrowserDataSource {
     
     // MARK: - Init
     
-    init(currentDirectory: URL) {
+    init(currentDirectory: URL, settings: SettingsStoreProtocol = SettingsStore.shared) {
         self.currentDirectory = currentDirectory
+        self.settings = settings
     }
     
     // MARK: - Data Loading
@@ -131,7 +135,7 @@ class FileBrowserDataSource {
     // MARK: - Sorting & Filtering
     
     private func applyStoredSortPreferences() {
-        if let stored = SettingsStore.shared.folderSortPreferences[currentDirectory.path] {
+        if let stored = settings.folderSortPreferences[currentDirectory.path] {
             let parts = stored.components(separatedBy: "|")
             if parts.count >= 2, !parts[0].isEmpty {
                 self.sortColumn = parts[0]
@@ -141,9 +145,9 @@ class FileBrowserDataSource {
     }
     
     func persistSortPreferences() {
-        var prefs = SettingsStore.shared.folderSortPreferences
+        var prefs = settings.folderSortPreferences
         prefs[currentDirectory.path] = "\(sortColumn)|\(sortAscending ? "asc" : "desc")"
-        SettingsStore.shared.folderSortPreferences = prefs
+        settings.folderSortPreferences = prefs
     }
 
     private func compareItems(_ item1: FileItem, _ item2: FileItem) -> Bool {

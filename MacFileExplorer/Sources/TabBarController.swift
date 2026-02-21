@@ -601,9 +601,9 @@ extension TabBarController {
     }
 
     func splitPaneDidRequestAddToFavorites(item: FileItem) {
-        // Forward to sidebar or handle adding to favorites
+        // Forward to sidebar to add item to favorites
         if let splitVC = owningSplitViewController() {
-            splitVC.updateSidebarSelection(url: item.url)
+            splitVC.sidebarViewController?.addFavorite(item: item)
         }
     }
     

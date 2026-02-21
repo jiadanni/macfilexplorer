@@ -18,6 +18,12 @@ class SelectableItemView: NSView {
 
 class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
 
+    /// Injected settings store for display preferences
+    var settings: SettingsStoreProtocol = SettingsStore.shared
+    
+    /// Injected color manager for folder colors
+    var colorManager: ColorManaging = ColorManager.shared
+
     var fileItem: FileItem? {
         didSet {
             updateView()
@@ -262,18 +268,18 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
             setupUI()
         }
 
-        myImageView?.image = fileItem.icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons)
-        myTextField?.stringValue = fileItem.displayName(showExtensions: SettingsStore.shared.showFileExtensions)
+        myImageView?.image = fileItem.icon(useGrayscale: settings.useGrayscaleIcons)
+        myTextField?.stringValue = fileItem.displayName(showExtensions: settings.showFileExtensions)
 
         // Apply custom folder color if set
         if fileItem.isDirectory,
-           let customColor = ColorManager.shared.getColor(forFolderName: fileItem.url.lastPathComponent) {
+           let customColor = colorManager.getColor(forFolderName: fileItem.url.lastPathComponent) {
             myImageView?.contentTintColor = customColor
         } else {
             myImageView?.contentTintColor = nil // Reset tint color
         }
 
-        view.setAccessibilityLabel(fileItem.displayName(showExtensions: SettingsStore.shared.showFileExtensions))
+        view.setAccessibilityLabel(fileItem.displayName(showExtensions: settings.showFileExtensions))
 
         // Apply dimmed appearance for cut files
         if isFileCut(fileItem.url) {

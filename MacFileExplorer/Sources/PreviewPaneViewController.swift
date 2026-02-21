@@ -10,6 +10,9 @@ enum PreviewPanePosition {
 
 class PreviewPaneViewController: NSViewController {
 
+    /// Injected settings store for display preferences
+    var settings: SettingsStoreProtocol = SettingsStore.shared
+
     private var containerView: NSView!
     private var headerView: NSView!
     private var titleLabel: NSTextField!
@@ -160,7 +163,7 @@ class PreviewPaneViewController: NSViewController {
             return
         }
         
-        titleLabel.stringValue = fileItem.displayName(showExtensions: SettingsStore.shared.showFileExtensions)
+        titleLabel.stringValue = fileItem.displayName(showExtensions: settings.showFileExtensions)
         
         // Find handler
         guard let handler = handlers.first(where: { $0.canHandle(fileItem) }) else { return }

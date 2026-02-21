@@ -78,7 +78,7 @@ final class FileOperationsManager {
                     
                     let response: NSApplication.ModalResponse
                     if let window = self.delegate?.window {
-                        response = await window.beginSheet(alert)
+                        response = await alert.beginSheetModal(for: window)
                     } else {
                         response = alert.runModal()
                     }

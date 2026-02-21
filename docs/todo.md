@@ -3,7 +3,7 @@ Features
 [ ] Inconsistency in previews between folder and file
 [] Folder color and accent color not working. Apply button should be un-grayed out once a new color has been selected. 
 [x] Create help docs linked to it in menu for existing link  , open in new tab. 
-Connect to Server creates the server in Finder and launches Finder. 
+[x] Connect to Server creates the server in Finder and launches Finder. - Fixed: Now uses NetFS to mount and navigates within the app
 [] Zoom does not increase icon size only the label
 [] Support for search in subdirectories
 [] Auto expand to folder

@@ -4,6 +4,12 @@ import PDFKit
 import Quartz
 import UniformTypeIdentifiers
 
+/// Shared settings accessor for preview handlers.
+/// Can be overridden in tests by setting `PreviewHandlerSettings.store`.
+enum PreviewHandlerSettings {
+    static var store: SettingsStoreProtocol = SettingsStore.shared
+}
+
 // MARK: - Image Handler
 
 class ImagePreviewHandler: PreviewHandler {
@@ -218,14 +224,14 @@ class GenericPreviewHandler: PreviewHandler {
         iconNameStack.alignment = .centerY
 
         let iconView = NSImageView()
-        iconView.image = file.icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons)
+        iconView.image = file.icon(useGrayscale: PreviewHandlerSettings.store.useGrayscaleIcons)
         iconView.imageScaling = .scaleProportionallyDown
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.widthAnchor.constraint(equalToConstant: 64).isActive = true
         iconView.heightAnchor.constraint(equalToConstant: 64).isActive = true
         iconNameStack.addArrangedSubview(iconView)
 
-        let nameLabel = NSTextField(labelWithString: file.displayName(showExtensions: SettingsStore.shared.showFileExtensions))
+        let nameLabel = NSTextField(labelWithString: file.displayName(showExtensions: PreviewHandlerSettings.store.showFileExtensions))
         nameLabel.font = NSFont.boldSystemFont(ofSize: 14)
         nameLabel.lineBreakMode = .byTruncatingTail
         iconNameStack.addArrangedSubview(nameLabel)

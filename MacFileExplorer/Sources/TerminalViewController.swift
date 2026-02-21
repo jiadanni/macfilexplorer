@@ -145,6 +145,12 @@ class TerminalViewController: NSViewController {
     // MARK: - PTY Shell Session Management
 
     private func startShellSession() {
+        // Guard against double-initialization - prevent file descriptor leaks
+        guard masterFD == -1 else {
+            debugLog("[Terminal] Shell session already running, skipping start")
+            return
+        }
+        
         // Get the user's shell (PTY-backed for interactive behavior)
         let shellPath = getShellPath()
         appendOutput("Starting shell (\(shellPath))...\n", color: .gray)

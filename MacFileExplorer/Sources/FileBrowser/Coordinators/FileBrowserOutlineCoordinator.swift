@@ -4,6 +4,7 @@ protocol FileBrowserOutlineCoordinatorDelegate: AnyObject {
     var rootItem: FileItem? { get }
     var showsHiddenFiles: Bool { get }
     var shortDateFormatter: DateFormatter { get }
+    var settings: SettingsStoreProtocol { get }
     func fileBrowserDidBecomeActive()
     func didSelectFile(_ item: FileItem?)
 }
@@ -45,9 +46,10 @@ final class FileBrowserOutlineCoordinator: NSObject, NSOutlineViewDataSource, NS
         let identifier = NSUserInterfaceItemIdentifier("Cell_\(tableColumn.identifier.rawValue)")
         let cell = outlineView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView ?? createCell(withIdentifier: identifier)
         
+        let settings = delegate?.settings ?? SettingsStore.shared
         let value: String
-        let showExtensions = SettingsStore.shared.showFileExtensions
-        let useGrayscale = SettingsStore.shared.useGrayscaleIcons
+        let showExtensions = settings.showFileExtensions
+        let useGrayscale = settings.useGrayscaleIcons
         let dateFormatter = delegate?.shortDateFormatter ?? DateFormatter()
         
         switch tableColumn.identifier.rawValue {

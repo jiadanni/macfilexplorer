@@ -311,7 +311,8 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
             tabBarController.navigateToLocation(url)
         }
         
-        sidebarViewController?.expandToCurrentDirectory(url: url)
+        // Force expansion when user explicitly selects a sidebar location
+        sidebarViewController?.expandToCurrentDirectory(url: url, force: true)
     }
     
     // MARK: - TabBarControllerDelegate

@@ -188,8 +188,12 @@ class SidebarViewController: NSViewController {
     }
 
     // Public method forwarding
-    func expandToCurrentDirectory(url: URL) {
-        folderOutlineVC.expandToCurrentDirectory(url: url)
+    /// Expands the folder outline to show the specified directory.
+    /// - Parameters:
+    ///   - url: The directory URL to expand to
+    ///   - force: If true, bypasses the expandSidebarToCurrentDirectory setting check
+    func expandToCurrentDirectory(url: URL, force: Bool = false) {
+        folderOutlineVC.expandToCurrentDirectory(url: url, force: force)
     }
     
     // Forwarding addFavorite (if used externally)

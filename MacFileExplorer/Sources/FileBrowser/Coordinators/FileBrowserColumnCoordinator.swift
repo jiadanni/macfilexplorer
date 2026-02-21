@@ -4,6 +4,7 @@ protocol FileBrowserColumnCoordinatorDelegate: AnyObject {
     var rootItem: FileItem? { get }
     var showsHiddenFiles: Bool { get }
     var browserView: NSBrowser? { get }
+    var settings: SettingsStoreProtocol { get }
     func fileBrowserDidBecomeActive()
 }
 
@@ -11,6 +12,10 @@ final class FileBrowserColumnCoordinator: NSObject, NSBrowserDelegate {
     weak var delegate: FileBrowserColumnCoordinatorDelegate?
     weak var selectionCoordinator: FileBrowserSelectionCoordinator?
     weak var dragDropHandler: FileBrowserDragDropHandler?
+    
+    private var settings: SettingsStoreProtocol {
+        delegate?.settings ?? SettingsStore.shared
+    }
     
     // MARK: - NSBrowserDelegate
     
@@ -42,7 +47,7 @@ final class FileBrowserColumnCoordinator: NSObject, NSBrowserDelegate {
     }
     
     func browser(_ browser: NSBrowser, objectValueForItem item: Any?) -> Any? {
-        return (item as? FileItem)?.displayName(showExtensions: SettingsStore.shared.showFileExtensions)
+        return (item as? FileItem)?.displayName(showExtensions: settings.showFileExtensions)
     }
     
     func browser(_ browser: NSBrowser, willDisplayCell cell: Any, atRow row: Int, column: Int) {
@@ -52,8 +57,8 @@ final class FileBrowserColumnCoordinator: NSObject, NSBrowserDelegate {
         guard let children = parentItem?.children, row < children.count else { return }
         let item = children[row]
         
-        browserCell.image = item.icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons)
-        browserCell.title = item.displayName(showExtensions: SettingsStore.shared.showFileExtensions)
+        browserCell.image = item.icon(useGrayscale: settings.useGrayscaleIcons)
+        browserCell.title = item.displayName(showExtensions: settings.showFileExtensions)
         browserCell.isLeaf = !item.isDirectory
     }
     
@@ -68,7 +73,7 @@ final class FileBrowserColumnCoordinator: NSObject, NSBrowserDelegate {
         var currentItem = delegate?.rootItem
         
         let components = path.components(separatedBy: browserView.pathSeparator)
-        let showExtensions = SettingsStore.shared.showFileExtensions
+        let showExtensions = settings.showFileExtensions
         
         for component in components.dropFirst() { // Drop root
             if let child = currentItem?.children?.first(where: { $0.displayName(showExtensions: showExtensions) == component }) {

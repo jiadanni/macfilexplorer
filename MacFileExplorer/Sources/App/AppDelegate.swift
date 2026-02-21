@@ -1,4 +1,5 @@
 import Cocoa
+import NetFS
 
 @main
 class AppDelegate: NSObject, NSApplicationDelegate, SettingsStoreDelegate {
@@ -450,11 +451,60 @@ class AppDelegate: NSObject, NSApplicationDelegate, SettingsStoreDelegate {
             return
         }
 
-        // Try to mount the network location
-        let success = NSWorkspace.shared.open(url)
-        if !success {
-            showError(L10n.text("Unable to mount the network location. Please verify the address and your permissions."))
+        // Mount the network location using NetFS framework
+        // This mounts the share and returns the mount point path
+        var mountPoints: Unmanaged<CFArray>?
+        
+        let status = NetFSMountURLSync(
+            url as CFURL,
+            nil, // mount path (nil = default /Volumes)
+            nil, // user (nil = use keychain or prompt)
+            nil, // password (nil = use keychain or prompt)
+            nil, // open options
+            nil, // mount options
+            &mountPoints
+        )
+        
+        if status == 0, let mountPointsArray = mountPoints?.takeRetainedValue() as? [String], let mountPath = mountPointsArray.first {
+            // Successfully mounted - navigate to the mount point in our app
+            let mountURL = URL(fileURLWithPath: mountPath)
+            windowController?.navigateToURL(mountURL)
+        } else {
+            // Mount failed - show error with status code for debugging
+            let errorMessage: String
+            switch status {
+            case -6600: // kNetFSBadURLError
+                errorMessage = L10n.text("Invalid server address format.")
+            case -6602: // kNetFSMountpointExistsError
+                // Already mounted - find and navigate to existing mount
+                if let existingMount = findExistingMountPoint(for: url) {
+                    windowController?.navigateToURL(existingMount)
+                    return
+                }
+                errorMessage = L10n.text("This server is already mounted.")
+            case -6003: // authentication error
+                errorMessage = L10n.text("Authentication failed. Please check your credentials.")
+            default:
+                errorMessage = L10n.text("Unable to connect to server. Error code: \(status)")
+            }
+            showError(errorMessage)
         }
+    }
+    
+    private func findExistingMountPoint(for serverURL: URL) -> URL? {
+        // Check /Volumes for existing mount that matches the server
+        let volumesURL = URL(fileURLWithPath: "/Volumes")
+        guard let contents = try? FileManager.default.contentsOfDirectory(at: volumesURL, includingPropertiesForKeys: [.volumeURLForRemountingKey], options: []) else {
+            return nil
+        }
+        
+        for volume in contents {
+            if let remountURL = try? volume.resourceValues(forKeys: [.volumeURLForRemountingKey]).volumeURLForRemounting,
+               remountURL.host == serverURL.host {
+                return volume
+            }
+        }
+        return nil
     }
 
     private func showError(_ message: String) {
