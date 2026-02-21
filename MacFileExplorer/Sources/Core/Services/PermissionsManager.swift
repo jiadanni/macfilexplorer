@@ -92,6 +92,9 @@ final class PermissionsManager {
     // Thread safety: Protected by lock
     private var _activeSecurityScopedURLs: Set<URL> = []
     private let lock = NSLock()
+
+    /// Backward compatibility type alias
+    typealias ResolvedGrantedDirectoryEntry = MacFileExplorer.ResolvedGrantedDirectoryEntry
     
     /// Thread-safe access to active security-scoped URLs
     private var activeSecurityScopedURLs: Set<URL> {
@@ -140,14 +143,6 @@ final class PermissionsManager {
         lock.lock()
         defer { lock.unlock() }
         _activeSecurityScopedURLs.removeAll()
-    }
-
-    /// Represents a resolved granted directory entry with its validation state.
-    struct ResolvedGrantedDirectoryEntry {
-        let url: URL?
-        let path: String
-        let isStale: Bool
-        let isValid: Bool
     }
 
     // MARK: Migration
@@ -460,7 +455,7 @@ final class PermissionsManager {
     }
 
     // MARK: - Environment
-    private func isSandboxed() -> Bool {
+    func isSandboxed() -> Bool {
         return ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
     }
 }

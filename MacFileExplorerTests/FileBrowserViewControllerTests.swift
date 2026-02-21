@@ -245,7 +245,14 @@ class FileBrowserViewControllerTests: XCTestCase {
         XCTAssertNotNil(copyItem, "Copy item should exist")
         XCTAssertTrue(copyItem?.target === provider, "Copy item target should be the provider")
         
-        // Tags submenu is populated dynamically on 'menuNeedsUpdate' with valid selection.
-        // Skipping Tags check in this static test.
+        // Tags submenu check
+        let tagsItem = menu.items.first(where: { $0.title == "Tags" })
+        XCTAssertNotNil(tagsItem, "Tags item should exist")
+        let tagsMenu = tagsItem?.submenu
+        XCTAssertNotNil(tagsMenu, "Tags submenu should exist")
+
+        let addNewTagItem = tagsMenu?.items.first(where: { $0.title == "Add New Tag..." })
+        XCTAssertNotNil(addNewTagItem, "Add New Tag item should exist")
+        XCTAssertTrue(addNewTagItem?.target === provider, "Add New Tag item target should be the provider")
     }
 }

@@ -26,9 +26,9 @@ class MockPermissionsManager: PermissionsManaging {
         return grantedDirectoriesURLs.contains(url)
     }
     
-    func resolvedGrantedDirectoryEntries() -> [PermissionsManager.ResolvedGrantedDirectoryEntry] {
+    func resolvedGrantedDirectoryEntries() -> [ResolvedGrantedDirectoryEntry] {
         return grantedDirectoriesURLs.map {
-            PermissionsManager.ResolvedGrantedDirectoryEntry(url: $0, path: $0.path, isStale: false, isValid: true)
+            ResolvedGrantedDirectoryEntry(url: $0, path: $0.path, isStale: false, isValid: true)
         }
     }
     
