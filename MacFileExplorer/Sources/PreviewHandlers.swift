@@ -188,13 +188,31 @@ class TextPreviewHandler: PreviewHandler {
     }
     
     func createView(for file: FileItem) -> NSView {
-        guard let content = try? String(contentsOf: file.url, encoding: .utf8) else { return NSView() }
+        let maxPreviewBytes = 1_000_000 // 1MB limit
+        var content: String?
+
+        if file.size > Int64(maxPreviewBytes) {
+            // Read only prefix to avoid DoS on large files
+            do {
+                let handle = try FileHandle(forReadingFrom: file.url)
+                defer { try? handle.close() }
+                if let data = try handle.read(upToCount: maxPreviewBytes) {
+                    content = String(decoding: data, as: UTF8.self) + "\n\n[Preview truncated due to file size]"
+                }
+            } catch {
+                debugLog("Error reading partial file: \(error)")
+            }
+        } else {
+            content = try? String(contentsOf: file.url, encoding: .utf8)
+        }
+
+        guard let finalContent = content else { return NSView() }
         
         let scrollView = NSTextView.scrollableTextView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         
         guard let textView = scrollView.documentView as? NSTextView else { return NSView() }
-        textView.string = content
+        textView.string = finalContent
         textView.isEditable = false
         textView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
         
