@@ -52,6 +52,10 @@ class StartViewController: NSViewController {
         refreshWidgets()
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     // MARK: - Setup
 
     private func setupUI() {

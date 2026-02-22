@@ -148,7 +148,11 @@ class StorageSettingsViewController: NSViewController {
     }
     
     @objc private func openSystemSettingsClicked() {
-        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
+            NSWorkspace.shared.open(url)
+        } else {
+            debugLog("StorageSettingsViewController: Failed to create URL for System Settings")
+        }
     }
 }
 
