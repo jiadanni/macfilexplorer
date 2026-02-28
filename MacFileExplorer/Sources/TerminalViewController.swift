@@ -359,13 +359,24 @@ class TerminalViewController: NSViewController {
                 // Found ANSI escape sequence
                 var j = text.index(nextIdx, offsetBy: 1)
                 var code = ""
-                while j < text.endIndex && text[j] != "m" {
-                    code.append(text[j])
+                var finalChar: Character = "\0"
+
+                while j < text.endIndex {
+                    let char = text[j]
+                    let scalar = char.unicodeScalars.first?.value ?? 0
+
+                    // The final byte of a CSI sequence is in the range 0x40 to 0x7E (@ through ~)
+                    if scalar >= 0x40 && scalar <= 0x7E {
+                        finalChar = char
+                        break
+                    }
+
+                    code.append(char)
                     j = text.index(after: j)
                 }
 
-                // Parse color code
-                if !code.isEmpty {
+                // Parse color code if the final character is 'm'
+                if finalChar == "m" && !code.isEmpty {
                     let codes = code.split(separator: ";").compactMap { Int($0) }
                     for c in codes {
                         switch c {
