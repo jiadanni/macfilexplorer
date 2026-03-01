@@ -330,13 +330,17 @@ class StorageOverviewWidgetView: StartWidgetView {
         return totalSize
     }
 
-    private nonisolated func formatBytes(_ bytes: Int64) -> String {
+    private static let byteFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         formatter.allowedUnits = [.useGB, .useTB]
         formatter.includesUnit = true
         formatter.includesCount = true
-        return formatter.string(fromByteCount: bytes)
+        return formatter
+    }()
+
+    private nonisolated func formatBytes(_ bytes: Int64) -> String {
+        return Self.byteFormatter.string(fromByteCount: bytes)
     }
 
     // MARK: - UI Components
