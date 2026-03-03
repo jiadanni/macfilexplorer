@@ -1,3 +1,0 @@
-/Users/daniel.jatto/Source/mine/macfilexplorer/MacFileExplorer/Sources/FileBrowserViewController.swift:243:29: error: cannot assign value of type 'FileBrowserViewController' to type '(any RootFileBrowserDropDelegate)?'
-        root.dropDelegate = self
-                            ^~~~

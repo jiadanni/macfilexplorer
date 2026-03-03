@@ -64,7 +64,15 @@ final class FileOperationsManager {
         guard !items.isEmpty else { return }
         
         // If confirmation is enabled, show the dialog first
-        let confirmOps = settings.confirmFileOperations
+        let confirmOps: Bool
+        switch operation {
+        case .copy:
+            confirmOps = settings.confirmCopyOperations
+        case .move:
+            confirmOps = settings.confirmMoveOperations
+        case .delete:
+            confirmOps = settings.confirmDeleteOperations
+        }
         
         if confirmOps {
             if operation == .delete {

@@ -152,8 +152,16 @@ class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(settingsStore.autoRenameOnConflict, "autoRenameOnConflict should default to false")
     }
     
-    func testConfirmFileOperationsDefault() throws {
-        XCTAssertTrue(settingsStore.confirmFileOperations, "confirmFileOperations should default to true")
+    func testConfirmCopyOperationsDefault() throws {
+        XCTAssertTrue(settingsStore.confirmCopyOperations, "confirmCopyOperations should default to true")
+    }
+    
+    func testConfirmMoveOperationsDefault() throws {
+        XCTAssertTrue(settingsStore.confirmMoveOperations, "confirmMoveOperations should default to true")
+    }
+    
+    func testConfirmDeleteOperationsDefault() throws {
+        XCTAssertTrue(settingsStore.confirmDeleteOperations, "confirmDeleteOperations should default to true")
     }
     
     func testShowOperationProgressDefault() throws {

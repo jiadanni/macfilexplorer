@@ -530,6 +530,43 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 }
 
+// MARK: - Column Auto-Sizing
+
+extension FileBrowserViewController {
+    /// Resizes the Name column to fit the widest filename in the current directory,
+    /// including the file icon and outline indentation, so nothing is clipped on load.
+    func autoSizeNameColumn() {
+        guard currentViewMode == .list,
+              let nameColumn = outlineView.tableColumn(withIdentifier: NSUserInterfaceItemIdentifier(AppConfig.ColumnID.name))
+        else { return }
+
+        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        let iconWidth: CGFloat = 16   // NSImageView width from createCell
+        let iconGap: CGFloat   = 6    // gap between icon and textField
+        let cellPadding: CGFloat = 4  // leading padding
+        let disclosureWidth: CGFloat = 16 // disclosure triangle per level
+        let minAllowedWidth: CGFloat = nameColumn.minWidth
+
+        var maxWidth: CGFloat = 0
+        let rowCount = outlineView.numberOfRows
+        let showExtensions = settings.showFileExtensions
+
+        for row in 0..<rowCount {
+            guard let item = outlineView.item(atRow: row) as? FileItem else { continue }
+            let level = CGFloat(outlineView.level(forRow: row))
+            let name = item.displayName(showExtensions: showExtensions)
+            let textWidth = (name as NSString).size(withAttributes: attributes).width
+            let totalWidth = cellPadding + disclosureWidth * (level + 1) + iconWidth + iconGap + textWidth + cellPadding
+            if totalWidth > maxWidth { maxWidth = totalWidth }
+        }
+
+        if maxWidth > minAllowedWidth {
+            nameColumn.width = maxWidth
+        }
+    }
+}
+
 // MARK: - NSOutlineView delegate/dataSource moved to FileBrowserViewController+Outline.swift
 
 // MARK: - NSCollectionView delegate/dataSource moved to FileBrowserViewController+Collection.swift
@@ -570,6 +607,8 @@ extension FileBrowserViewController: FileBrowserDataSourceDelegate {
             } else if self.currentViewMode == .columns {
                 self.browserView?.loadColumnZero()
             }
+            
+            self.autoSizeNameColumn()
             
             self.delegate?.directoryDidChange(self, to: dataSource.currentDirectory.path)
             self.selectionCoordinator.updateStatusBar()

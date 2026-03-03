@@ -57,7 +57,9 @@ extension UserDefaults {
         // File Operations Settings
         case autoRenameOnConflict = "autoRenameOnConflict"
         case deleteWithBackspaceOnly = "deleteWithBackspaceOnly"
-        case confirmFileOperations = "confirmFileOperations" // Show confirmation dialogs for copy/move/paste/delete
+        case confirmCopyOperations = "confirmCopyOperations" // Show confirmation dialogs for copy/paste
+        case confirmMoveOperations = "confirmMoveOperations" // Show confirmation dialogs for move
+        case confirmDeleteOperations = "confirmDeleteOperations" // Show confirmation dialogs for delete
         case showOperationProgress = "showOperationProgress" // Show progress sheets for operations
 
         // Toolbar Settings

@@ -1,17 +1,29 @@
-
 # Xcode
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
 
-#Project documentation
-#Project documentation (docs/ removed)
+# Project documentation
+# Fixed: Only ignore logs in docs, allow MD documentation
+docs/*.log
 
+# Project specific
 package-lock.json
+build.log
+test_output.log
+full_build_log.txt
+full_test_output*.log
 
 ## Build generated
-docs/
 build/
 DerivedData/
+
+## OS / Filesystem Junk
+.DS_Store
+
+## Tool-specific
+node_modules/
+.claude/
+.clang-module-cache/
 
 ## Various settings
 *.pbxuser
@@ -48,3 +60,5 @@ XCBuildData/
 !*.xcodeproj/xcshareddata/
 !*.xcworkspace/contents.xcworkspacedata
 /*.gcno
+
+.gemini-clipboard

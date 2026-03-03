@@ -74,7 +74,9 @@ protocol SettingsStoreProtocol: AnyObject {
     
     var autoRenameOnConflict: Bool { get set }
     var deleteWithBackspaceOnly: Bool { get set }
-    var confirmFileOperations: Bool { get set }
+    var confirmCopyOperations: Bool { get set }
+    var confirmMoveOperations: Bool { get set }
+    var confirmDeleteOperations: Bool { get set }
     var showOperationProgress: Bool { get set }
 
     // MARK: - Filter Settings

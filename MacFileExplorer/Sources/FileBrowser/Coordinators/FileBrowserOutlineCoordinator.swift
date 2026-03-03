@@ -122,6 +122,11 @@ final class FileBrowserOutlineCoordinator: NSObject, NSOutlineViewDataSource, NS
     
     // MARK: - NSOutlineView Drag & Drop
     
+    func outlineView(_ outlineView: NSOutlineView, pasteboardWriterForItem item: Any) -> NSPasteboardWriting? {
+        guard let fileItem = item as? FileItem else { return nil }
+        return fileItem.url as NSURL
+    }
+    
     func outlineView(_ outlineView: NSOutlineView, validateDrop info: NSDraggingInfo, proposedItem item: Any?, proposedChildIndex index: Int) -> NSDragOperation {
         return dragDropHandler?.validateDrop(info, proposedTarget: item as? FileItem) ?? []
     }

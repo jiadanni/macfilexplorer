@@ -5,6 +5,10 @@ final class FileOperationsSettingsViewController: NSViewController {
     private var stackView: NSStackView!
     private let settingsStore: SettingsStoreProtocol = SettingsStore.shared
 
+    private class FlippedView: NSView {
+        override var isFlipped: Bool { return true }
+    }
+
     override func loadView() {
         let scrollView = NSScrollView()
         scrollView.hasVerticalScroller = true
@@ -16,7 +20,7 @@ final class FileOperationsSettingsViewController: NSViewController {
         scrollView.backgroundColor = NSColor.controlBackgroundColor
         self.view = scrollView
 
-        let contentView = NSView()
+        let contentView = FlippedView()
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -30,11 +34,12 @@ final class FileOperationsSettingsViewController: NSViewController {
 
         scrollView.documentView = contentView
 
+        let contentContainer = scrollView.contentView
         NSLayoutConstraint.activate([
-            contentView.topAnchor.constraint(equalTo: scrollView.contentView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            contentView.topAnchor.constraint(equalTo: contentContainer.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
+            contentView.widthAnchor.constraint(equalTo: contentContainer.widthAnchor),
 
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
@@ -89,8 +94,14 @@ final class FileOperationsSettingsViewController: NSViewController {
         confirmationsTitle.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
         stackView.addArrangedSubview(confirmationsTitle)
 
-        // Confirm operations
-        addCheckbox(title: "Confirm file operations (copy/move/paste/delete)", key: .confirmFileOperations, defaultValue: true)
+        // Confirm copy operations
+        addCheckbox(title: "Confirm copy/paste operations", key: .confirmCopyOperations, defaultValue: true)
+        
+        // Confirm move operations
+        addCheckbox(title: "Confirm move operations", key: .confirmMoveOperations, defaultValue: true)
+        
+        // Confirm delete operations
+        addCheckbox(title: "Confirm delete operations", key: .confirmDeleteOperations, defaultValue: true)
 
         let confirmDesc = NSTextField(labelWithString: "Show confirmation dialogs with item counts, sizes, and available space before executing operations.")
         confirmDesc.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)

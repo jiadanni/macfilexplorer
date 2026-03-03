@@ -23,6 +23,12 @@ class FavoritesViewController: NSViewController {
         settings.removeDelegate(self)
     }
 
+    var contentHeight: CGFloat {
+        let rowHeight: CGFloat = 22
+        let rowCount = CGFloat(favoriteItems.count)
+        return rowCount * rowHeight
+    }
+
     override func loadView() {
         view = NSView()
         setupUI()

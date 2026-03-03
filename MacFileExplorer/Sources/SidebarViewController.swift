@@ -129,41 +129,52 @@ class SidebarViewController: NSViewController {
 
         // Set equal proportions logic
         mainSplitView.setHoldingPriority(.defaultLow, forSubviewAt: 0) // Favorites
+        mainSplitView.setHoldingPriority(.defaultLow, forSubviewAt: 1) // Bottom Split (Locations + Folder)
+        
         bottomSplitView.setHoldingPriority(.defaultLow, forSubviewAt: 0) // Locations
         bottomSplitView.setHoldingPriority(.defaultLow, forSubviewAt: 1) // Folder Explorer
     }
 
+    private var initialLayoutDone = false
+
     override func viewDidLayout() {
         super.viewDidLayout()
         
-        // Maintain the equal split logic if possible
+        // Only perform initial layout once to avoid fighting user resizing
+        guard !initialLayoutDone else { return }
+        
         if let mainSplitView = view.subviews.first as? NSSplitView,
            let bottomSplitView = mainSplitView.arrangedSubviews.safe(at: 1) as? NSSplitView {
 
             let totalHeight = mainSplitView.bounds.height
+            guard totalHeight > 0 else { return }
+            
             let mainDividerThickness = mainSplitView.dividerThickness
             let bottomDividerThickness = bottomSplitView.dividerThickness
-
-            let availableHeight = totalHeight - mainDividerThickness - bottomDividerThickness
-            let sectionHeight = availableHeight / 3.0
-            _ = sectionHeight // Silencing unused warning as proportional split is currently disabled to allow user resizing
-
-            // We only set this initially or if we want to enforce it always (which might fight user resizing)
-            // For now, let's leave it as is, or we can check if it's the *first* layout
-            // But the original code did it on every layout which might be aggressive. 
-            // I'll keep the original logic roughly but maybe less aggressive if I could.
-            // For now, exact copy of logic:
+            let headerHeight: CGFloat = 20.0
             
-            // NOTE: Constant resetting of split position prevents user from resizing. 
-            // In a real refactor I would fix this, but to maintain behavior I'll keep it comparable
-            // or perhaps improve it by checking a flag.
+            // Calculate ideal heights based on content
+            let favoritesContentHeight = favoritesVC.contentHeight + headerHeight
+            let locationsContentHeight = locationsVC.contentHeight + headerHeight
             
-            // To be safe and allow resizing, I will NOT force it every layout cycle unless it's way off. 
-            // Or better, only on load. But viewDidLayout is handy for initial size.
-            // I'll leave it as the original for consistency.
+            // Minimum heights to ensure visibility
+            let minSectHeight: CGFloat = 100.0
+            let targetSectHeight = totalHeight / 3.0
             
-            // mainSplitView.setPosition(sectionHeight, ofDividerAt: 0)
-            // bottomSplitView.setPosition(sectionHeight, ofDividerAt: 0)
+            // Calculate Favorites height: at least content height (if small), 
+            // but not more than 1/3 if it's large, unless there is plenty of space.
+            // If favorites is tiny (e.g. 2 items = ~64px), we don't want to give it 1/3 of the screen.
+            let favoritesHeight = max(minSectHeight, min(targetSectHeight, favoritesContentHeight + 10))
+            
+            mainSplitView.setPosition(favoritesHeight, ofDividerAt: 0)
+            
+            // Now distribute the rest between Locations and Folder Explorer
+            let remainingHeight = totalHeight - favoritesHeight - mainDividerThickness
+            let locationsHeight = max(minSectHeight, min(remainingHeight / 2.0, locationsContentHeight + 10))
+            
+            bottomSplitView.setPosition(locationsHeight, ofDividerAt: 0)
+            
+            initialLayoutDone = true
         }
     }
 

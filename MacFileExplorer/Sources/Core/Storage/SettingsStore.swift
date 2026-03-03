@@ -405,11 +405,25 @@ final class SettingsStore: SettingsStoreProtocol {
         set { defaults.set(newValue, forKey: UserDefaults.Keys.deleteWithBackspaceOnly.rawValue) }
     }
     
-    /// Whether to confirm file operations.
+    /// Whether to confirm copy operations.
     /// Default: `true`
-    var confirmFileOperations: Bool {
-        get { defaults.object(forKey: UserDefaults.Keys.confirmFileOperations.rawValue) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: UserDefaults.Keys.confirmFileOperations.rawValue) }
+    var confirmCopyOperations: Bool {
+        get { defaults.object(forKey: UserDefaults.Keys.confirmCopyOperations.rawValue) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.confirmCopyOperations.rawValue) }
+    }
+    
+    /// Whether to confirm move operations.
+    /// Default: `true`
+    var confirmMoveOperations: Bool {
+        get { defaults.object(forKey: UserDefaults.Keys.confirmMoveOperations.rawValue) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.confirmMoveOperations.rawValue) }
+    }
+    
+    /// Whether to confirm delete operations.
+    /// Default: `true`
+    var confirmDeleteOperations: Bool {
+        get { defaults.object(forKey: UserDefaults.Keys.confirmDeleteOperations.rawValue) as? Bool ?? true }
+        set { defaults.set(newValue, forKey: UserDefaults.Keys.confirmDeleteOperations.rawValue) }
     }
     
     /// Whether to show operation progress dialogs.

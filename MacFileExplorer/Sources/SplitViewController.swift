@@ -40,6 +40,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         splitView.isVertical = true
         splitView.dividerStyle = .thin
         splitView.delegate = self
+        splitView.autosaveName = "MainSplitView"
 
         // Create sidebar
         sidebarViewController = SidebarViewController(settings: settingsStore)
@@ -65,25 +66,29 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
         contentSplitViewController = NSSplitViewController()
         contentSplitViewController!.splitView.isVertical = false
         contentSplitViewController!.splitView.dividerStyle = .thin
+        contentSplitViewController!.splitView.autosaveName = "TerminalSplitView"
 
         // Create tab bar controller for file browsing
         tabBarController = TabBarController()
         tabBarController?.delegate = self // Set self as the delegate
         let tabBarItem = NSSplitViewItem(viewController: tabBarController!)
         tabBarItem.minimumThickness = 300
+        tabBarItem.holdingPriority = NSLayoutConstraint.Priority(rawValue: 249)
         // Don't set maximumThickness - let it grow automatically
         tabBarItem.canCollapse = false
         contentSplitViewController!.addSplitViewItem(tabBarItem)
 
-        // Create terminal view controller (initially hidden)
+        // Create terminal view controller
         terminalViewController = TerminalViewController()
         terminalViewController?.delegate = self
         terminalCoordinator.delegate = self
         terminalSplitItem = NSSplitViewItem(viewController: terminalViewController!)
         terminalSplitItem?.minimumThickness = 150
         terminalSplitItem?.maximumThickness = 500
+        terminalSplitItem?.holdingPriority = NSLayoutConstraint.Priority(rawValue: 251)
         terminalSplitItem?.canCollapse = true
-        terminalSplitItem?.isCollapsed = true
+        // Set initial collapsed state directly from coordinator to avoid jumping later
+        terminalSplitItem?.isCollapsed = !terminalCoordinator.isVisible
         contentSplitViewController!.addSplitViewItem(terminalSplitItem!)
 
         // Add content split view to main split view
@@ -122,13 +127,7 @@ class SplitViewController: NSSplitViewController, SidebarDelegate, TabBarControl
                 addNewTab()
             }
 
-            // Restore terminal visibility state from coordinator
-            if terminalCoordinator.isVisible {
-                Task { @MainActor [weak self] in
-                    self?.shouldAnimateTerminalTransition = false
-                    self?.applyTerminalVisibility(true, animated: false)
-                }
-            }
+
         }
     }
 

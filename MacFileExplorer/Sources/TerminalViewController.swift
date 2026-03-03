@@ -116,6 +116,7 @@ class TerminalViewController: NSViewController {
         if let container = textView.textContainer {
             container.containerSize = NSSize(width: scrollView.contentSize.width, height: .greatestFiniteMagnitude)
             container.widthTracksTextView = true
+            container.lineBreakMode = .byCharWrapping
         }
         textView.frame = scrollView.contentView.bounds
         scrollView.documentView = textView
@@ -306,9 +307,11 @@ class TerminalViewController: NSViewController {
             }
         }
 
-        // Normalize carriage returns: CRLF -> LF, standalone CR -> empty (avoids ghost prompts)
+        // Normalize carriage returns: 
+        // 1. CRLF -> LF
+        // 2. standalone CR -> LF (avoids staircase "jumping" in log-style view)
         let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
-                            .replacingOccurrences(of: "\r", with: "")
+                            .replacingOccurrences(of: "\r", with: "\n")
         
         let cleaned = stripControlSequences(normalized)
         let filtered = cleaned
@@ -637,6 +640,45 @@ class TerminalViewController: NSViewController {
     private func updateScrollVisibility() {
         let isEmpty = textView.string.isEmpty
         scrollView.verticalScroller?.alphaValue = isEmpty ? 0 : 1
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        updatePTYSize()
+    }
+
+    private func updatePTYSize() {
+        guard masterFD >= 0 else { return }
+        
+        // Calculate rows and columns based on view size and font
+        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        let charSize = ("A" as NSString).size(withAttributes: attributes)
+        
+        let horizontalInset: CGFloat = 10
+        let verticalInset: CGFloat = 10
+        let lineFragmentPadding: CGFloat = 5 // Default for NSTextContainer
+        
+        // availableWidth should subtract both insets and lineFragmentPadding on both sides
+        let availableWidth = textView.bounds.width - (horizontalInset * 2) - (lineFragmentPadding * 2)
+        let availableHeight = scrollView.contentView.bounds.height - (verticalInset * 2)
+        
+        let cols = Int32(max(10, floor(availableWidth / charSize.width)))
+        let rows = Int32(max(1, floor(availableHeight / charSize.height)))
+        
+        var win = winsize()
+        win.ws_row = UInt16(rows)
+        win.ws_col = UInt16(cols)
+        win.ws_xpixel = 0
+        win.ws_ypixel = 0
+        
+        // Use TIOCSWINSZ to update the PTY window size
+        // Note: TIOCSWINSZ is usually defined in sys/ioctl.h
+        if ioctl(masterFD, TIOCSWINSZ, &win) == -1 {
+            debugLog("TerminalViewController: Failed to update PTY size via ioctl: \(String(cString: strerror(errno)))")
+        } else {
+            debugLog("TerminalViewController: Updated PTY size to \(cols)x\(rows)")
+        }
     }
 }
 

@@ -338,9 +338,7 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
         let items = delegate?.getSelectedItems() ?? []
         guard !items.isEmpty else { return }
 
-        if FileBrowserDialogHelper.showConfirmationDialog(title: "Delete \(items.count) item(s)?", message: "Move to Trash?") {
-            delegate?.performFileOperation(.delete, items: items.map { $0.url }, destination: nil)
-        }
+        delegate?.performFileOperation(.delete, items: items.map { $0.url }, destination: nil)
     }
     
     @objc func handleNewFolder(_ sender: Any) {

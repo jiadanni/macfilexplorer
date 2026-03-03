@@ -38,6 +38,12 @@ class LocationsViewController: NSViewController {
         settings.removeDelegate(self)
     }
     
+    var contentHeight: CGFloat {
+        let rowHeight: CGFloat = 22
+        let rowCount = CGFloat(driveItems.count)
+        return rowCount * rowHeight
+    }
+    
     @objc private func volumeDidMount(_ notification: Notification) {
         Task { @MainActor [weak self] in
             self?.loadDrives()

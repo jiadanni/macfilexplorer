@@ -164,7 +164,7 @@ class FileOperationsManagerTests: XCTestCase {
     
     func testPerform_WithConfirmationEnabled_ShowsDialog() {
         // Given
-        settingsStore.confirmFileOperations = true
+        settingsStore.confirmCopyOperations = true
         let source = tempDirectory.appendingPathComponent("file.txt")
         let destination = tempDirectory.appendingPathComponent("dest", isDirectory: true)
         
@@ -179,7 +179,7 @@ class FileOperationsManagerTests: XCTestCase {
     
     func testPerform_WithConfirmationDisabled_ExecutesDirectly() {
         // Given
-        settingsStore.confirmFileOperations = false
+        settingsStore.confirmCopyOperations = false
         settingsStore.showOperationProgress = false
         let source = tempDirectory.appendingPathComponent("file.txt")
         let destination = tempDirectory.appendingPathComponent("dest", isDirectory: true)

@@ -4,42 +4,35 @@ A native macOS file explorer application built with Swift that combines the fami
 
 ## Features
 
-### 📊 Windows Explorer-Style List View
-- Multi-column list view with sortable headers
+### 📊 Multiple View Modes
+- Windows Explorer-Style multi-column list view with sortable headers
 - Columns: Name, Date Modified, Type, Size, Date Created
 - Click column headers to sort (ascending/descending)
-- Visual sort indicators on column headers
 - Resizable and reorderable columns
-- Alternating row colors for better readability
-- Right-aligned size column like Windows Explorer
 - File type descriptions (e.g., "PDF Document", "JPEG Image")
 
-### 📑 Split View with Tabs
-- Multiple tabs for browsing different directories simultaneously
-- Easy tab management with keyboard shortcuts
-- Tab switching and navigation
-- Each tab maintains its own browsing history
+### �️ Navigation & Organization
+- **Sidebar & Favorites**: Quick access to favorite locations and drives
+- **Split View with Tabs**: Browse multiple directories simultaneously
+- **Start Dashboard**: Quick actions, recent locations, and storage overview
+- **Search**: Built-in search functionality in the toolbar
+
+### 🛠️ File Operations & Management
+- Full file operations (Copy, Move, Delete) with progress dialogs
+- **File Preview Panel**: Quick look at file contents directly in the app
+- Real-time directory monitoring and updates
+- **Storage Analyzer**: Visual breakdown of storage usage across drives
 
 ### 💻 Integrated Terminal Panel
 - Built-in terminal that automatically tracks the current directory
 - Toggle visibility with keyboard shortcut (Ctrl + `)
 - Full command execution support
-- Command history navigation (up/down arrows)
-- Built-in commands: `ls`, `cd`, `pwd`, `clear`, `help`
-- Execute any system command from within the app
+- Command history navigation
 
-### 🎨 Bulk Folder Color Customization
-- Select multiple folders and change their colors at once
-- Custom color picker integration
+### 🎨 Customization & Settings
+- Comprehensive Settings window (Appearance, Context Menu, Terminal, Toolbar, etc.)
+- **Bulk Folder Color Customization**: Select and colorize folders custom colors
 - Colors are preserved across app restarts
-- Visual distinction for organized folder hierarchies
-
-### 📁 File System Features
-- Real-time directory monitoring and updates
-- Navigate through folder hierarchies
-- Double-click to open files and folders
-- System file icons for all file types
-- Hidden files are filtered out by default
 
 ## Requirements
 
@@ -297,21 +290,18 @@ open /Applications/MacFileExplorer.app
 
 ## Project Structure
 
-```
+```text
 MacFileExplorer/
 ├── MacFileExplorer.xcodeproj/     # Xcode project file
 │   └── project.pbxproj
 ├── MacFileExplorer/
 │   ├── Sources/                   # Swift source files
-│   │   ├── AppDelegate.swift                # App lifecycle management
-│   │   ├── MainWindowController.swift       # Main window controller
-│   │   ├── SplitViewController.swift        # Split view management
-│   │   ├── TabBarController.swift           # Tab management
-│   │   ├── FileBrowserViewController.swift  # File browsing UI
-│   │   ├── TerminalViewController.swift     # Terminal integration
-│   │   ├── FileItem.swift                   # File/folder model
-│   │   ├── ColorManager.swift               # Folder color persistence
-│   │   └── FileSystemMonitor.swift          # Real-time file monitoring
+│   │   ├── App/                   # App lifecycle and main window
+│   │   ├── Core/                  # Models, Services, and Storage
+│   │   ├── FileBrowser/           # File browsing coordinators and UI
+│   │   ├── Settings/              # Preferences and settings UI
+│   │   ├── StorageAnalyzer/       # Storage usage visualization
+│   │   └── *ViewController.swift  # Main view controllers (e.g. TabBar, Terminal, SplitView)
 │   ├── Resources/                 # App resources
 │   │   ├── Assets.xcassets/       # Asset catalog
 │   │   └── MainMenu.xib           # Main menu definition
@@ -325,15 +315,14 @@ MacFileExplorer/
 
 ### Component Overview
 
-- **AppDelegate**: Manages application lifecycle and creates the main window
-- **MainWindowController**: Controls the main application window
-- **SplitViewController**: Manages the split between file browser and terminal
-- **TabBarController**: Handles multiple browsing tabs
-- **FileBrowserViewController**: Displays files and folders in a list view
-- **TerminalViewController**: Provides terminal functionality
-- **FileItem**: Model representing a file or folder
-- **ColorManager**: Persists and retrieves custom folder colors
-- **FileSystemMonitor**: Monitors directory changes in real-time
+- **App**: Manages application lifecycle (`AppDelegate`) and the main window (`MainWindowController`)
+- **Core**: Contains domain models, storage mechanisms, and core services (e.g., `FileSystemMonitor`, `ColorManager`, `FileOperationsManager`)
+- **FileBrowser**: Displays files and folders, managed by coordinators for navigation, selection, and view modes
+- **Sidebar**: Manages navigation locations, local drives, and favorites
+- **StorageAnalyzer**: Visualizes disk usage, directory sizes, and storage breakdowns
+- **Settings**: Modular preferences for application behavior (Appearance, Terminal, Context Menu, File Operations)
+- **Preview**: Provides quick previews for selected files directly within the interface
+- **Terminal**: Provides embedded terminal functionality and settings
 
 ### Key Technologies
 
@@ -403,13 +392,10 @@ If folder colors reset:
 ## Contributing
 
 Contributions are welcome! Areas for improvement:
-- Icon view mode (in addition to list view)
 - Column view mode (like Finder)
-- Search functionality
-- File operations (copy, move, delete)
-- Favorites/bookmarks sidebar
-- Preview panel
+- Icon view mode refinements
 - More terminal features (colors, custom shell selection)
+- Additional visual themes
 
 ## License
 

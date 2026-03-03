@@ -111,9 +111,19 @@ extension SettingsStore {
             set { store.autoRenameOnConflict = newValue }
         }
         
-        var confirmFileOperations: Bool {
-            get { store.confirmFileOperations }
-            set { store.confirmFileOperations = newValue }
+        var confirmCopyOperations: Bool {
+            get { store.confirmCopyOperations }
+            set { store.confirmCopyOperations = newValue }
+        }
+        
+        var confirmMoveOperations: Bool {
+            get { store.confirmMoveOperations }
+            set { store.confirmMoveOperations = newValue }
+        }
+        
+        var confirmDeleteOperations: Bool {
+            get { store.confirmDeleteOperations }
+            set { store.confirmDeleteOperations = newValue }
         }
         
         var showOperationProgress: Bool {

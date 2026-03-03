@@ -43,7 +43,9 @@ class MockSettingsStore: SettingsStoreProtocol {
     // MARK: - File Operations Settings
     var autoRenameOnConflict: Bool = false
     var deleteWithBackspaceOnly: Bool = false
-    var confirmFileOperations: Bool = true
+    var confirmCopyOperations: Bool = true
+    var confirmMoveOperations: Bool = true
+    var confirmDeleteOperations: Bool = true
     var showOperationProgress: Bool = true
 
     // MARK: - Filter Settings
