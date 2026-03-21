@@ -709,19 +709,23 @@ extension TerminalViewController: NSTextViewDelegate {
             writeToShell(input + "\n")
             return true
         } else if commandSelector == #selector(NSResponder.moveUp(_:)) {
-            if historyIndex > 0 {
+            if !commandHistory.isEmpty && historyIndex > 0 {
                 historyIndex -= 1
                 replaceCurrentInput(with: commandHistory[historyIndex])
+            } else if !commandHistory.isEmpty && historyIndex == 0 {
+                // Already at first command, stay there
+                replaceCurrentInput(with: commandHistory[0])
             }
             return true
         } else if commandSelector == #selector(NSResponder.moveDown(_:)) {
             if historyIndex < commandHistory.count - 1 {
                 historyIndex += 1
                 replaceCurrentInput(with: commandHistory[historyIndex])
-            } else {
+            } else if historyIndex < commandHistory.count {
                 historyIndex = commandHistory.count
                 replaceCurrentInput(with: "")
             }
+            // If already past history (historyIndex >= commandHistory.count), stay there
             return true
         } else if commandSelector == #selector(NSResponder.insertTab(_:)) {
             writeToShell("\t")
