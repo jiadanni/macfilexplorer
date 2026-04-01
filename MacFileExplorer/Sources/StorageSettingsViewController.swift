@@ -22,7 +22,7 @@ class StorageSettingsViewController: NSViewController {
         scrollView.backgroundColor = NSColor.controlBackgroundColor
         self.view = scrollView
         
-        let contentView = NSView()
+        let contentView = SettingsContentView()
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -51,13 +51,6 @@ class StorageSettingsViewController: NSViewController {
         ])
         
         setupUI()
-    }
-    
-    override func viewDidAppear() {
-        super.viewDidAppear()
-        if let scrollView = view as? NSScrollView {
-            scrollView.contentView.scroll(to: NSPoint.zero)
-        }
     }
     
     private func setupUI() {
@@ -155,4 +148,3 @@ class StorageSettingsViewController: NSViewController {
         }
     }
 }
-

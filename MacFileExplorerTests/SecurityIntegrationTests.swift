@@ -33,7 +33,9 @@ class SecurityIntegrationTests: XCTestCase {
         let testDefaults = UserDefaults(suiteName: settingsSuiteName)!
         testDefaults.removePersistentDomain(forName: settingsSuiteName)
         settingsStore = SettingsStore(defaults: testDefaults)
-        settingsStore.confirmFileOperations = false
+        settingsStore.confirmCopyOperations = false
+        settingsStore.confirmMoveOperations = false
+        settingsStore.confirmDeleteOperations = false
         settingsStore.showOperationProgress = false
         fileOperationsDelegate = FileOperationsTestDelegate()
         fileOperationsManager = FileOperationsManager(delegate: fileOperationsDelegate, settings: settingsStore)

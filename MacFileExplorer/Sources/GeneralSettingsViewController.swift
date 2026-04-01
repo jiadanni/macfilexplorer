@@ -17,7 +17,7 @@ final class GeneralSettingsViewController: NSViewController {
         scrollView.backgroundColor = NSColor.controlBackgroundColor
         self.view = scrollView
 
-        let contentView = NSView()
+        let contentView = SettingsContentView()
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
         contentView.translatesAutoresizingMaskIntoConstraints = false

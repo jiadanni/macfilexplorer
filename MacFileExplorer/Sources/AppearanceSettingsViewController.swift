@@ -16,7 +16,7 @@ final class AppearanceSettingsViewController: NSViewController {
         scrollView.backgroundColor = NSColor.controlBackgroundColor
         self.view = scrollView
 
-        let contentView = NSView()
+        let contentView = SettingsContentView()
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -46,14 +46,6 @@ final class AppearanceSettingsViewController: NSViewController {
         addWindowAppearanceSettings()
         // Custom accent color settings removed for consistency with macOS.
         // addAccentColorSettings() // intentionally disabled
-    }
-
-    override func viewDidAppear() {
-        super.viewDidAppear()
-        // Scroll to top when view appears
-        if let scrollView = view as? NSScrollView {
-            scrollView.contentView.scroll(to: NSPoint.zero)
-        }
     }
 
     private func addFolderAppearanceSettings() {

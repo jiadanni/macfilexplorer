@@ -15,7 +15,7 @@ final class PermissionsSettingsViewController: NSViewController {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         self.view = scrollView
 
-        let contentView = NSView()
+        let contentView = SettingsContentView()
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -31,8 +31,9 @@ final class PermissionsSettingsViewController: NSViewController {
 
         NSLayoutConstraint.activate([
             contentView.topAnchor.constraint(equalTo: scrollView.contentView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.contentView.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.contentView.trailingAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor),
 
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
@@ -435,4 +436,3 @@ final class PermissionsSettingsViewController: NSViewController {
         }
     }
 }
-

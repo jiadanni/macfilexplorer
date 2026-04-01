@@ -16,7 +16,7 @@ final class TerminalSettingsViewController: NSViewController {
         scrollView.backgroundColor = NSColor.controlBackgroundColor
         self.view = scrollView
 
-        let contentView = NSView()
+        let contentView = SettingsContentView()
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -36,7 +36,7 @@ final class TerminalSettingsViewController: NSViewController {
             contentView.topAnchor.constraint(equalTo: contentContainer.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
-            contentView.widthAnchor.constraint(lessThanOrEqualTo: contentContainer.widthAnchor),
+            contentView.widthAnchor.constraint(equalTo: contentContainer.widthAnchor),
 
             stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 20),
             stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),

@@ -14,7 +14,7 @@ final class ContextMenuSettingsViewController: NSViewController {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         self.view = scrollView
 
-        let contentView = NSView()
+        let contentView = SettingsContentView()
         contentView.wantsLayer = true
         contentView.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
         contentView.translatesAutoresizingMaskIntoConstraints = false
@@ -43,14 +43,6 @@ final class ContextMenuSettingsViewController: NSViewController {
         stackView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         addContextMenuSettings()
-    }
-
-    override func viewDidAppear() {
-        super.viewDidAppear()
-        // Scroll to top when view appears
-        if let scrollView = view as? NSScrollView {
-            scrollView.contentView.scroll(to: NSPoint.zero)
-        }
     }
 
     private func addContextMenuSettings() {

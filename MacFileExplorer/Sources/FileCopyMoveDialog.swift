@@ -170,14 +170,27 @@ class FileCopyMoveDialog: NSWindowController {
         alert.addButton(withTitle: L10n.text("Cancel Operation Button"))
         alert.addButton(withTitle: L10n.text("Continue"))
 
-        if alert.runModal() == .alertFirstButtonReturn {
-            let shouldCancel = $isCancelled.update { cancelled in
-                if cancelled { return false }
-                cancelled = true
-                return true
+        guard let window = window else { return }
+        alert.beginSheetModal(for: window) { [weak self] response in
+            if response == .alertFirstButtonReturn {
+                let shouldCancel = self?.$isCancelled.update { cancelled in
+                    if cancelled { return false }
+                    cancelled = true
+                    return true
+                } ?? false
+                
+                if shouldCancel {
+                    self?.operation?.cancel()
+                    self?.closeWindow()
+                }
             }
-            guard shouldCancel else { return }
-            operation?.cancel()
+        }
+    }
+
+    private func closeWindow() {
+        if let window = window, let parent = window.sheetParent {
+            parent.endSheet(window)
+        } else {
             close()
         }
     }
@@ -238,22 +251,23 @@ extension FileCopyMoveDialog: FileOperationDelegate {
 
             // Auto-close after 2 seconds
             try? await Task.sleep(nanoseconds: 2_000_000_000)
-            self.close()
+            self.closeWindow()
         }
     }
 
     func fileOperationDidFail(error: String) {
         Task { @MainActor [weak self] in
-            guard let self else { return }
+            guard let self = self, let window = self.window else { return }
 
             let alert = NSAlert()
             alert.messageText = L10n.text("Operation Failed")
             alert.informativeText = error
             alert.alertStyle = .critical
             alert.addButton(withTitle: "OK")
-            alert.runModal()
-
-            self.close()
+            
+            alert.beginSheetModal(for: window) { [weak self] _ in
+                self?.closeWindow()
+            }
         }
     }
 
@@ -261,10 +275,8 @@ extension FileCopyMoveDialog: FileOperationDelegate {
         Task { @MainActor [weak self] in
             guard let self else { return }
 
-            var queueText = ""
-            for (index, file) in files.enumerated() {
-                queueText += "\(index + 1). \(file)\n"
-            }
+            // Using joined for efficient string creation now that the count is limited
+            let queueText = files.enumerated().map { "\($0 + 1). \($1)" }.joined(separator: "\n")
             self.fileQueueTextView.string = queueText
         }
     }
@@ -294,6 +306,7 @@ private actor FileOperationControl {
     }
 
     func cancel() {
+        isPaused = false
         resumeAll()
     }
 
@@ -325,6 +338,8 @@ class FileOperation {
 
     @Atomic private var isPaused = false
     @Atomic private var isCancelled = false
+    private var lastUpdateTimestamp: CFAbsoluteTime = 0
+    private let updateInterval: TimeInterval = 0.1 // 100ms throttle
 
     init(type: FileCopyMoveDialog.OperationType, sourceFiles: [URL], destination: URL, delegate: FileOperationDelegate?) {
         self.type = type
@@ -341,6 +356,7 @@ class FileOperation {
 
     func pause() {
         isPaused = true
+        Task { await control.pause() }
     }
 
     func resume() {
@@ -366,6 +382,7 @@ class FileOperation {
             var sourceSize: Int64 = 0
 
             if let enumerator = fileManager.enumerator(at: sourceURL, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
+                var yieldCounter = 0
                 while let fileURL = enumerator.nextObject() as? URL {
                     if Task.isCancelled || isCancelled { return }
 
@@ -376,6 +393,13 @@ class FileOperation {
                         await control.wait()
                     }
                     if Task.isCancelled || isCancelled { return }
+                    
+                    yieldCounter += 1
+                    if yieldCounter >= 100 {
+                        await Task.yield()
+                        yieldCounter = 0
+                    }
+
                     do {
                         let resourceValues = try fileURL.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
                         if let isDirectory = resourceValues.isDirectory, !isDirectory {
@@ -404,7 +428,14 @@ class FileOperation {
         }
 
         delegate?.fileOperationDidStart(totalBytes: totalSize, fileCount: filesToProcess.count)
-        delegate?.fileOperationDidUpdateQueue(files: filesToProcess.map { $0.lastPathComponent })
+        
+        // Limit the queue display to first 500 items to avoid freezing UI
+        let displayLimit = 500
+        var queueFiles = filesToProcess.prefix(displayLimit).map { $0.lastPathComponent }
+        if filesToProcess.count > displayLimit {
+            queueFiles.append("... and \(filesToProcess.count - displayLimit) more items")
+        }
+        delegate?.fileOperationDidUpdateQueue(files: queueFiles)
 
         // Process files
         var bytesProcessed: Int64 = 0
@@ -436,7 +467,7 @@ class FileOperation {
                     // Fast atomic move on same volume
                     try fileManager.moveItem(at: sourceURL, to: finalDestination)
                     bytesProcessed += sourceSizes[sourceURL] ?? 0
-                    delegate?.fileOperationDidProgress(currentFile: fileName, bytesProcessed: bytesProcessed, totalBytes: totalSize)
+                    sendProgress(currentFile: fileName, bytesProcessed: bytesProcessed, totalBytes: totalSize)
                 } else {
                     // Copy (or cross-volume move) - handle recursively for progress
                     try await processRecursively(at: sourceURL, to: finalDestination, totalSize: totalSize, bytesProcessed: &bytesProcessed)
@@ -452,7 +483,17 @@ class FileOperation {
             }
         }
 
+        // Final progress update to ensure 100%
+        delegate?.fileOperationDidProgress(currentFile: "", bytesProcessed: bytesProcessed, totalBytes: totalSize)
         delegate?.fileOperationDidComplete()
+    }
+
+    private func sendProgress(currentFile: String, bytesProcessed: Int64, totalBytes: Int64) {
+        let now = CFAbsoluteTimeGetCurrent()
+        if now - lastUpdateTimestamp >= updateInterval || bytesProcessed == totalBytes {
+            lastUpdateTimestamp = now
+            delegate?.fileOperationDidProgress(currentFile: currentFile, bytesProcessed: bytesProcessed, totalBytes: totalBytes)
+        }
     }
 
     private func isOnSameVolume(_ url1: URL, _ url2: URL) -> Bool {
@@ -540,7 +581,11 @@ class FileOperation {
             }
 
             bytesProcessed += Int64(bytesRead)
-            delegate?.fileOperationDidProgress(currentFile: fileName, bytesProcessed: bytesProcessed, totalBytes: totalSize)
+            sendProgress(currentFile: fileName, bytesProcessed: bytesProcessed, totalBytes: totalSize)
+            
+            if bytesRead % (10 * bufferSize) == 0 {
+                await Task.yield()
+            }
         }
         
         // Copy file attributes

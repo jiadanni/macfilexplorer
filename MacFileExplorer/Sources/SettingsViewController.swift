@@ -1,6 +1,31 @@
 import Cocoa
 import Foundation
 
+final class SettingsContentView: NSView {
+    override var isFlipped: Bool { true }
+}
+
+extension NSScrollView {
+    func scrollToTop() {
+        layoutSubtreeIfNeeded()
+        documentView?.layoutSubtreeIfNeeded()
+
+        let targetY: CGFloat
+        if let documentView {
+            if documentView.isFlipped {
+                targetY = 0
+            } else {
+                targetY = max(0, documentView.bounds.height - contentView.bounds.height)
+            }
+        } else {
+            targetY = 0
+        }
+
+        contentView.scroll(to: NSPoint(x: 0, y: targetY))
+        reflectScrolledClipView(contentView)
+    }
+}
+
 class SettingsViewController: NSSplitViewController, SettingsSidebarDelegate {
 
     private var currentContentViewController: NSViewController?
@@ -85,12 +110,15 @@ class SettingsViewController: NSSplitViewController, SettingsSidebarDelegate {
 
         // Always start scrolled to the top when switching sections
         scrollContentToTop(from: newContentVC.view)
+        DispatchQueue.main.async { [weak newContentVC] in
+            guard let view = newContentVC?.view else { return }
+            self.scrollContentToTop(from: view)
+        }
     }
 
     private func scrollContentToTop(from root: NSView) {
         if let scrollView = root as? NSScrollView {
-            scrollView.contentView.scroll(to: NSPoint(x: 0, y: 0))
-            scrollView.reflectScrolledClipView(scrollView.contentView)
+            scrollView.scrollToTop()
             return
         }
 
