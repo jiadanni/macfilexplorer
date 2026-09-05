@@ -20,19 +20,35 @@ final class FileOperationsManager {
     // MARK: - Validation
 
     func isValidDestination(_ destination: URL, for urls: [URL]) -> Bool {
-        // Use canonical paths to prevent path traversal bypasses
-        let canonicalDest = destination.standardizedFileURL
+        // Resolve symlinks and standardize to prevent traversal bypasses
+        let resolvedDest = destination.resolvingSymlinksInPath().standardizedFileURL
 
         for source in urls {
-            let canonicalSource = source.standardizedFileURL
+            let resolvedSource = source.resolvingSymlinksInPath().standardizedFileURL
 
-            // Check for exact match
-            if canonicalSource == canonicalDest { return false }
+            // Check for exact match (using standardized and resolved paths)
+            if resolvedSource == resolvedDest || source.standardizedFileURL == destination.standardizedFileURL {
+                return false
+            }
 
             // Check if destination is inside source (prevent moving folder into itself)
-            let sourceString = canonicalSource.path
-            let destString = canonicalDest.path
+            // 1. FileID-based ancestor check (robust against symlinks and path aliasing)
+            if FileSystemHelpers.isAncestorByFileID(ancestor: resolvedSource, descendant: resolvedDest) {
+                return false
+            }
+            if FileSystemHelpers.isAncestorByFileID(ancestor: source.standardizedFileURL, descendant: destination.standardizedFileURL) {
+                return false
+            }
+
+            // 2. Fallback path string prefix check (e.g. if one of the paths doesn't exist yet on disk)
+            let sourceString = resolvedSource.path
+            let destString = resolvedDest.path
             if destString.hasPrefix(sourceString + "/") {
+                return false
+            }
+            let rawSourceString = source.standardizedFileURL.path
+            let rawDestString = destination.standardizedFileURL.path
+            if rawDestString.hasPrefix(rawSourceString + "/") {
                 return false
             }
         }
@@ -134,6 +150,10 @@ final class FileOperationsManager {
         
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
+            ProcessInfo.processInfo.disableSuddenTermination()
+            defer {
+                ProcessInfo.processInfo.enableSuddenTermination()
+            }
             let fileManager = FileManager.default
             var totalSize: Int64 = 0
             let startTime = Date()

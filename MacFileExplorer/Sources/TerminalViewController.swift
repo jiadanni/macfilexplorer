@@ -17,7 +17,7 @@ class TerminalViewController: NSViewController {
     private var currentDirectory: String = ""
     private var commandHistory: [String] = []
     private var historyIndex = 0
-    private var promptLocation: Int = 0
+    private(set) var promptLocation: Int = 0
 
     // Shell session via PTY so output is line-buffered like a real terminal
     private var shellTask: Process?
@@ -27,9 +27,31 @@ class TerminalViewController: NSViewController {
     private var outputTask: Task<Void, Never>?
     private var outputContinuation: AsyncStream<Data>.Continuation?
     private let sentinelEcho = "MFE_SENTINEL_12345"
-    private var lastSyncedDirectory: String?
+    private(set) var lastSyncedDirectory: String?
     private var inputBuffer = ""
-    private var suppressOutputUntilSentinel = false
+    private(set) var suppressOutputUntilSentinel = false
+
+    // OSC 133 semantic-prompt state (populated from shell-integration markers).
+    /// Exit code reported by the most recently finished command, if any.
+    private(set) var lastExitCode: Int?
+    /// True between a `commandStart` (133;C) marker and the next `commandEnd` (133;D).
+    private(set) var isCommandRunning = false
+    /// True once a `promptEnd` (133;B) marker has pinned `promptLocation` precisely,
+    /// so `processOutput` should stop overwriting it with the end-of-text heuristic.
+    private var promptLocationIsPinned = false
+    /// True while the shell is idle at a prompt (between `133;B` and the next
+    /// `133;C`). Directory syncs are only safe to inject when this is true —
+    /// otherwise the `cd` string would be delivered as keystrokes to whatever
+    /// foreground program owns the PTY (vim, ssh, a sudo password prompt).
+    private(set) var isAtPrompt = false
+    /// A directory sync requested while a command was running; flushed on the
+    /// next `133;B`. Only the most recent target matters.
+    private(set) var pendingDirectorySync: String?
+    /// Fallback that clears `suppressOutputUntilSentinel` if the expected
+    /// sentinel / prompt marker never arrives (e.g. a shell without our .zshrc,
+    /// or a wedged foreground program), so the panel never goes permanently dark.
+    private var suppressionTimeoutTask: Task<Void, Never>?
+    private let suppressionTimeout: Duration = .seconds(2)
 
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 200))
@@ -215,7 +237,7 @@ class TerminalViewController: NSViewController {
             appendOutput("Shell session started (\(shellPath))\n", color: AppDesignSystem.Colors.success)
             lastSyncedDirectory = currentDirectory
             // PTY echo is already disabled via termios, just send sentinel
-            suppressOutputUntilSentinel = true
+            beginSuppressingOutput()
             writeToShell("printf \"\(sentinelEcho)\\n\"\n")
 
         } catch {
@@ -276,14 +298,20 @@ class TerminalViewController: NSViewController {
         }
     }
 
-    private func processOutput(_ output: String) {
+    func processOutput(_ output: String) {
         // Drop any programmatic echoes until the sentinel is seen so the UI stays clean
         var text = output
         
         if suppressOutputUntilSentinel {
             if let sentinelRange = text.range(of: sentinelEcho) {
-                suppressOutputUntilSentinel = false
-                
+                endSuppressingOutput()
+
+                // Seeing our own sentinel echoed back is proof the shell consumed
+                // a full line, i.e. it is sitting at a prompt. This is the only
+                // idle signal available for shells without our OSC 133 .zshrc.
+                isAtPrompt = true
+                flushPendingDirectorySync()
+
                 // Discard everything in the current buffer up to and including the current line
                 // This ensures the echo of the command itself is completely hidden.
                 let afterSentinel = text[sentinelRange.upperBound...]
@@ -297,6 +325,9 @@ class TerminalViewController: NSViewController {
                 
                 // If nothing meaningful remains, we've successfully swallowed the internal command.
                 if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    // The injected `cd` triggers a fresh prompt whose 133;B marker
+                    // will re-pin promptLocation; until then fall back to the heuristic.
+                    promptLocationIsPinned = false
                     // promptLocation is consumed as an NSRange offset, so it must be a
                     // UTF-16 length — String.count diverges on emoji/multi-scalar output.
                     promptLocation = (textView.string as NSString).length
@@ -315,7 +346,8 @@ class TerminalViewController: NSViewController {
         let normalized = text.replacingOccurrences(of: "\r\n", with: "\n")
                             .replacingOccurrences(of: "\r", with: "\n")
         
-        let cleaned = stripControlSequences(normalized)
+        var markers: [SemanticMarker] = []
+        let cleaned = stripControlSequences(normalized, markers: &markers)
         let filtered = cleaned
             .components(separatedBy: "\n")
             .filter { !$0.contains(sentinelEcho) }
@@ -326,15 +358,54 @@ class TerminalViewController: NSViewController {
             textView.textStorage?.append(attributed)
             textView.scrollToEndOfDocument(nil)
             updateScrollVisibility()
-            // Update prompt location to the end of the text (UTF-16 length for NSRange math)
-            promptLocation = (textView.string as NSString).length
-            // Ensure cursor is positioned at the end for user input
-            textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
-        } else {
-            // Even if no text was added (filtered out), update cursor position
-            promptLocation = (textView.string as NSString).length
-            textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
         }
+
+        applySemanticMarkers(markers)
+
+        // Fall back to the end-of-text heuristic only while no 133;B marker has
+        // pinned the prompt location for the current prompt.
+        if !promptLocationIsPinned {
+            promptLocation = (textView.string as NSString).length
+        }
+        textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
+    }
+
+    /// React to OSC 133 markers extracted from a chunk of shell output. Markers
+    /// arrive interleaved with text, but by the time this runs the text for this
+    /// chunk has already been appended, so "current end of text" is the right
+    /// anchor for `promptEnd`.
+    private func applySemanticMarkers(_ markers: [SemanticMarker]) {
+        for marker in markers {
+            switch marker {
+            case .promptStart:
+                // A new prompt is being drawn; the previous pin is stale.
+                promptLocationIsPinned = false
+            case .promptEnd:
+                // The prompt string has finished printing — everything the user
+                // types starts exactly here, and the shell is now idle.
+                promptLocation = (textView.string as NSString).length
+                promptLocationIsPinned = true
+                isCommandRunning = false
+                isAtPrompt = true
+                flushPendingDirectorySync()
+            case .commandStart:
+                isCommandRunning = true
+                isAtPrompt = false
+            case .commandEnd(let code):
+                isCommandRunning = false
+                lastExitCode = code
+            }
+        }
+    }
+
+    /// If a directory sync was deferred while a command was running, issue it now
+    /// that the shell is back at a prompt.
+    private func flushPendingDirectorySync() {
+        guard let path = pendingDirectorySync else { return }
+        pendingDirectorySync = nil
+        guard path != lastSyncedDirectory else { return }
+        debugLog("TerminalViewController: flushing deferred directory sync to \(path)")
+        performDirectorySync(to: path)
     }
 
     private func parseANSI(_ text: String) -> NSAttributedString {
@@ -439,8 +510,20 @@ class TerminalViewController: NSViewController {
         return result
     }
 
-    // Remove OSC (Operating System Command) sequences like ESC ] ... BEL / ESC \ that can appear in prompts
-    private func stripControlSequences(_ text: String) -> String {
+    // MARK: - OSC 133 semantic prompt markers
+
+    /// A parsed OSC 133 shell-integration marker (see default-terminal.zshrc).
+    enum SemanticMarker: Equatable {
+        case promptStart          // 133;A  — fresh line, a new prompt is about to be drawn
+        case promptEnd            // 133;B  — end of the prompt string; user input begins here
+        case commandStart         // 133;C  — the entered command has begun executing
+        case commandEnd(Int?)     // 133;D  — command finished; associated value is the exit code
+    }
+
+    /// Strip OSC (Operating System Command) sequences that can appear in prompts,
+    /// extracting any OSC 133 semantic markers in the order they occur. Non-133
+    /// OSC sequences are removed silently, matching the previous behaviour.
+    func stripControlSequences(_ text: String, markers: inout [SemanticMarker]) -> String {
         var output = ""
         var i = text.startIndex
         while i < text.endIndex {
@@ -448,23 +531,31 @@ class TerminalViewController: NSViewController {
             if char == "\u{1B}" { // ESC
                 let next = text.index(after: i)
                 if next < text.endIndex && text[next] == "]" {
-                    // Skip until BEL or ST (ESC \)
+                    // Collect the OSC body up to BEL or ST (ESC \).
+                    var body = ""
                     var j = text.index(after: next)
-                    while j < text.endIndex && text[j] != "\u{07}" {
+                    var terminated = false
+                    while j < text.endIndex {
+                        if text[j] == "\u{07}" { // BEL
+                            j = text.index(after: j)
+                            terminated = true
+                            break
+                        }
                         if text[j] == "\u{1B}" {
                             let maybe = text.index(after: j)
-                            if maybe < text.endIndex && text[maybe] == "\\" {
+                            if maybe < text.endIndex && text[maybe] == "\\" { // ST
                                 j = text.index(after: maybe)
+                                terminated = true
                                 break
                             }
                         }
+                        body.append(text[j])
                         j = text.index(after: j)
                     }
-                    if j < text.endIndex && text[j] == "\u{07}" {
-                        i = text.index(after: j)
-                    } else {
-                        i = j
+                    if terminated, let marker = Self.parseOSC133(body) {
+                        markers.append(marker)
                     }
+                    i = j
                     continue
                 }
             }
@@ -472,6 +563,24 @@ class TerminalViewController: NSViewController {
             i = text.index(after: i)
         }
         return output
+    }
+
+    /// Parse the body of an OSC sequence (everything between `ESC ]` and the
+    /// terminator) into a `SemanticMarker` if it is an OSC 133 sequence.
+    private static func parseOSC133(_ body: String) -> SemanticMarker? {
+        let parts = body.split(separator: ";", omittingEmptySubsequences: false)
+        guard parts.first == "133", parts.count >= 2 else { return nil }
+        switch parts[1] {
+        case "A": return .promptStart
+        case "B": return .promptEnd
+        case "C": return .commandStart
+        case "D":
+            // 133;D or 133;D;<exit-code>
+            let code = parts.count >= 3 ? Int(parts[2]) : nil
+            return .commandEnd(code)
+        default:
+            return nil
+        }
     }
 
     private func writeToShell(_ text: String) {
@@ -484,6 +593,8 @@ class TerminalViewController: NSViewController {
     }
 
     private func terminateShellSession() {
+        suppressionTimeoutTask?.cancel()
+        suppressionTimeoutTask = nil
         outputTask?.cancel()
         outputTask = nil
         outputContinuation?.finish()
@@ -596,16 +707,60 @@ class TerminalViewController: NSViewController {
 
     func changeDirectory(to path: String) {
         if path == lastSyncedDirectory { return }
-        lastSyncedDirectory = path
         currentDirectory = path
         debugLog("TerminalViewController: changeDirectory to \(path)")
+
+        // Only inject the `cd` when the shell is idle at a prompt. If a command
+        // is running, the string would go to that program as keystrokes; instead
+        // remember the target and flush it once the shell returns to a prompt.
+        guard isAtPrompt else {
+            debugLog("  shell busy, deferring directory sync to \(path)")
+            pendingDirectorySync = path
+            return
+        }
+
+        performDirectorySync(to: path)
+    }
+
+    /// Actually write the `cd` command to the shell. Caller must ensure the shell
+    /// is at a prompt.
+    private func performDirectorySync(to path: String) {
+        lastSyncedDirectory = path
+        pendingDirectorySync = nil
         // Send cd command without echoing to the terminal and drop any echoed text until sentinel arrives
-        suppressOutputUntilSentinel = true
+        beginSuppressingOutput()
         // Properly escape path for shell execution
         let escapedPath = Self.escapeShellArgument(path)
         // "--" stops option parsing so a hyphen-leading path can't be read as a flag
         let command = "cd -- \(escapedPath) 2>/dev/null; printf \"\(sentinelEcho)\\n\"\n"
         writeToShell(command)
+    }
+
+    /// Start dropping shell output until the startup/sync sentinel is seen, and
+    /// arm a timeout so a missing sentinel can never leave the panel dark forever.
+    private func beginSuppressingOutput() {
+        suppressOutputUntilSentinel = true
+        suppressionTimeoutTask?.cancel()
+        let timeout = suppressionTimeout
+        suppressionTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: timeout)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard let self, self.suppressOutputUntilSentinel else { return }
+                debugLog("TerminalViewController: suppression timeout fired; re-enabling output")
+                self.suppressOutputUntilSentinel = false
+                self.promptLocationIsPinned = false
+                self.promptLocation = (self.textView.string as NSString).length
+                self.textView.setSelectedRange(NSRange(location: self.promptLocation, length: 0))
+            }
+        }
+    }
+
+    /// Stop suppressing output and cancel the timeout.
+    private func endSuppressingOutput() {
+        suppressOutputUntilSentinel = false
+        suppressionTimeoutTask?.cancel()
+        suppressionTimeoutTask = nil
     }
 
     func focusInput() {
@@ -707,6 +862,10 @@ extension TerminalViewController: NSTextViewDelegate {
             let input = fullText.substring(from: promptLocation)
             commandHistory.append(input)
             historyIndex = commandHistory.count
+            // The shell is about to run a command; treat it as busy immediately
+            // so a directory sync in the gap before the 133;C marker is deferred
+            // rather than injected into the running program.
+            isAtPrompt = false
             writeToShell(input + "\n")
             return true
         } else if commandSelector == #selector(NSResponder.moveUp(_:)) {

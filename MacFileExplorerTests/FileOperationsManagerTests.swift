@@ -110,6 +110,66 @@ class FileOperationsManagerTests: XCTestCase {
         XCTAssertFalse(isValid, "Should reject if any source is invalid")
     }
     
+    func testIsValidDestination_NonExistentNestedDestination_ReturnsFalse() throws {
+        // Given: a real source directory and a destination that does not exist on
+        // disk yet but is nested inside it. The FileID check is a no-op here
+        // (destination can't be stat'ed), so this exercises the string-prefix path.
+        let source = tempDirectory.appendingPathComponent("realFolder", isDirectory: true)
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        let destination = source.appendingPathComponent("does/not/exist/yet", isDirectory: true)
+
+        // When
+        let isValid = sut.isValidDestination(destination, for: [source])
+
+        // Then
+        XCTAssertFalse(isValid, "Cannot move a folder into a not-yet-created path inside itself")
+    }
+
+    func testIsValidDestination_DestinationViaSymlinkIntoSource_ReturnsFalse() throws {
+        // Given: source directory, and a symlink elsewhere that points back inside it.
+        let source = tempDirectory.appendingPathComponent("srcDir", isDirectory: true)
+        let realChild = source.appendingPathComponent("child", isDirectory: true)
+        try FileManager.default.createDirectory(at: realChild, withIntermediateDirectories: true)
+
+        let link = tempDirectory.appendingPathComponent("linkToChild")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: realChild)
+
+        // When: the destination is given via the symlink, which resolves inside source.
+        let isValid = sut.isValidDestination(link, for: [source])
+
+        // Then
+        XCTAssertFalse(isValid, "A symlinked destination that resolves inside the source must be rejected")
+    }
+
+    func testIsValidDestination_SourceViaSymlink_MatchesRealDestination_ReturnsFalse() throws {
+        // Given: the source is passed via a symlink; the destination is the real path.
+        let realDir = tempDirectory.appendingPathComponent("realDir", isDirectory: true)
+        try FileManager.default.createDirectory(at: realDir, withIntermediateDirectories: true)
+
+        let linkedSource = tempDirectory.appendingPathComponent("linkedSource")
+        try FileManager.default.createSymbolicLink(at: linkedSource, withDestinationURL: realDir)
+
+        // When
+        let isValid = sut.isValidDestination(realDir, for: [linkedSource])
+
+        // Then
+        XCTAssertFalse(isValid, "Source and destination that resolve to the same path must be rejected")
+    }
+
+    func testIsValidDestination_SiblingWithSharedPrefix_ReturnsTrue() throws {
+        // Given: "folder" and "folder2" share a string prefix but are siblings.
+        let source = tempDirectory.appendingPathComponent("folder", isDirectory: true)
+        let destination = tempDirectory.appendingPathComponent("folder2", isDirectory: true)
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+
+        // When
+        let isValid = sut.isValidDestination(destination, for: [source])
+
+        // Then
+        XCTAssertTrue(isValid, "A sibling directory sharing a name prefix is a valid destination")
+    }
+
     // MARK: - Drag Operation Tests
     
     func testPreferredDragOperation_OptionKey_ReturnsCopy() {

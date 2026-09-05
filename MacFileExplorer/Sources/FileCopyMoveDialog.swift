@@ -352,6 +352,10 @@ class FileOperation {
     }
 
     func start() {
+        // Guard against a second start(): it would orphan the running task and
+        // leave sudden-termination disabled (performOperation calls disable once
+        // per invocation, enable once on exit).
+        guard operationTask == nil else { return }
         operationTask = Task.detached(priority: .userInitiated) { [weak self] in
             await self?.performOperation()
         }
@@ -378,6 +382,10 @@ class FileOperation {
     }
 
     private func performOperation() async {
+        ProcessInfo.processInfo.disableSuddenTermination()
+        defer {
+            ProcessInfo.processInfo.enableSuddenTermination()
+        }
         let fileManager = FileManager.default
 
         // Calculate total size
