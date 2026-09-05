@@ -37,10 +37,16 @@ final class FileBrowserDataSourceDITests: XCTestCase {
     func testDataSourceUsesInjectedSettings() {
         // Given
         mockSettings.folderSortPreferences = [tempDirectory.path: "SizeColumn|desc"]
-        
-        // When - reload triggers applyStoredSortPreferences internally
+
+        // When - reload triggers applyStoredSortPreferences internally.
+        // Sort preferences are applied at the end of the async load, so wait for it.
+        let loaded = expectation(description: "Data loaded")
+        let mockDelegate = MockDataSourceDelegate()
+        mockDelegate.onDataLoaded = { _ in loaded.fulfill() }
+        dataSource.delegate = mockDelegate
         dataSource.reload()
-        
+        wait(for: [loaded], timeout: 2.0)
+
         // Then - should read from injected settings
         XCTAssertEqual(dataSource.sortColumn, "SizeColumn")
         XCTAssertFalse(dataSource.sortAscending)

@@ -28,7 +28,7 @@ class SidebarViewController: NSViewController {
     
     private func setupUI() {
         view.wantsLayer = true
-        view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        view.layer?.backgroundColor = AppDesignSystem.Colors.widgetBackground.cgColor
 
         // Create the top-level split view
         let mainSplitView = NSSplitView()
@@ -183,8 +183,8 @@ class SidebarViewController: NSViewController {
         headerView.translatesAutoresizingMaskIntoConstraints = false
 
         let label = NSTextField(labelWithString: title)
-        label.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
-        label.textColor = .secondaryLabelColor
+        label.font = AppDesignSystem.Typography.sidebarHeader
+        label.textColor = AppDesignSystem.Colors.inactive
         label.translatesAutoresizingMaskIntoConstraints = false
         headerView.addSubview(label)
 

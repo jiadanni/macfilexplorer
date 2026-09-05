@@ -21,13 +21,13 @@ class StatusBarViewController: NSViewController {
 
     private func setupUI() {
         view.wantsLayer = true
-        view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        view.layer?.backgroundColor = AppDesignSystem.Colors.widgetBackground.cgColor
 
         // Left Status Label (for disk space info)
         statusLabel = NSTextField(labelWithString: L10n.text("Ready"))
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
-        statusLabel.font = NSFont.systemFont(ofSize: 11)
-        statusLabel.textColor = .secondaryLabelColor
+        statusLabel.font = AppDesignSystem.Typography.caption
+        statusLabel.textColor = AppDesignSystem.Colors.inactive
         statusLabel.lineBreakMode = .byTruncatingTail
         statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         statusLabel.setAccessibilityLabel(L10n.text("Status"))
@@ -37,8 +37,8 @@ class StatusBarViewController: NSViewController {
         // Center Label (for file selection info)
         centerLabel = NSTextField(labelWithString: "")
         centerLabel.translatesAutoresizingMaskIntoConstraints = false
-        centerLabel.font = NSFont.systemFont(ofSize: 11)
-        centerLabel.textColor = .secondaryLabelColor
+        centerLabel.font = AppDesignSystem.Typography.caption
+        centerLabel.textColor = AppDesignSystem.Colors.inactive
         centerLabel.lineBreakMode = .byTruncatingTail
         centerLabel.alignment = .center
         centerLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -61,8 +61,8 @@ class StatusBarViewController: NSViewController {
         // Zoom Percentage Label
         zoomPercentageLabel = NSTextField(labelWithString: String(format: L10n.text("%d%%"), 100))
         zoomPercentageLabel.translatesAutoresizingMaskIntoConstraints = false
-        zoomPercentageLabel.font = NSFont.systemFont(ofSize: 11)
-        zoomPercentageLabel.textColor = .secondaryLabelColor
+        zoomPercentageLabel.font = AppDesignSystem.Typography.caption
+        zoomPercentageLabel.textColor = AppDesignSystem.Colors.inactive
         zoomPercentageLabel.alignment = .right
         zoomPercentageLabel.setAccessibilityRole(.staticText)
         zoomPercentageLabel.setAccessibilityLabel(L10n.text("Zoom percentage"))

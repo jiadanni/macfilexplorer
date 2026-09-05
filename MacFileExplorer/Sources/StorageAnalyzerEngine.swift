@@ -8,6 +8,7 @@
 import Foundation
 
 /// Delegate protocol for storage analyzer progress updates
+@MainActor
 protocol StorageAnalyzerDelegate: AnyObject {
     func analyzerDidStart(totalItems: Int)
     func analyzerDidProgress(currentPath: String, itemsScanned: Int, totalSize: Int64)

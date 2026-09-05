@@ -13,7 +13,7 @@ class WelcomeWidgetView: StartWidgetView {
     private var quickStartButton: NSButton!
 
     init() {
-        super.init(title: "Welcome to Founder", icon: StartDesignSystem.Icons.start, dismissible: true)
+        super.init(title: "Welcome to Founder", icon: AppDesignSystem.Icons.start, dismissible: true)
         setupContent()
     }
 
@@ -24,7 +24,7 @@ class WelcomeWidgetView: StartWidgetView {
 
     override func setupContent() {
         // Welcome message
-        messageLabel = StartDesignSystem.createLabel(
+        messageLabel = AppDesignSystem.createLabel(
             text: "Your files, your way. Get started by pinning your favorite folders and exploring powerful features.",
             style: .body
         )
@@ -32,7 +32,7 @@ class WelcomeWidgetView: StartWidgetView {
         contentView.addSubview(messageLabel)
 
         // Quick Start button
-        quickStartButton = StartDesignSystem.createButton(title: "Quick Start Guide", style: .secondary)
+        quickStartButton = AppDesignSystem.createButton(title: "Quick Start Guide", style: .secondary)
         quickStartButton.target = self
         quickStartButton.action = #selector(quickStartTapped)
         quickStartButton.translatesAutoresizingMaskIntoConstraints = false
@@ -43,7 +43,7 @@ class WelcomeWidgetView: StartWidgetView {
             messageLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             messageLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
 
-            quickStartButton.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: StartDesignSystem.Spacing.lg),
+            quickStartButton.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: AppDesignSystem.Spacing.lg),
             quickStartButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             quickStartButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])

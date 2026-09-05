@@ -115,6 +115,17 @@ class FileBrowserViewControllerTests: XCTestCase {
         XCTAssertEqual(fileBrowserVC.currentDirectory, docsDir)
     }
 
+    func testNavigateToURLRejectsPathTraversal() {
+        let docsDir = tempDirectory.appendingPathComponent("Documents")
+        fileBrowserVC.navigationCoordinator.loadDirectory(docsDir)
+        XCTAssertEqual(fileBrowserVC.currentDirectory, docsDir)
+
+        fileBrowserVC.navigateToURL(URL(fileURLWithPath: "/tmp/../etc"))
+
+        XCTAssertEqual(fileBrowserVC.currentDirectory, docsDir,
+                       "A path containing traversal components must not change the current directory")
+    }
+
     func testNavigateToParent() throws {
         let docsDir = tempDirectory.appendingPathComponent("Documents")
         let subDir = docsDir.appendingPathComponent("Subfolder")
@@ -139,6 +150,18 @@ class FileBrowserViewControllerTests: XCTestCase {
         XCTAssertEqual(fileBrowserVC.currentDirectory, docsDir)
     }
 
+    func testNewItemParentIsDisplayedDirectory() {
+        let docsDir = tempDirectory.appendingPathComponent("Documents")
+        fileBrowserVC.navigationCoordinator.loadDirectory(docsDir)
+
+        let provider = FileBrowserContextMenuProvider(settings: testSettingsStore)
+        provider.delegate = fileBrowserVC
+
+        // With nothing selected, new folders/files belong in the displayed directory,
+        // not the home-directory fallback.
+        XCTAssertEqual(provider.resolveNewItemParent(), docsDir)
+    }
+
     // MARK: - Hidden Files Tests
 
     func testHiddenFilesToggle() {
@@ -146,21 +169,23 @@ class FileBrowserViewControllerTests: XCTestCase {
         XCTAssertFalse(fileBrowserVC.showsHiddenFiles)
 
         // Toggle on
-        fileBrowserVC.showsHiddenFilesState()
+        fileBrowserVC.toggleHiddenFilesState()
         XCTAssertTrue(fileBrowserVC.showsHiddenFiles)
 
         // Toggle off
-        fileBrowserVC.showsHiddenFilesState()
+        fileBrowserVC.toggleHiddenFilesState()
         XCTAssertFalse(fileBrowserVC.showsHiddenFiles)
     }
 
-    func testHiddenFilesPersistence() {
-        fileBrowserVC.showsHiddenFilesState()
+    @MainActor func testHiddenFilesPersistence() {
+        fileBrowserVC.toggleHiddenFilesState()
         let wasHidden = fileBrowserVC.showsHiddenFiles
 
         // Create new VC with same settings store
         let newVC = FileBrowserViewController(settings: testSettingsStore)
         XCTAssertEqual(newVC.showsHiddenFiles, wasHidden)
+        XCTAssertEqual(newVC.dataSource.showsHiddenFiles, wasHidden,
+                       "Persisted hidden-files state must reach the data source, not just the coordinator")
     }
 
     // MARK: - View Mode Tests

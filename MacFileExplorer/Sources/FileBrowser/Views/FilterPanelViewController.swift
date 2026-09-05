@@ -49,7 +49,7 @@ class FilterPanelViewController: NSViewController {
     override func loadView() {
         view = NSView(frame: NSRect(x: 0, y: 0, width: 480, height: 500))
         view.wantsLayer = true
-        view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        view.layer?.backgroundColor = AppDesignSystem.Colors.widgetBackground.cgColor
         setupUI()
     }
     
@@ -68,7 +68,7 @@ class FilterPanelViewController: NSViewController {
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.orientation = .vertical
         stackView.alignment = .leading
-        stackView.spacing = 16
+        stackView.spacing = AppDesignSystem.Spacing.lg
         stackView.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
         
         let contentView = NSView()

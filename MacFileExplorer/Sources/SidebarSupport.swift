@@ -15,8 +15,8 @@ class AccentTableRowView: NSTableRowView {
     override func drawSelection(in dirtyRect: NSRect) {
         if selectionHighlightStyle != .none {
             let selectionRect = bounds
-            NSColor.customAccentColor.withAlphaComponent(0.3).setFill()
-            let selectionPath = NSBezierPath(roundedRect: selectionRect, xRadius: 4, yRadius: 4)
+            AppDesignSystem.Colors.selectionOverlay.setFill()
+            let selectionPath = NSBezierPath(roundedRect: selectionRect, xRadius: AppDesignSystem.Spacing.xs, yRadius: AppDesignSystem.Spacing.xs)
             selectionPath.fill()
         }
     }
@@ -61,7 +61,7 @@ class HoverButton: NSButton {
         // Draw circular background on hover
         if isHovering {
             let circlePath = NSBezierPath(ovalIn: bounds.insetBy(dx: 2, dy: 2))
-            NSColor.customAccentColor.withAlphaComponent(0.2).setFill()
+            AppDesignSystem.Colors.hoverOverlayStrong.setFill()
             circlePath.fill()
         }
 

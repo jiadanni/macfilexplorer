@@ -60,12 +60,12 @@ final class BannerNotificationManager {
 
         let label = NSTextField(labelWithString: message)
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 12)
-        label.textColor = (style == .info) ? .labelColor : .systemRed
+        label.font = AppDesignSystem.Typography.body
+        label.textColor = (style == .info) ? .labelColor : AppDesignSystem.Colors.error
         bannerContainer.addSubview(label)
 
         bannerContainer.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.9).cgColor
-        bannerContainer.layer?.cornerRadius = 6
+        bannerContainer.layer?.cornerRadius = AppDesignSystem.Layout.controlCornerRadius
 
         NSLayoutConstraint.activate([
             label.leadingAnchor.constraint(equalTo: bannerContainer.leadingAnchor, constant: 10),

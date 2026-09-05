@@ -39,6 +39,7 @@ class SettingsSplitPaneViewController: SplitPaneViewController, SettingsChangeDe
         containerVC.view = containerView
 
         // Add settings view
+        containerVC.addChild(svc)
         let settingsView = svc.view
         settingsView.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(settingsView)

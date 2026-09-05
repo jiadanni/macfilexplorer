@@ -84,7 +84,7 @@ class StartViewController: NSViewController {
 
         contentStackView = NSStackView()
         contentStackView.orientation = .vertical
-        contentStackView.spacing = StartDesignSystem.Spacing.gridSpacing
+        contentStackView.spacing = AppDesignSystem.Spacing.gridSpacing
         contentStackView.alignment = .leading
         contentStackView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -106,10 +106,10 @@ class StartViewController: NSViewController {
             contentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor),
 
             // Stack inside the content container with padding
-            contentStackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: StartDesignSystem.Spacing.lg),
-            contentStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: StartDesignSystem.Spacing.xxl),
-            contentStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -StartDesignSystem.Spacing.xxl),
-            contentStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -StartDesignSystem.Spacing.xxl)
+            contentStackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: AppDesignSystem.Spacing.lg),
+            contentStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: AppDesignSystem.Spacing.xxl),
+            contentStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -AppDesignSystem.Spacing.xxl),
+            contentStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -AppDesignSystem.Spacing.xxl)
         ])
     }
 

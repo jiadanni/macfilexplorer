@@ -17,7 +17,7 @@ class FavoritesWidgetView: StartWidgetView {
     init() {
         // Get device name/hostname
         let deviceName = Host.current().localizedName ?? ProcessInfo.processInfo.hostName
-        super.init(title: deviceName, icon: StartDesignSystem.Icons.folder, dismissible: false)
+        super.init(title: deviceName, icon: AppDesignSystem.Icons.folder, dismissible: false)
         setupDefaultFolders()
         setupContent()
     }
@@ -38,14 +38,14 @@ class FavoritesWidgetView: StartWidgetView {
             defaultFolders = savedPaths.compactMap { path in
                 let url = URL(fileURLWithPath: path)
                 let name = url.lastPathComponent.isEmpty ? "/" : url.lastPathComponent
-                return (name, StartDesignSystem.Icons.folder, url)
+                return (name, AppDesignSystem.Icons.folder, url)
             }
         }
 
         // If no saved folders, use root as default
         if defaultFolders.isEmpty {
             defaultFolders = [
-                ("/", StartDesignSystem.Icons.folder, URL(fileURLWithPath: "/"))
+                ("/", AppDesignSystem.Icons.folder, URL(fileURLWithPath: "/"))
             ]
         }
     }
@@ -54,7 +54,7 @@ class FavoritesWidgetView: StartWidgetView {
         debugLog("FavoritesWidget: addFolder called with url: \(url.path)")
         // Add to the folders array
         let name = url.lastPathComponent.isEmpty ? "/" : url.lastPathComponent
-        let newFolder = (name, StartDesignSystem.Icons.folder, url as URL?)
+        let newFolder = (name, AppDesignSystem.Icons.folder, url as URL?)
         defaultFolders.append(newFolder)
         debugLog("FavoritesWidget: defaultFolders count after append: \(defaultFolders.count)")
 
@@ -81,7 +81,7 @@ class FavoritesWidgetView: StartWidgetView {
         // Use stack view for better layout control
         let containerStack = NSStackView()
         containerStack.orientation = .horizontal
-        containerStack.spacing = StartDesignSystem.Spacing.md
+        containerStack.spacing = AppDesignSystem.Spacing.md
         containerStack.alignment = .top
         containerStack.distribution = .fill
         containerStack.translatesAutoresizingMaskIntoConstraints = false
@@ -115,12 +115,12 @@ class FavoritesWidgetView: StartWidgetView {
         if let sysImage = NSImage.mfeSymbol(named: icon, accessibilityDescription: name) {
             let useGrayscale = settingsStore.useGrayscaleIcons
             iconView.image = useGrayscale ? sysImage.grayscale() : sysImage
-            iconView.contentTintColor = useGrayscale ? NSColor.secondaryLabelColor : StartDesignSystem.Colors.accent
+            iconView.contentTintColor = useGrayscale ? NSColor.secondaryLabelColor : AppDesignSystem.Colors.accent
         }
         iconView.translatesAutoresizingMaskIntoConstraints = false
 
         // Label
-        let label = StartDesignSystem.createLabel(text: name, style: .body)
+        let label = AppDesignSystem.createLabel(text: name, style: .body)
         label.alignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
 
@@ -146,15 +146,15 @@ class FavoritesWidgetView: StartWidgetView {
         card.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         NSLayoutConstraint.activate([
-            iconView.topAnchor.constraint(equalTo: card.topAnchor, constant: StartDesignSystem.Spacing.md),
+            iconView.topAnchor.constraint(equalTo: card.topAnchor, constant: AppDesignSystem.Spacing.md),
             iconView.centerXAnchor.constraint(equalTo: card.centerXAnchor),
             iconView.widthAnchor.constraint(equalToConstant: 32),
             iconView.heightAnchor.constraint(equalToConstant: 32),
 
-            label.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: StartDesignSystem.Spacing.sm),
-            label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: StartDesignSystem.Spacing.sm),
-            label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -StartDesignSystem.Spacing.sm),
-            label.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -StartDesignSystem.Spacing.md),
+            label.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: AppDesignSystem.Spacing.sm),
+            label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: AppDesignSystem.Spacing.sm),
+            label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -AppDesignSystem.Spacing.sm),
+            label.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -AppDesignSystem.Spacing.md),
 
             button.topAnchor.constraint(equalTo: card.topAnchor),
             button.leadingAnchor.constraint(equalTo: card.leadingAnchor),
@@ -184,15 +184,15 @@ class FavoritesWidgetView: StartWidgetView {
 
         // Plus icon
         let iconView = NSImageView()
-        if let sysImage = NSImage.mfeSymbol(named: StartDesignSystem.Icons.addFolder, accessibilityDescription: "Add Folder") {
+        if let sysImage = NSImage.mfeSymbol(named: AppDesignSystem.Icons.addFolder, accessibilityDescription: "Add Folder") {
             let useGrayscale = settingsStore.useGrayscaleIcons
             iconView.image = useGrayscale ? sysImage.grayscale() : sysImage
         }
-        iconView.contentTintColor = StartDesignSystem.Colors.accent
+        iconView.contentTintColor = AppDesignSystem.Colors.accent
         iconView.translatesAutoresizingMaskIntoConstraints = false
 
         // Label
-        let label = StartDesignSystem.createLabel(text: L10n.text("Add to Folder"), style: .body)
+        let label = AppDesignSystem.createLabel(text: L10n.text("Add to Folder"), style: .body)
         label.alignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
 
@@ -217,15 +217,15 @@ class FavoritesWidgetView: StartWidgetView {
         card.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         NSLayoutConstraint.activate([
-            iconView.topAnchor.constraint(equalTo: card.topAnchor, constant: StartDesignSystem.Spacing.md),
+            iconView.topAnchor.constraint(equalTo: card.topAnchor, constant: AppDesignSystem.Spacing.md),
             iconView.centerXAnchor.constraint(equalTo: card.centerXAnchor),
             iconView.widthAnchor.constraint(equalToConstant: 32),
             iconView.heightAnchor.constraint(equalToConstant: 32),
 
-            label.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: StartDesignSystem.Spacing.sm),
-            label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: StartDesignSystem.Spacing.sm),
-            label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -StartDesignSystem.Spacing.sm),
-            label.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -StartDesignSystem.Spacing.md),
+            label.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: AppDesignSystem.Spacing.sm),
+            label.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: AppDesignSystem.Spacing.sm),
+            label.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -AppDesignSystem.Spacing.sm),
+            label.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -AppDesignSystem.Spacing.md),
 
             button.topAnchor.constraint(equalTo: card.topAnchor),
             button.leadingAnchor.constraint(equalTo: card.leadingAnchor),

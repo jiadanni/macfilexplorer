@@ -39,7 +39,7 @@ class TerminalViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         currentDirectory = FileManager.default.homeDirectoryForCurrentUser.path
-        appendOutput(String(format: L10n.text("Terminal initializing in %@\n"), currentDirectory), color: .darkGray)
+        appendOutput(String(format: L10n.text("Terminal initializing in %@\n"), currentDirectory), color: AppDesignSystem.Terminal.dimForeground)
         startShellSession()
     }
 
@@ -59,20 +59,20 @@ class TerminalViewController: NSViewController {
 
     private func setupUI() {
         view.wantsLayer = true
-        view.layer?.backgroundColor = NSColor(white: 0.1, alpha: 1.0).cgColor
+        view.layer?.backgroundColor = AppDesignSystem.Terminal.background.cgColor
 
         // Create header view
         headerView = NSView()
         headerView.translatesAutoresizingMaskIntoConstraints = false
         headerView.wantsLayer = true
-        headerView.layer?.backgroundColor = NSColor(white: 0.15, alpha: 1.0).cgColor
+        headerView.layer?.backgroundColor = AppDesignSystem.Terminal.headerBackground.cgColor
         view.addSubview(headerView)
 
         // Create title label
         titleLabel = NSTextField(labelWithString: L10n.text("Terminal"))
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.textColor = NSColor(white: 0.9, alpha: 1.0)
-        titleLabel.font = NSFont.boldSystemFont(ofSize: 12)
+        titleLabel.textColor = AppDesignSystem.Terminal.foreground
+        titleLabel.font = AppDesignSystem.Terminal.headerTitleFont
         titleLabel.setAccessibilityLabel(L10n.text("Terminal"))
         titleLabel.setAccessibilityRole(.staticText)
         headerView.addSubview(titleLabel)
@@ -103,9 +103,9 @@ class TerminalViewController: NSViewController {
         textView = NSTextView()
         textView.isEditable = true
         textView.isSelectable = true
-        textView.backgroundColor = NSColor(white: 0.1, alpha: 1.0)
-        textView.textColor = NSColor(white: 0.9, alpha: 1.0)
-        textView.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        textView.backgroundColor = AppDesignSystem.Terminal.background
+        textView.textColor = AppDesignSystem.Terminal.foreground
+        textView.font = AppDesignSystem.Typography.monospace()
         textView.textContainerInset = NSSize(width: 10, height: 10)
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
@@ -154,7 +154,7 @@ class TerminalViewController: NSViewController {
         
         // Get the user's shell (PTY-backed for interactive behavior)
         let shellPath = getShellPath()
-        appendOutput("Starting shell (\(shellPath))...\n", color: .gray)
+        appendOutput("Starting shell (\(shellPath))...\n", color: AppDesignSystem.Terminal.dimForeground)
 
         // Create PTY
         var master: Int32 = -1
@@ -166,7 +166,7 @@ class TerminalViewController: NSViewController {
         win.ws_ypixel = 0
 
         if openpty(&master, &slave, nil, nil, &win) != 0 {
-            appendOutput("Failed to create PTY\n", color: .red)
+            appendOutput("Failed to create PTY\n", color: AppDesignSystem.Colors.error)
             return
         }
         masterFD = master
@@ -204,7 +204,7 @@ class TerminalViewController: NSViewController {
 
         task.terminationHandler = { [weak self] proc in
             Task { @MainActor in
-                self?.appendOutput("\nShell exited (\(proc.terminationStatus))\n", color: .gray)
+                self?.appendOutput("\nShell exited (\(proc.terminationStatus))\n", color: AppDesignSystem.Terminal.dimForeground)
             }
         }
 
@@ -212,14 +212,14 @@ class TerminalViewController: NSViewController {
             try task.run()
             shellTask = task
             startReadingPTY()
-            appendOutput("Shell session started (\(shellPath))\n", color: .green)
+            appendOutput("Shell session started (\(shellPath))\n", color: AppDesignSystem.Colors.success)
             lastSyncedDirectory = currentDirectory
             // PTY echo is already disabled via termios, just send sentinel
             suppressOutputUntilSentinel = true
             writeToShell("printf \"\(sentinelEcho)\\n\"\n")
 
         } catch {
-            appendOutput("Failed to start shell: \(error.localizedDescription)\n", color: .red)
+            appendOutput("Failed to start shell: \(error.localizedDescription)\n", color: AppDesignSystem.Colors.error)
             shellTask = nil
             if masterFD >= 0 {
                 close(masterFD)
@@ -297,7 +297,9 @@ class TerminalViewController: NSViewController {
                 
                 // If nothing meaningful remains, we've successfully swallowed the internal command.
                 if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    promptLocation = textView.string.count
+                    // promptLocation is consumed as an NSRange offset, so it must be a
+                    // UTF-16 length — String.count diverges on emoji/multi-scalar output.
+                    promptLocation = (textView.string as NSString).length
                     textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
                     return
                 }
@@ -324,20 +326,20 @@ class TerminalViewController: NSViewController {
             textView.textStorage?.append(attributed)
             textView.scrollToEndOfDocument(nil)
             updateScrollVisibility()
-            // Update prompt location to the end of the text
-            promptLocation = textView.string.count
+            // Update prompt location to the end of the text (UTF-16 length for NSRange math)
+            promptLocation = (textView.string as NSString).length
             // Ensure cursor is positioned at the end for user input
             textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
         } else {
             // Even if no text was added (filtered out), update cursor position
-            promptLocation = textView.string.count
+            promptLocation = (textView.string as NSString).length
             textView.setSelectedRange(NSRange(location: promptLocation, length: 0))
         }
     }
 
     private func parseANSI(_ text: String) -> NSAttributedString {
         let result = NSMutableAttributedString()
-        var currentColor: NSColor = NSColor(white: 0.9, alpha: 1.0)
+        var currentColor: NSColor = AppDesignSystem.Terminal.foreground
         var currentBold = false
 
         var i = text.startIndex
@@ -351,7 +353,7 @@ class TerminalViewController: NSViewController {
                         string: String(text[i]),
                         attributes: [
                             .foregroundColor: currentColor,
-                            .font: NSFont.monospacedSystemFont(ofSize: 12, weight: currentBold ? .bold : .regular)
+                            .font: AppDesignSystem.Typography.monospace(weight: currentBold ? .bold : .regular)
                         ]
                     )
                     result.append(attrs)
@@ -384,26 +386,26 @@ class TerminalViewController: NSViewController {
                     for c in codes {
                         switch c {
                         case 0:  // Reset
-                            currentColor = NSColor(white: 0.9, alpha: 1.0)
+                            currentColor = AppDesignSystem.Terminal.foreground
                             currentBold = false
                         case 1:  // Bold
                             currentBold = true
-                        case 30: currentColor = .black
-                        case 31: currentColor = .red
-                        case 32: currentColor = .green
-                        case 33: currentColor = .yellow
-                        case 34: currentColor = .blue
-                        case 35: currentColor = .magenta
-                        case 36: currentColor = .cyan
-                        case 37: currentColor = .white
-                        case 90: currentColor = .darkGray
-                        case 91: currentColor = NSColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)
-                        case 92: currentColor = NSColor(red: 0.4, green: 1.0, blue: 0.4, alpha: 1.0)
-                        case 93: currentColor = NSColor(red: 1.0, green: 1.0, blue: 0.4, alpha: 1.0)
-                        case 94: currentColor = NSColor(red: 0.4, green: 0.4, blue: 1.0, alpha: 1.0)
-                        case 95: currentColor = NSColor(red: 1.0, green: 0.4, blue: 1.0, alpha: 1.0)
-                        case 96: currentColor = NSColor(red: 0.4, green: 1.0, blue: 1.0, alpha: 1.0)
-                        case 97: currentColor = NSColor(white: 0.95, alpha: 1.0)
+                        case 30: currentColor = AppDesignSystem.Terminal.ANSI.black
+                        case 31: currentColor = AppDesignSystem.Terminal.ANSI.red
+                        case 32: currentColor = AppDesignSystem.Terminal.ANSI.green
+                        case 33: currentColor = AppDesignSystem.Terminal.ANSI.yellow
+                        case 34: currentColor = AppDesignSystem.Terminal.ANSI.blue
+                        case 35: currentColor = AppDesignSystem.Terminal.ANSI.magenta
+                        case 36: currentColor = AppDesignSystem.Terminal.ANSI.cyan
+                        case 37: currentColor = AppDesignSystem.Terminal.ANSI.white
+                        case 90: currentColor = AppDesignSystem.Terminal.ANSI.brightBlack
+                        case 91: currentColor = AppDesignSystem.Terminal.ANSI.brightRed
+                        case 92: currentColor = AppDesignSystem.Terminal.ANSI.brightGreen
+                        case 93: currentColor = AppDesignSystem.Terminal.ANSI.brightYellow
+                        case 94: currentColor = AppDesignSystem.Terminal.ANSI.brightBlue
+                        case 95: currentColor = AppDesignSystem.Terminal.ANSI.brightMagenta
+                        case 96: currentColor = AppDesignSystem.Terminal.ANSI.brightCyan
+                        case 97: currentColor = AppDesignSystem.Terminal.ANSI.brightWhite
                         default: break
                         }
                     }
@@ -420,9 +422,7 @@ class TerminalViewController: NSViewController {
                 }
 
                 if !normalText.isEmpty {
-                    let font = currentBold ?
-                        NSFont.monospacedSystemFont(ofSize: 12, weight: .bold) :
-                        NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+                    let font = AppDesignSystem.Typography.monospace(weight: currentBold ? .bold : .regular)
 
                     let attrs = NSAttributedString(
                         string: normalText,
@@ -603,7 +603,8 @@ class TerminalViewController: NSViewController {
         suppressOutputUntilSentinel = true
         // Properly escape path for shell execution
         let escapedPath = Self.escapeShellArgument(path)
-        let command = "cd \(escapedPath) 2>/dev/null; printf \"\(sentinelEcho)\\n\"\n"
+        // "--" stops option parsing so a hyphen-leading path can't be read as a flag
+        let command = "cd -- \(escapedPath) 2>/dev/null; printf \"\(sentinelEcho)\\n\"\n"
         writeToShell(command)
     }
 
@@ -619,12 +620,12 @@ class TerminalViewController: NSViewController {
 
     // MARK: - Private Methods
 
-    private func appendOutput(_ text: String, color: NSColor = NSColor(white: 0.9, alpha: 1.0)) {
+    private func appendOutput(_ text: String, color: NSColor = AppDesignSystem.Terminal.foreground) {
         let attributedString = NSAttributedString(
             string: text,
             attributes: [
                 .foregroundColor: color,
-                .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+                .font: AppDesignSystem.Typography.monospace()
             ]
         )
 
@@ -651,7 +652,7 @@ class TerminalViewController: NSViewController {
         guard masterFD >= 0 else { return }
         
         // Calculate rows and columns based on view size and font
-        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        let font = AppDesignSystem.Typography.monospace()
         let attributes: [NSAttributedString.Key: Any] = [.font: font]
         let charSize = ("A" as NSString).size(withAttributes: attributes)
         
@@ -738,6 +739,6 @@ extension TerminalViewController: NSTextViewDelegate {
         let nsString = textView.string as NSString
         let range = NSRange(location: promptLocation, length: nsString.length - promptLocation)
         textView.replaceCharacters(in: range, with: text)
-        textView.setSelectedRange(NSRange(location: promptLocation + text.count, length: 0))
+        textView.setSelectedRange(NSRange(location: promptLocation + (text as NSString).length, length: 0))
     }
 }

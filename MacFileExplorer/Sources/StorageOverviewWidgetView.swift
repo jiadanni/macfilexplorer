@@ -14,7 +14,7 @@ class StorageOverviewWidgetView: StartWidgetView {
     private var hasFullDiskAccess: Bool = false
 
     init() {
-        super.init(title: "Storage Overview", icon: StartDesignSystem.Icons.storage, dismissible: false)
+        super.init(title: "Storage Overview", icon: AppDesignSystem.Icons.storage, dismissible: false)
         checkPermissions()
         setupContent()
     }
@@ -43,13 +43,13 @@ class StorageOverviewWidgetView: StartWidgetView {
     private func setupPlaceholderView() {
         // Placeholder icon
         let iconView = NSImageView()
-        iconView.image = NSImage.mfeSymbol(named: StartDesignSystem.Icons.storage, accessibilityDescription: "Storage")
-        iconView.contentTintColor = StartDesignSystem.Colors.inactive
+        iconView.image = NSImage.mfeSymbol(named: AppDesignSystem.Icons.storage, accessibilityDescription: "Storage")
+        iconView.contentTintColor = AppDesignSystem.Colors.inactive
         iconView.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(iconView)
 
         // Status message
-        statusLabel = StartDesignSystem.createLabel(
+        statusLabel = AppDesignSystem.createLabel(
             text: "Enable Full Disk Access to see a detailed breakdown of your storage",
             style: .body
         )
@@ -59,7 +59,7 @@ class StorageOverviewWidgetView: StartWidgetView {
         contentView.addSubview(statusLabel)
 
         // Grant access button
-        actionButton = StartDesignSystem.createButton(title: "Enable Full Disk Access", style: .primary)
+        actionButton = AppDesignSystem.createButton(title: "Enable Full Disk Access", style: .primary)
         actionButton.target = self
         actionButton.action = #selector(grantAccessTapped)
         actionButton.translatesAutoresizingMaskIntoConstraints = false
@@ -71,11 +71,11 @@ class StorageOverviewWidgetView: StartWidgetView {
             iconView.widthAnchor.constraint(equalToConstant: 48),
             iconView.heightAnchor.constraint(equalToConstant: 48),
 
-            statusLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: StartDesignSystem.Spacing.md),
+            statusLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: AppDesignSystem.Spacing.md),
             statusLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             statusLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
 
-            actionButton.topAnchor.constraint(equalTo: statusLabel.bottomAnchor, constant: StartDesignSystem.Spacing.lg),
+            actionButton.topAnchor.constraint(equalTo: statusLabel.bottomAnchor, constant: AppDesignSystem.Spacing.lg),
             actionButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             actionButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
@@ -83,7 +83,7 @@ class StorageOverviewWidgetView: StartWidgetView {
 
     private func setupGrantedView() {
         // Show loading state first
-        let loadingLabel = StartDesignSystem.createLabel(
+        let loadingLabel = AppDesignSystem.createLabel(
             text: "Calculating storage...",
             style: .body
         )
@@ -117,14 +117,14 @@ class StorageOverviewWidgetView: StartWidgetView {
 
     private func buildStorageUI(with storageInfo: StorageInfo) {
         // Title and usage label
-        let titleLabel = StartDesignSystem.createLabel(
+        let titleLabel = AppDesignSystem.createLabel(
             text: storageInfo.volumeName,
             style: .title
         )
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(titleLabel)
 
-        let usageLabel = StartDesignSystem.createLabel(
+        let usageLabel = AppDesignSystem.createLabel(
             text: storageInfo.usageText,
             style: .body
         )
@@ -154,12 +154,12 @@ class StorageOverviewWidgetView: StartWidgetView {
             usageLabel.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
             usageLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
 
-            storageBar.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: StartDesignSystem.Spacing.md),
+            storageBar.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: AppDesignSystem.Spacing.md),
             storageBar.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             storageBar.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             storageBar.heightAnchor.constraint(equalToConstant: 28),
 
-            legend.topAnchor.constraint(equalTo: storageBar.bottomAnchor, constant: StartDesignSystem.Spacing.sm),
+            legend.topAnchor.constraint(equalTo: storageBar.bottomAnchor, constant: AppDesignSystem.Spacing.sm),
             legend.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
 
             freeSpaceBox.centerYAnchor.constraint(equalTo: legend.centerYAnchor),
@@ -404,7 +404,7 @@ class StorageOverviewWidgetView: StartWidgetView {
         dot.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(dot)
 
-        let label = StartDesignSystem.createLabel(text: name, style: .caption)
+        let label = AppDesignSystem.createLabel(text: name, style: .caption)
         label.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(label)
 
@@ -429,7 +429,7 @@ class StorageOverviewWidgetView: StartWidgetView {
         container.layer?.backgroundColor = NSColor.quaternaryLabelColor.withAlphaComponent(0.3).cgColor
         container.layer?.cornerRadius = 4
 
-        let label = StartDesignSystem.createLabel(text: text, style: .body)
+        let label = AppDesignSystem.createLabel(text: text, style: .body)
         label.font = NSFont.monospacedSystemFont(ofSize: 13, weight: .medium)
         label.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(label)

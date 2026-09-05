@@ -85,7 +85,7 @@ class StartWidgetView: NSView {
         wantsLayer = true
 
         // Container with styling
-        containerView = StartDesignSystem.createWidgetContainer()
+        containerView = AppDesignSystem.createWidgetContainer()
         containerView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(containerView)
 
@@ -98,13 +98,13 @@ class StartWidgetView: NSView {
         if let iconName = widgetIcon {
             iconView = NSImageView()
             iconView.image = NSImage.mfeSymbol(named: iconName, accessibilityDescription: nil)
-            iconView.contentTintColor = StartDesignSystem.Colors.accent
+            iconView.contentTintColor = AppDesignSystem.Colors.accent
             iconView.translatesAutoresizingMaskIntoConstraints = false
             headerView.addSubview(iconView)
         }
 
         // Title
-        titleLabel = StartDesignSystem.createLabel(text: widgetTitle, style: .title)
+        titleLabel = AppDesignSystem.createLabel(text: widgetTitle, style: .title)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         headerView.addSubview(titleLabel)
 
@@ -139,16 +139,16 @@ class StartWidgetView: NSView {
             containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
 
             // Header
-            headerView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: StartDesignSystem.Spacing.widgetPadding),
-            headerView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: StartDesignSystem.Spacing.widgetPadding),
-            headerView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -StartDesignSystem.Spacing.widgetPadding),
+            headerView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: AppDesignSystem.Spacing.widgetPadding),
+            headerView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: AppDesignSystem.Spacing.widgetPadding),
+            headerView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -AppDesignSystem.Spacing.widgetPadding),
             headerView.heightAnchor.constraint(equalToConstant: 28),
 
             // Content view
-            contentView.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: StartDesignSystem.Spacing.md),
-            contentView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: StartDesignSystem.Spacing.widgetPadding),
-            contentView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -StartDesignSystem.Spacing.widgetPadding),
-            contentView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -StartDesignSystem.Spacing.widgetPadding)
+            contentView.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: AppDesignSystem.Spacing.md),
+            contentView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: AppDesignSystem.Spacing.widgetPadding),
+            contentView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -AppDesignSystem.Spacing.widgetPadding),
+            contentView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -AppDesignSystem.Spacing.widgetPadding)
         ]
 
         // Icon constraints
@@ -158,7 +158,7 @@ class StartWidgetView: NSView {
                 icon.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
                 icon.widthAnchor.constraint(equalToConstant: 20),
                 icon.heightAnchor.constraint(equalToConstant: 20),
-                titleLabel.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: StartDesignSystem.Spacing.sm)
+                titleLabel.leadingAnchor.constraint(equalTo: icon.trailingAnchor, constant: AppDesignSystem.Spacing.sm)
             ])
         } else {
             constraints.append(titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor))
@@ -174,7 +174,7 @@ class StartWidgetView: NSView {
                 dismiss.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
                 dismiss.widthAnchor.constraint(equalToConstant: 20),
                 dismiss.heightAnchor.constraint(equalToConstant: 20),
-                titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: dismiss.leadingAnchor, constant: -StartDesignSystem.Spacing.sm)
+                titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: dismiss.leadingAnchor, constant: -AppDesignSystem.Spacing.sm)
             ])
         } else {
             constraints.append(titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: headerView.trailingAnchor))
@@ -205,7 +205,7 @@ class StartWidgetView: NSView {
 
     private func updateAccentColors() {
         // Update icon tint color
-        iconView?.contentTintColor = StartDesignSystem.Colors.accent
+        iconView?.contentTintColor = AppDesignSystem.Colors.accent
     }
 
     // MARK: - Hover Effects
@@ -213,16 +213,16 @@ class StartWidgetView: NSView {
     override func mouseEntered(with event: NSEvent) {
         super.mouseEntered(with: event)
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = StartDesignSystem.Animation.fastDuration
-            containerView.layer?.borderColor = StartDesignSystem.Colors.accent.cgColor
+            context.duration = AppDesignSystem.Animation.fastDuration
+            containerView.layer?.borderColor = AppDesignSystem.Colors.accent.cgColor
         })
     }
 
     override func mouseExited(with event: NSEvent) {
         super.mouseExited(with: event)
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = StartDesignSystem.Animation.fastDuration
-            containerView.layer?.borderColor = StartDesignSystem.Colors.widgetBorder.cgColor
+            context.duration = AppDesignSystem.Animation.fastDuration
+            containerView.layer?.borderColor = AppDesignSystem.Colors.widgetBorder.cgColor
         })
     }
 
@@ -239,7 +239,7 @@ class StartWidgetView: NSView {
         alphaValue = 0
 
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = StartDesignSystem.Animation.duration
+            context.duration = AppDesignSystem.Animation.duration
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             animator().alphaValue = 1
         })
@@ -247,7 +247,7 @@ class StartWidgetView: NSView {
 
     func animateOut(completion: (() -> Void)? = nil) {
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = StartDesignSystem.Animation.fastDuration
+            context.duration = AppDesignSystem.Animation.fastDuration
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
             animator().alphaValue = 0
         }, completionHandler: {
@@ -267,7 +267,7 @@ class StartWidgetView: NSView {
 
         if iconView == nil {
             iconView = NSImageView()
-            iconView.contentTintColor = StartDesignSystem.Colors.accent
+            iconView.contentTintColor = AppDesignSystem.Colors.accent
             iconView.translatesAutoresizingMaskIntoConstraints = false
             headerView.addSubview(iconView)
         }

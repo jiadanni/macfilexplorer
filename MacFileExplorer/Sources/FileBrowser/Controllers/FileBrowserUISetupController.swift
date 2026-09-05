@@ -61,17 +61,18 @@ final class FileBrowserUISetupController {
         vc.previewSplitView = splitView
         vc.view.addSubview(splitView)
         
-        // Configure coordinator with this split view
-        vc.previewPaneCoordinator.setup(in: splitView)
-        
         // Create container view for switching between view modes
         let container = RootFileBrowserView()
         container.translatesAutoresizingMaskIntoConstraints = false
         container.dropDelegate = vc.dragDropCoordinator
         vc.containerView = container
-        
+
         // Add container to split view (it will be the first item)
         splitView.addArrangedSubview(container)
+
+        // Configure the preview coordinator after the container is in place so a
+        // preview pane restored at launch lands to the right of the file list.
+        vc.previewPaneCoordinator.setup(in: splitView, owner: vc)
         
         // Create outline view and scroll view
         let outline = NSOutlineView()

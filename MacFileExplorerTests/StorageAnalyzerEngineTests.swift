@@ -47,7 +47,9 @@ class StorageAnalyzerEngineTests: XCTestCase {
     override func setUp() {
         super.setUp()
         sut = StorageAnalyzerEngine()
-        mockDelegate = MockStorageAnalyzerDelegate()
+        // setUp runs on the main thread; the mock's init is MainActor-isolated
+        // because StorageAnalyzerDelegate is a @MainActor protocol.
+        mockDelegate = MainActor.assumeIsolated { MockStorageAnalyzerDelegate() }
         
         // Create temporary test directory
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("StorageAnalyzerTest-\(UUID().uuidString)", isDirectory: true)
@@ -70,7 +72,7 @@ class StorageAnalyzerEngineTests: XCTestCase {
     
     // MARK: - Basic Scan Tests
     
-    func testStartScan_NotifiesDelegate() {
+    @MainActor func testStartScan_NotifiesDelegate() {
         let expectation = self.expectation(description: "Scan completes")
         
         mockDelegate.didCompleteCount = 0
@@ -93,7 +95,7 @@ class StorageAnalyzerEngineTests: XCTestCase {
         XCTAssertTrue(mockDelegate.didStartCount > 0, "Should notify start")
     }
     
-    func testScan_EmptyDirectory() {
+    @MainActor func testScan_EmptyDirectory() {
         let expectation = self.expectation(description: "Empty directory scan")
         
         // Ensure directory is empty
@@ -114,7 +116,7 @@ class StorageAnalyzerEngineTests: XCTestCase {
         XCTAssertEqual(mockDelegate.didFailCount, 0, "Empty directory should not fail")
     }
     
-    func testScan_SingleFile() {
+    @MainActor func testScan_SingleFile() {
         let expectation = self.expectation(description: "Single file scan")
         let testContent = "This is test content for storage analyzer"
         let testFile = testDirectoryURL.appendingPathComponent("testfile.txt")
@@ -136,7 +138,7 @@ class StorageAnalyzerEngineTests: XCTestCase {
         XCTAssertNotNil(mockDelegate.lastRootItem, "Should return root item")
     }
     
-    func testScan_NestedDirectories() {
+    @MainActor func testScan_NestedDirectories() {
         let expectation = self.expectation(description: "Nested directory scan")
         
         // Create nested structure
@@ -163,7 +165,7 @@ class StorageAnalyzerEngineTests: XCTestCase {
     
     // MARK: - Cancellation Tests
     
-    func testCancel_StopsScanning() {
+    @MainActor func testCancel_StopsScanning() {
         let expectation = self.expectation(description: "Scan cancelled")
         
         // Create many files to ensure scan takes time
@@ -190,7 +192,7 @@ class StorageAnalyzerEngineTests: XCTestCase {
     
     // MARK: - Scan Options Tests
     
-    func testScanOptions_SkipHiddenFiles() {
+    @MainActor func testScanOptions_SkipHiddenFiles() {
         let expectation = self.expectation(description: "Skip hidden files")
         
         let visibleFile = testDirectoryURL.appendingPathComponent("visible.txt")
@@ -258,7 +260,7 @@ class StorageAnalyzerEngineTests: XCTestCase {
     
     // MARK: - Cache Tests
     
-    func testCache_StoresAndRetrievesResults() {
+    @MainActor func testCache_StoresAndRetrievesResults() {
         let expectation = self.expectation(description: "Cache test")
         
         mockDelegate.didCompleteCount = 0
@@ -279,7 +281,7 @@ class StorageAnalyzerEngineTests: XCTestCase {
     
     // MARK: - Properties Tests
     
-    func testRootProperties_SetAfterScan() {
+    @MainActor func testRootProperties_SetAfterScan() {
         let expectation = self.expectation(description: "Properties set")
         
         mockDelegate.didCompleteCount = 0

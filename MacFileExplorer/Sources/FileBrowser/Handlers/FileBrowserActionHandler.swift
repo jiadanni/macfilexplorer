@@ -30,11 +30,13 @@ final class FileBrowserActionHandler: NSObject, FileBrowserInteractionDelegate, 
     }
     
     func handleGetInfo() {
-        viewController?.contextMenuGetInfo(viewController!)
+        guard let vc = viewController else { return }
+        vc.contextMenuGetInfo(vc)
     }
     
     func handleNewFolder() {
-        viewController?.contextMenuNewFolder(viewController!)
+        guard let vc = viewController else { return }
+        vc.contextMenuNewFolder(vc)
     }
     
     func handleDuplicate() {
@@ -50,7 +52,8 @@ final class FileBrowserActionHandler: NSObject, FileBrowserInteractionDelegate, 
     }
     
     func handleDelete() {
-        viewController?.contextMenuDelete(viewController!)
+        guard let vc = viewController else { return }
+        vc.contextMenuDelete(vc)
     }
     
     func handleToggleQuickLook() {
@@ -73,6 +76,10 @@ final class FileBrowserActionHandler: NSObject, FileBrowserInteractionDelegate, 
     func openSelection() {
         viewController?.openSelection()
     }
+
+    func openItem(_ item: FileItem) {
+        viewController?.openItem(item)
+    }
     
     func contextMenuRename(_ item: FileItem) {
         viewController?.contextMenuRename(item)
@@ -88,8 +95,8 @@ final class FileBrowserActionHandler: NSObject, FileBrowserInteractionDelegate, 
         viewController?.interactionCoordinator.recordClick(row: row)
     }
     
-    func handleInteractionDoubleClick() {
-        viewController?.interactionCoordinator.handleDoubleClick()
+    func handleInteractionDoubleClick(row: Int) {
+        viewController?.handleDoubleClick(at: row)
     }
     
     // MARK: - FileBrowserQuickLookDelegate
@@ -97,8 +104,6 @@ final class FileBrowserActionHandler: NSObject, FileBrowserInteractionDelegate, 
     func selectedItemsForQuickLook() -> [FileItem] {
         return viewController?.selectionCoordinator.selectedItems() ?? []
     }
-    
-    // MARK: - FileBrowserGestureHandlerDelegate
     
     var currentViewMode: ViewMode {
         return viewController?.currentViewMode ?? .list

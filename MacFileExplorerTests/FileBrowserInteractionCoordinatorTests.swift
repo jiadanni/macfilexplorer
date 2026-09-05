@@ -20,13 +20,19 @@ class FileBrowserInteractionCoordinatorTests: XCTestCase {
 
     func testClickTracking() {
         let row = 5
+        // Simulate two clicks: first click selects, second click (after short delay)
         sut.recordClick(row: row)
-        
-        // Immediately after click, it should be eligible for rename (if within delay)
-        XCTAssertTrue(sut.isRenameEligibleClick(row: row))
-        
-        // Different row should not be eligible
-        XCTAssertFalse(sut.isRenameEligibleClick(row: row + 1))
+
+        let exp = expectation(description: "Second click")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            self.sut.recordClick(row: row)
+            // After the second click (within rename delay), rename should be eligible
+            XCTAssertTrue(self.sut.isRenameEligibleClick(row: row))
+            // Different row should not be eligible
+            XCTAssertFalse(self.sut.isRenameEligibleClick(row: row + 1))
+            exp.fulfill()
+        }
+        wait(for: [exp], timeout: 1.0)
     }
 
     func testClearClickTracking() {
@@ -58,15 +64,30 @@ class FileBrowserInteractionCoordinatorTests: XCTestCase {
         XCTAssertTrue(mockDelegate.openSelectionCalled)
         XCTAssertFalse(sut.isRenameEligibleClick(row: 3), "Click tracking should be cleared after double click")
     }
+
+    func testHandleDoubleClickOnItem() {
+        let item = FileItem(url: URL(fileURLWithPath: "/tmp/example.txt"))
+
+        sut.recordClick(row: 2)
+        sut.handleDoubleClick(on: item)
+
+        XCTAssertEqual(mockDelegate.openedItem?.url, item.url)
+        XCTAssertFalse(sut.isRenameEligibleClick(row: 2), "Click tracking should be cleared after opening a specific item")
+    }
 }
 
 class MockInteractionDelegate: FileBrowserInteractionDelegate {
     var openSelectionCalled = false
+    var openedItem: FileItem?
     var renameCalledWithItem: FileItem?
     var lastErrorMessage: String?
 
     func openSelection() {
         openSelectionCalled = true
+    }
+
+    func openItem(_ item: FileItem) {
+        openedItem = item
     }
 
     func contextMenuRename(_ item: FileItem) {

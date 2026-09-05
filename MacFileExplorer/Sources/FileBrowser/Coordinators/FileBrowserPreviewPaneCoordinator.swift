@@ -31,6 +31,7 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
     
     private var settings: SettingsStoreProtocol
     private weak var parentSplitView: NSSplitView?
+    private weak var ownerViewController: NSViewController?
     private(set) var previewPaneViewController: PreviewPaneViewController?
     
     /// SSOT: Preview pane visibility
@@ -71,10 +72,11 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
     }
     
     /// Initializes preview pane with parent split view reference.
-    func setup(in parentSplitView: NSSplitView) {
+    func setup(in parentSplitView: NSSplitView, owner: NSViewController) {
         self.parentSplitView = parentSplitView
+        self.ownerViewController = owner
         parentSplitView.delegate = self
-        
+
         // Apply initial state
         if isVisible {
             showPreviewPane()
@@ -137,20 +139,20 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
         
         let previewVC = PreviewPaneViewController()
         previewPaneViewController = previewVC
-        
-        let previewItem = NSSplitViewItem(viewController: previewVC)
-        previewItem.collapseBehavior = .preferResizingSiblingsWithFixedSplitView
-        
+
+        // Ensure proper view-controller containment so lifecycle events are delivered
+        ownerViewController?.addChild(previewVC)
+        previewVC.view.translatesAutoresizingMaskIntoConstraints = false
+        parentSplitView.addArrangedSubview(previewVC.view)
+
+        previewVC.view.widthAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+
+        // Restore the saved width once the split view has performed its initial layout
         if width > 100 {
-            previewItem.minimumThickness = 100
-            previewItem.maximumThickness = CGFloat.greatestFiniteMagnitude
-            
             Task { @MainActor in
                 previewVC.view.frame.size.width = self.width
             }
         }
-        
-        parentSplitView.addArrangedSubview(previewVC.view)
     }
     
     /// Hides the preview pane.

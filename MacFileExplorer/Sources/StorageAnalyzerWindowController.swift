@@ -177,11 +177,11 @@ class StorageAnalyzerWindowController: NSWindowController {
         alert.addButton(withTitle: "Cancel")
 
         guard let window = window else { return }
-        alert.beginSheetModal(for: window) { response in
+        alert.beginSheetModal(for: window) { [weak self] response in
             if response == .alertFirstButtonReturn {
                 PermissionsManager.shared.openSystemPreferences(for: .fullDiskAccess)
             } else if response == .alertSecondButtonReturn {
-                self.showScopeSelectionDialog()
+                self?.showScopeSelectionDialog()
             }
         }
     }
@@ -254,11 +254,17 @@ extension StorageAnalyzerWindowController: StorageAnalyzerDelegate {
     }
 
     func analyzerDidFail(error: String) {
+        // Update UI immediately on MainActor
         Task { @MainActor [weak self] in
             self?.progressViewController?.setScanFailed(error: error)
+        }
 
+        // Schedule hide after delay in a detached task so cancellation of the local Task doesn't prevent cleanup
+        Task.detached { [weak self] in
             try? await Task.sleep(nanoseconds: 2_000_000_000)
-            self?.hideProgressSheet()
+            await MainActor.run {
+                self?.hideProgressSheet()
+            }
         }
     }
 
@@ -327,7 +333,8 @@ extension StorageAnalyzerWindowController: StorageListViewDelegate {
         alert.addButton(withTitle: "Cancel")
 
         guard let window = window else { return }
-        alert.beginSheetModal(for: window) { response in
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self = self else { return }
             if response == .alertFirstButtonReturn {
                 for item in items {
                     do {
@@ -369,9 +376,12 @@ extension StorageAnalyzerWindowController: NSToolbarDelegate {
         case "search":
             let item = NSToolbarItem(itemIdentifier: itemIdentifier)
             item.label = "Search"
+            item.paletteLabel = "Search"
+            item.toolTip = "Search scan results"
 
             searchField = NSSearchField(frame: NSRect(x: 0, y: 0, width: 200, height: 22))
             searchField.placeholderString = "Search..."
+            searchField.toolTip = "Search scan results"
             searchField.target = self
             searchField.action = #selector(searchFieldChanged(_:))
 

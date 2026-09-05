@@ -223,7 +223,7 @@ extension FolderOutlineViewController: NSOutlineViewDataSource, NSOutlineViewDel
         textField.isBordered = false
         textField.backgroundColor = .clear
         textField.isEditable = false
-        textField.font = NSFont.systemFont(ofSize: 13)
+        textField.font = AppDesignSystem.Typography.sidebarRow
         textField.lineBreakMode = .byTruncatingTail
         textField.translatesAutoresizingMaskIntoConstraints = false
         textField.stringValue = fileItem.displayName(showExtensions: settings.showFileExtensions)

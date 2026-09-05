@@ -14,7 +14,7 @@ final class FileBrowserGestureHandler: NSObject, NSGestureRecognizerDelegate {
         var collectionView: NSCollectionView? { get }
         var freeFormLayout: FreeFormCollectionViewLayout? { get }
         func recordInteractionClick(row: Int)
-        func handleInteractionDoubleClick()
+        func handleInteractionDoubleClick(row: Int)
     }
     
     // MARK: - NSGestureRecognizerDelegate
@@ -101,13 +101,13 @@ final class FileBrowserGestureHandler: NSObject, NSGestureRecognizerDelegate {
         
         if let indexPath = collectionView.indexPathForItem(at: point) {
             delegate.recordInteractionClick(row: indexPath.item)
-            delegate.handleInteractionDoubleClick()
+            delegate.handleInteractionDoubleClick(row: indexPath.item)
         }
     }
     
     func handleBrowserDoubleClick(_ sender: NSBrowser, rowInColumn: Int, column: Int) {
         guard let delegate = delegate else { return }
         delegate.recordInteractionClick(row: rowInColumn)
-        delegate.handleInteractionDoubleClick()
+        delegate.handleInteractionDoubleClick(row: rowInColumn)
     }
 }

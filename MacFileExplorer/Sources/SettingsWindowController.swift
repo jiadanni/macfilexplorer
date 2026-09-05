@@ -40,6 +40,7 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
         // Create a wrapper view controller
         let wrapperVC = NSViewController()
         wrapperVC.view = containerView
+        wrapperVC.addChild(settingsVC)
 
         window.contentViewController = wrapperVC
         self.init(window: window)

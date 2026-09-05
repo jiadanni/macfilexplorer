@@ -341,6 +341,9 @@ class FileOperation {
     private var lastUpdateTimestamp: CFAbsoluteTime = 0
     private let updateInterval: TimeInterval = 0.1 // 100ms throttle
 
+    // Overrides the same-volume check so tests can force the chunked cross-volume path.
+    var sameVolumeCheckOverride: ((URL, URL) -> Bool)?
+
     init(type: FileCopyMoveDialog.OperationType, sourceFiles: [URL], destination: URL, delegate: FileOperationDelegate?) {
         self.type = type
         self.sourceFiles = sourceFiles
@@ -368,6 +371,10 @@ class FileOperation {
         isCancelled = true
         operationTask?.cancel()
         Task { await control.cancel() }
+    }
+
+    func waitUntilFinished() async {
+        await operationTask?.value
     }
 
     private func performOperation() async {
@@ -477,6 +484,10 @@ class FileOperation {
                         try fileManager.removeItem(at: sourceURL)
                     }
                 }
+            } catch is CancellationError {
+                // Cancelled mid-copy: discard the partial destination, keep the source intact.
+                try? fileManager.removeItem(at: finalDestination)
+                return
             } catch {
                 delegate?.fileOperationDidFail(error: "Failed to \(type == .copy ? "copy" : "move") '\(fileName)': \(error.localizedDescription)")
                 return
@@ -497,6 +508,7 @@ class FileOperation {
     }
 
     private func isOnSameVolume(_ url1: URL, _ url2: URL) -> Bool {
+        if let override = sameVolumeCheckOverride { return override(url1, url2) }
         do {
             let v1 = try url1.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier
             let v2 = try url2.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier
@@ -515,7 +527,7 @@ class FileOperation {
             try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
             let contents = try fileManager.contentsOfDirectory(at: source, includingPropertiesForKeys: nil)
             for item in contents {
-                if Task.isCancelled || isCancelled { return }
+                if Task.isCancelled || isCancelled { throw CancellationError() }
                 if isPaused {
                     await control.wait()
                 }
@@ -556,9 +568,9 @@ class FileOperation {
         defer { buffer.deallocate() }
 
         while inputStream.hasBytesAvailable {
-            if Task.isCancelled || isCancelled { 
+            if Task.isCancelled || isCancelled {
                 try? fileManager.removeItem(at: destination) // Cleanup partial file
-                return 
+                throw CancellationError()
             }
             if isPaused {
                 await control.wait()

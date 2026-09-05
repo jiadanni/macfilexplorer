@@ -211,7 +211,11 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
 
         // Setup hidden files coordinator delegate
         hiddenFilesCoordinator.delegate = stateHandler
-        
+
+        // The coordinator initializes from settings in its init, where didSet doesn't
+        // fire, so the persisted state must be pushed to the data source explicitly.
+        dataSource.applyInitialHiddenFilesState(hiddenFilesCoordinator.isVisible)
+
         // Setup new coordinators
         outlineCoordinator.delegate = self
         outlineCoordinator.selectionCoordinator = selectionCoordinator
@@ -267,7 +271,6 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     }
 
     override func keyDown(with event: NSEvent) {
-        keyboardHandler.delegate = actionHandler
         if !keyboardHandler.handleKeyDown(event) {
             super.keyDown(with: event)
         }
@@ -276,7 +279,11 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     func openSelection() {
         let items = selectionCoordinator.selectedItems()
         guard let item = items.first, items.count == 1 else { return }
-        
+
+        openItem(item)
+    }
+
+    func openItem(_ item: FileItem) {
         if item.isDirectory {
             navigationCoordinator.loadDirectory(item.url)
         } else {
@@ -331,6 +338,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         // Update toolbar display
         toolbarViewController?.updateViewModeDisplay(for: currentViewMode)
         toolbarViewController?.updateSortDisplay(column: sortColumn, ascending: sortAscending)
+        
+        // Set handler delegates once during setup (avoid reassigning on every event)
+        keyboardHandler.delegate = actionHandler
+        gestureHandler.delegate = actionHandler
     }
 
     func applyColumnVisibility(_ visibility: [String: Bool]) {
@@ -386,18 +397,16 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         guard selectedRow >= 0 else { return }
         
         interactionCoordinator.recordClick(row: selectedRow)
-        interactionCoordinator.handleDoubleClick()
+        handleDoubleClick(at: selectedRow)
     }
     
     @objc func handleCollectionViewDoubleClick(_ sender: NSClickGestureRecognizer) {
-        gestureHandler.delegate = actionHandler
         gestureHandler.handleCollectionViewDoubleClick(sender)
     }
     
     // MARK: - Gesture Recognition (delegated to FileBrowserGestureHandler)
     
     @objc func handleIconDrag(_ sender: NSPanGestureRecognizer) {
-        gestureHandler.delegate = actionHandler
         gestureHandler.handleIconDrag(sender)
     }
 
@@ -443,7 +452,26 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         guard clickedRow >= 0 else { return }
         
         interactionCoordinator.recordClick(row: clickedRow)
-        interactionCoordinator.handleDoubleClick()
+        handleDoubleClick(at: clickedRow)
+    }
+
+    func handleDoubleClick(at row: Int) {
+        switch currentViewMode {
+        case .list:
+            guard let item = outlineView.item(atRow: row) as? FileItem else { return }
+            interactionCoordinator.handleDoubleClick(on: item)
+        case .icons, .windowsList:
+            guard let item = rootItem?.children?.safe(at: row) else { return }
+            interactionCoordinator.handleDoubleClick(on: item)
+        case .columns:
+            guard let browserView = browserView else { return }
+            let selectedColumn = browserView.selectedColumn
+            guard selectedColumn >= 0,
+                  let parentItem = fileItemForColumn(selectedColumn),
+                  let children = parentItem.children,
+                  row < children.count else { return }
+            interactionCoordinator.handleDoubleClick(on: children[row])
+        }
     }
 
     // MARK: - Public Methods
@@ -451,9 +479,8 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     func toggleHiddenFilesState() {
         hiddenFilesCoordinator.toggleVisibility()
     }
-
-    func showsHiddenFilesState() {
-        toggleHiddenFilesState()
+    func showsHiddenFilesState() -> Bool {
+        return showsHiddenFiles
     }
 
     func isShowingHiddenFiles() -> Bool {
@@ -486,14 +513,15 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             return
         }
 
-        let resolvedURL = url.resolvingSymlinksInPath()
-        let path = resolvedURL.path
-
-        // Check for path traversal attacks
-        if path.contains("/../") || path.hasPrefix("..") {
+        // Check for path traversal attacks on the raw path; resolution below would
+        // silently collapse ".." components, so this must run before resolving.
+        let rawPath = url.path
+        if rawPath.contains("/../") || rawPath.hasPrefix("..") || rawPath.hasSuffix("/..") {
             showError("Invalid path: path traversal detected")
             return
         }
+
+        let resolvedURL = url.resolvingSymlinksInPath()
 
         // For sandboxed builds, check permissions
         let isSandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
@@ -637,6 +665,10 @@ extension FileBrowserViewController {
         // Return potentially relevant folders for move/copy
         return [FileManager.default.homeDirectoryForCurrentUser]
     }
+
+    func getCurrentDirectory() -> URL {
+        return currentDirectory
+    }
     
     func getSelectedItems() -> [FileItem] {
         return selectionCoordinator.selectedItems()
@@ -690,4 +722,3 @@ extension FileBrowserViewController {
 // MARK: - FileBrowserDragDropDelegate
 // Note: Methods implemented directly in main class body; extension conforms to protocol only
 extension FileBrowserViewController {}
-

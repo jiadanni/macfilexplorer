@@ -17,7 +17,6 @@ class FileBrowserDataSource {
     
     private(set) var currentDirectory: URL
     private(set) var rootItem: FileItem?
-    private let loadStateLock = NSLock()
     private var loadGeneration: Int = 0
     private var loadTask: Task<Void, Never>?
     private var unfilteredItems: [FileItem] = []
@@ -61,7 +60,15 @@ class FileBrowserDataSource {
     }
     
     // MARK: - Data Loading
-    
+
+    /// Applies persisted hidden-files state without triggering a reload.
+    /// Used during controller setup, before the initial directory load happens.
+    func applyInitialHiddenFilesState(_ showsHidden: Bool) {
+        isUpdatingSilently = true
+        showsHiddenFiles = showsHidden
+        isUpdatingSilently = false
+    }
+
     func navigate(to url: URL, isSearch: Bool = false) {
         var targetURL = url
         if let googleDriveURL = googleDrivePreferredRoot(for: url) {
@@ -87,11 +94,9 @@ class FileBrowserDataSource {
         let url = currentDirectory
         let showsHidden = showsHiddenFiles
         
-        loadStateLock.lock()
-        loadGeneration += 1
-        let generation = loadGeneration
+        // Cancel any previous load and bump generation atomically
         loadTask?.cancel()
-        loadStateLock.unlock()
+        let generation = nextLoadGeneration()
         
         loadTask = Task {
             let result = await Task.detached(priority: .userInitiated) {
@@ -119,15 +124,16 @@ class FileBrowserDataSource {
             let (item, error) = result
             if let error = error {
                 self.delegate?.dataSource(self, didFailToLoad: error)
+                return
             }
-            
+
             self.rootItem = item
             self.unfilteredItems = item.children ?? []
-            
+
             isUpdatingSilently = true
             self.applyStoredSortPreferences()
             isUpdatingSilently = false
-            
+
             self.sortItems() // This will call applySearchFilter and notify delegate ONCE
         }
     }
@@ -272,15 +278,11 @@ class FileBrowserDataSource {
     }
 
     private func nextLoadGeneration() -> Int {
-        loadStateLock.lock()
-        defer { loadStateLock.unlock() }
         loadGeneration += 1
         return loadGeneration
     }
 
     private func isCurrentLoad(_ generation: Int) -> Bool {
-        loadStateLock.lock()
-        defer { loadStateLock.unlock() }
         return generation == loadGeneration
     }
     

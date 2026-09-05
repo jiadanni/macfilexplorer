@@ -78,8 +78,6 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         settings.addDelegate(self)
         // Observe toolbar settings changes so visibility toggles update live
         NotificationCenter.default.addObserver(self, selector: #selector(handleToolbarSettingsChanged(_:)), name: .toolbarSettingsDidChangeNotification, object: nil)
-        // Observe accent color changes
-        NotificationCenter.default.addObserver(self, selector: #selector(accentColorDidChange), name: .accentColorDidChangeNotification, object: nil)
         // Initial state update based on persisted preference
         let initiallyShowingPreview = settings.previewPaneVisible
         updatePreviewPaneDisplay(showing: initiallyShowingPreview)
@@ -87,7 +85,6 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
 
     deinit {
         settings.removeDelegate(self)
-        NotificationCenter.default.removeObserver(self, name: .accentColorDidChangeNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: .toolbarSettingsDidChangeNotification, object: nil)
     }
 
@@ -118,6 +115,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         backButton.translatesAutoresizingMaskIntoConstraints = false
         backButton.bezelStyle = .texturedRounded
         backButton.image = NSImage.mfeSymbol(named: "chevron.left", accessibilityDescription: "Back")
+        backButton.contentTintColor = .labelColor
+        backButton.isBordered = false
         backButton.target = self
         backButton.action = #selector(backButtonClicked(_:))
         backButton.isEnabled = false
@@ -133,6 +132,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         forwardButton.translatesAutoresizingMaskIntoConstraints = false
         forwardButton.bezelStyle = .texturedRounded
         forwardButton.image = NSImage.mfeSymbol(named: "chevron.right", accessibilityDescription: "Forward")
+        forwardButton.contentTintColor = .labelColor
+        forwardButton.isBordered = false
         forwardButton.target = self
         forwardButton.action = #selector(forwardButtonClicked(_:))
         forwardButton.isEnabled = false
@@ -212,6 +213,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         hiddenFilesButton.translatesAutoresizingMaskIntoConstraints = false
         hiddenFilesButton.bezelStyle = .texturedRounded
         hiddenFilesButton.image = NSImage.mfeSymbol(named: "eye.slash", accessibilityDescription: "Show Hidden Files")
+        hiddenFilesButton.contentTintColor = .labelColor
+        hiddenFilesButton.isBordered = false
         hiddenFilesButton.target = self
         hiddenFilesButton.action = #selector(toggleHiddenFiles(_:))
         hiddenFilesButton.toolTip = L10n.text("Show Hidden Files (⇧⌘.)")
@@ -225,6 +228,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         splitVerticalButton.translatesAutoresizingMaskIntoConstraints = false
         splitVerticalButton.bezelStyle = .texturedRounded
         splitVerticalButton.image = NSImage.mfeSymbol(named: "rectangle.split.2x1", accessibilityDescription: "Split Vertically")
+        splitVerticalButton.contentTintColor = .labelColor
+        splitVerticalButton.isBordered = false
         splitVerticalButton.target = self
         splitVerticalButton.action = #selector(splitVerticallyClicked(_:))
         splitVerticalButton.toolTip = L10n.text("Split View Vertically")
@@ -238,6 +243,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         splitHorizontalButton.translatesAutoresizingMaskIntoConstraints = false
         splitHorizontalButton.bezelStyle = .texturedRounded
         splitHorizontalButton.image = NSImage.mfeSymbol(named: "rectangle.split.1x2", accessibilityDescription: "Split Horizontally")
+        splitHorizontalButton.contentTintColor = .labelColor
+        splitHorizontalButton.isBordered = false
         splitHorizontalButton.target = self
         splitHorizontalButton.action = #selector(splitHorizontallyClicked(_:))
         splitHorizontalButton.toolTip = L10n.text("Split View Horizontally")
@@ -251,6 +258,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         previewPaneButton.translatesAutoresizingMaskIntoConstraints = false
         previewPaneButton.bezelStyle = .texturedRounded
         previewPaneButton.image = NSImage.mfeSymbol(named: "sidebar.right", accessibilityDescription: "Toggle Preview Pane")
+        previewPaneButton.contentTintColor = .labelColor
+        previewPaneButton.isBordered = false
         previewPaneButton.target = self
         previewPaneButton.action = #selector(togglePreviewPaneClicked(_:))
         previewPaneButton.toolTip = L10n.text("Show Preview Pane")
@@ -264,6 +273,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         storageAnalyzerButton.translatesAutoresizingMaskIntoConstraints = false
         storageAnalyzerButton.bezelStyle = .texturedRounded
         storageAnalyzerButton.image = NSImage.mfeSymbol(named: "chart.pie", accessibilityDescription: "Storage Analyzer")
+        storageAnalyzerButton.contentTintColor = .labelColor
+        storageAnalyzerButton.isBordered = false
         storageAnalyzerButton.target = self
         storageAnalyzerButton.action = #selector(storageAnalyzerButtonClicked(_:))
         storageAnalyzerButton.toolTip = L10n.text("Storage Analyzer")
@@ -277,6 +288,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         openTerminalButton.translatesAutoresizingMaskIntoConstraints = false
         openTerminalButton.bezelStyle = .texturedRounded
         openTerminalButton.image = NSImage.mfeSymbol(named: "terminal", accessibilityDescription: "Open in Terminal")
+        openTerminalButton.contentTintColor = .labelColor
+        openTerminalButton.isBordered = false
         openTerminalButton.target = self
         openTerminalButton.action = #selector(openTerminalButtonClicked(_:))
         openTerminalButton.toolTip = L10n.text("Open in Terminal")
@@ -299,6 +312,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         newFolderButton.translatesAutoresizingMaskIntoConstraints = false
         newFolderButton.bezelStyle = .texturedRounded
         newFolderButton.image = NSImage.mfeSymbol(named: "folder.badge.plus", accessibilityDescription: "New Folder")
+        newFolderButton.contentTintColor = .labelColor
+        newFolderButton.isBordered = false
         newFolderButton.target = self
         newFolderButton.action = #selector(newFolderButtonClicked(_:))
         newFolderButton.toolTip = L10n.text("New Folder (⇧⌘N)")
@@ -346,6 +361,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         overflowButton.bezelStyle = .texturedRounded
         overflowButton.image = NSImage.mfeSymbol(named: "ellipsis", accessibilityDescription: "More")
         overflowButton.isBordered = false
+        overflowButton.contentTintColor = .labelColor
         overflowButton.target = self
         overflowButton.action = #selector(overflowButtonClicked(_:))
         overflowButton.toolTip = L10n.text("More")
@@ -379,6 +395,7 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
 
         sortButton.menu?.items.forEach { $0.target = self }
         sortButton.toolTip = L10n.text("Sort Options")
+        sortButton.contentTintColor = .labelColor
         sortButton.setAccessibilityRole(.popUpButton)
         sortButton.setAccessibilityLabel(L10n.text("Sort Options"))
         sortButton.isHidden = !showSort
@@ -389,6 +406,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         closePaneButton.translatesAutoresizingMaskIntoConstraints = false
         closePaneButton.bezelStyle = .texturedRounded
         closePaneButton.image = NSImage.mfeSymbol(named: "xmark", accessibilityDescription: "Close Pane")
+        closePaneButton.contentTintColor = .labelColor
+        closePaneButton.isBordered = false
         closePaneButton.target = self
         closePaneButton.action = #selector(closePaneButtonClicked(_:))
         closePaneButton.toolTip = "Close Pane (⌘W)"
@@ -400,6 +419,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         searchButton.translatesAutoresizingMaskIntoConstraints = false
         searchButton.bezelStyle = .texturedRounded
         searchButton.image = NSImage.mfeSymbol(named: "magnifyingglass", accessibilityDescription: "Search")
+        searchButton.contentTintColor = .labelColor
+        searchButton.isBordered = false
         searchButton.target = self
         searchButton.action = #selector(searchButtonClicked(_:))
         searchButton.toolTip = L10n.text("Search (⌘F)")
@@ -430,6 +451,8 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
         filterButton.bezelStyle = .texturedRounded
         filterButton.image = NSImage.mfeSymbol(named: "line.3.horizontal.decrease.circle", accessibilityDescription: "Filter")
         filterButton.imagePosition = .imageOnly
+        filterButton.contentTintColor = .labelColor
+        filterButton.isBordered = false
         filterButton.target = self
         filterButton.action = #selector(filterButtonClicked(_:))
         filterButton.toolTip = L10n.text("Filter Files")
@@ -647,11 +670,11 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
             NSAnimationContext.current.duration = 0.15
             if showing {
                 previewPaneButton.image = NSImage.mfeSymbol(named: "sidebar.right", accessibilityDescription: "Hide Preview Pane")
-                previewPaneButton.contentTintColor = NSColor.customAccentColor
+                previewPaneButton.contentTintColor = .labelColor
                 previewPaneButton.toolTip = "Hide Preview Pane"
             } else {
                 previewPaneButton.image = NSImage.mfeSymbol(named: "sidebar.right", accessibilityDescription: "Show Preview Pane")
-                previewPaneButton.contentTintColor = nil
+                previewPaneButton.contentTintColor = .labelColor
                 previewPaneButton.toolTip = "Show Preview Pane"
             }
         }
@@ -819,14 +842,6 @@ class ToolbarViewController: NSViewController, NSSearchFieldDelegate, SettingsSt
     @objc private func overflowButtonClicked(_ sender: NSButton) {
         let location = NSPoint(x: 0, y: sender.bounds.height)
         overflowMenu.popUp(positioning: nil, at: location, in: sender)
-    }
-
-    @objc private func accentColorDidChange() {
-        // Update preview pane button color if it's active
-        let isShowingPreview = settings.previewPaneVisible
-        if isShowingPreview {
-            previewPaneButton.contentTintColor = NSColor.customAccentColor
-        }
     }
 
     private func updateBreadcrumbs(for url: URL) {

@@ -10,6 +10,7 @@ import Cocoa
 protocol FileBrowserContextMenuDelegate: AnyObject {
     func getSelectedItems() -> [FileItem]
     func getAllFolders() -> [URL] // For "Move To"/"Copy To" defaults or similar
+    func getCurrentDirectory() -> URL
     func refreshDirectory()
     func showError(_ message: String)
     func openFile(_ url: URL, withApplication: URL?)
@@ -85,7 +86,8 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
         let tagsMenuItem = NSMenuItem(title: "Tags", action: nil, keyEquivalent: "")
         let tagsMenu = NSMenu()
         tagsMenuItem.submenu = tagsMenu
-        tagsMenu.addItem(withTitle: "Add New Tag...", action: #selector(handleAddNewTag(_:)), keyEquivalent: "")
+        // Submenu items are skipped by the top-level target loop below, so set the target here
+        tagsMenu.addItem(withTitle: "Add New Tag...", action: #selector(handleAddNewTag(_:)), keyEquivalent: "").target = self
         menu.addItem(tagsMenuItem)
         menu.addItem(NSMenuItem.separator())
         
@@ -178,7 +180,7 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
         }
 
         tagsMenu.addItem(NSMenuItem.separator())
-        tagsMenu.addItem(withTitle: "Add New Tag...", action: #selector(handleAddNewTag(_:)), keyEquivalent: "")
+        tagsMenu.addItem(withTitle: "Add New Tag...", action: #selector(handleAddNewTag(_:)), keyEquivalent: "").target = self
     }
     
     // MARK: - Menu Item Actions
@@ -212,9 +214,20 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
         guard let item = items.first, items.count == 1, !item.isDirectory else { return }
 
         let openWithMenu = NSMenu()
-        let url = item.url as CFURL
-        let defaultAppURL = LSCopyDefaultApplicationURLForURL(url, .all, nil)?.takeRetainedValue() as? URL
-        let appURLs = LSCopyApplicationURLsForURL(url, .all)?.takeRetainedValue() as? [URL] ?? []
+        // Use NSWorkspace replacement APIs instead of deprecated Launch Services functions
+        let defaultAppURL = NSWorkspace.shared.urlForApplication(toOpen: item.url)
+        var appURLs: [URL]
+        if #available(macOS 12.0, *) {
+            appURLs = NSWorkspace.shared.urlsForApplications(toOpen: item.url)
+                .sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+            // List the default app first
+            if let defaultAppURL, let index = appURLs.firstIndex(of: defaultAppURL) {
+                appURLs.remove(at: index)
+                appURLs.insert(defaultAppURL, at: 0)
+            }
+        } else {
+            appURLs = defaultAppURL.map { [$0] } ?? []
+        }
 
         for appURL in appURLs {
             let appName = appURL.deletingPathExtension().lastPathComponent
@@ -341,15 +354,45 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
         delegate?.performFileOperation(.delete, items: items.map { $0.url }, destination: nil)
     }
     
+    /// Parent directory for "New Folder"/"New File": inside a single selected directory,
+    /// next to a single selected file, otherwise the directory currently being displayed.
+    func resolveNewItemParent() -> URL {
+        if let selected = delegate?.getSelectedItems(), selected.count == 1 {
+            let item = selected[0]
+            return item.isDirectory ? item.url : item.url.deletingLastPathComponent()
+        }
+        return delegate?.getCurrentDirectory() ?? FileManager.default.homeDirectoryForCurrentUser
+    }
+
     @objc func handleNewFolder(_ sender: Any) {
-        if FileBrowserDialogHelper.showNewFolderDialog() != nil {
-            delegate?.performFileOperation(.move, items: [], destination: nil) // Mock operation to trigger refresh or just use logic below
-            // Actually, better to just perform the direct action
+        guard let folderName = FileBrowserDialogHelper.showNewFolderDialog() else { return }
+
+        let parent = resolveNewItemParent()
+        let newURL = parent.appendingPathComponent(folderName, isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: newURL, withIntermediateDirectories: false, attributes: nil)
+            delegate?.refreshDirectory()
+        } catch {
+            delegate?.showError("Failed to create folder: \(error.localizedDescription)")
         }
     }
     
     @objc private func handleNewFile(_ sender: Any) {
-        // Similar to folder
+        guard let fileName = FileBrowserDialogHelper.showNewFileDialog() else { return }
+
+        let parent = resolveNewItemParent()
+        let newFileURL = parent.appendingPathComponent(fileName)
+        if FileManager.default.fileExists(atPath: newFileURL.path) {
+            delegate?.showError("A file named '\(fileName)' already exists.")
+            return
+        }
+
+        let created = FileManager.default.createFile(atPath: newFileURL.path, contents: Data(), attributes: nil)
+        if created {
+            delegate?.refreshDirectory()
+        } else {
+            delegate?.showError("Failed to create file '\(fileName)'.")
+        }
     }
     
     @objc private func handleAddToFavorites(_ sender: Any) {

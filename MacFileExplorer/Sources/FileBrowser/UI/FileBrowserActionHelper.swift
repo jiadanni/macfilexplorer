@@ -78,24 +78,6 @@ class FileBrowserActionHelper {
         NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: url.deletingLastPathComponent().path)
     }
     
-    /// Opens Terminal at a directory.
-    static func openTerminal(at directory: URL) {
-        let script = """
-        tell application "Terminal"
-            do script "cd '\(directory.path)' && clear"
-            activate
-        end tell
-        """
-        
-        var error: NSDictionary?
-        if let scriptObject = NSAppleScript(source: script) {
-            scriptObject.executeAndReturnError(&error)
-            if let error = error {
-                debugLog("AppleScript error: \(error)")
-            }
-        }
-    }
-    
     /// Returns the available disk space for a directory.
     static func getAvailableDiskSpace(for url: URL) -> UInt64? {
         let keys: Set<URLResourceKey> = [.volumeAvailableCapacityKey]

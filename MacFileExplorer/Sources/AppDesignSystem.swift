@@ -1,14 +1,16 @@
 //
-//  StartDesignSystem.swift
+//  AppDesignSystem.swift
 //  MacFileExplorer
 //
-//  Design system constants for the Start Page
+//  Shared design system constants used across the app's chrome
+//  (sidebar, toolbar, status bar, terminal, Start Page).
 //
 
 import Cocoa
 
-/// Design system for Start Page widgets and components
-struct StartDesignSystem {
+/// App-wide design system. Members under `StartPage` are scoped to the
+/// Start Page widget grid; everything else is shared chrome styling.
+struct AppDesignSystem {
 
     // MARK: - Colors
 
@@ -18,10 +20,10 @@ struct StartDesignSystem {
             return NSColor.customAccentColor
         }
 
-        /// Widget background color
+        /// Widget/panel background color
         static let widgetBackground = NSColor.controlBackgroundColor
 
-        /// Widget border color
+        /// Widget/panel border color
         static let widgetBorder = NSColor.separatorColor
 
         /// Success/granted permission color
@@ -36,9 +38,19 @@ struct StartDesignSystem {
         /// Inactive/placeholder color
         static let inactive = NSColor.secondaryLabelColor
 
-        /// Card hover overlay
+        /// Subtle hover overlay (e.g. Start Page card hover)
         static var hoverOverlay: NSColor {
             return NSColor.customAccentColor.withAlphaComponent(0.05)
+        }
+
+        /// Stronger hover/pressed overlay (e.g. toolbar icon buttons)
+        static var hoverOverlayStrong: NSColor {
+            return NSColor.customAccentColor.withAlphaComponent(0.2)
+        }
+
+        /// Selection highlight fill (e.g. sidebar row selection)
+        static var selectionOverlay: NSColor {
+            return NSColor.customAccentColor.withAlphaComponent(0.3)
         }
     }
 
@@ -62,6 +74,17 @@ struct StartDesignSystem {
 
         /// Button text
         static let button = NSFont.systemFont(ofSize: 13, weight: .medium)
+
+        /// Sidebar section header ("FAVORITES", "LOCATIONS", ...)
+        static let sidebarHeader = NSFont.systemFont(ofSize: 11, weight: .semibold)
+
+        /// Sidebar row label (Favorites, Locations, Folder Explorer rows)
+        static let sidebarRow = NSFont.systemFont(ofSize: 13, weight: .regular)
+
+        /// Monospaced text (terminal output/input)
+        static func monospace(weight: NSFont.Weight = .regular) -> NSFont {
+            return NSFont.monospacedSystemFont(ofSize: 12, weight: weight)
+        }
     }
 
     // MARK: - Spacing
@@ -98,6 +121,9 @@ struct StartDesignSystem {
         /// Widget corner radius
         static let cornerRadius: CGFloat = 12
 
+        /// Small control corner radius (address bar, banners, chips)
+        static let controlCornerRadius: CGFloat = 6
+
         /// Widget border width
         static let borderWidth: CGFloat = 1
 
@@ -117,6 +143,39 @@ struct StartDesignSystem {
             shadow.shadowBlurRadius = 8
             shadow.shadowColor = NSColor.black.withAlphaComponent(0.1)
             return shadow
+        }
+    }
+
+    // MARK: - Terminal
+
+    /// Colors for the Terminal panel, which intentionally keeps a fixed
+    /// dark theme regardless of the system's light/dark appearance.
+    struct Terminal {
+        static let background = NSColor(white: 0.1, alpha: 1.0)
+        static let headerBackground = NSColor(white: 0.15, alpha: 1.0)
+        static let foreground = NSColor(white: 0.9, alpha: 1.0)
+        static let brightForeground = NSColor(white: 0.95, alpha: 1.0)
+        static let dimForeground = NSColor.darkGray
+        static let headerTitleFont = NSFont.boldSystemFont(ofSize: 12)
+
+        /// ANSI 16-color palette (SGR codes 30-37, 90-97)
+        enum ANSI {
+            static let black = NSColor.black
+            static let red = NSColor.red
+            static let green = NSColor.green
+            static let yellow = NSColor.yellow
+            static let blue = NSColor.blue
+            static let magenta = NSColor.magenta
+            static let cyan = NSColor.cyan
+            static let white = NSColor.white
+            static let brightBlack = NSColor.darkGray
+            static let brightRed = NSColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0)
+            static let brightGreen = NSColor(red: 0.4, green: 1.0, blue: 0.4, alpha: 1.0)
+            static let brightYellow = NSColor(red: 1.0, green: 1.0, blue: 0.4, alpha: 1.0)
+            static let brightBlue = NSColor(red: 0.4, green: 0.4, blue: 1.0, alpha: 1.0)
+            static let brightMagenta = NSColor(red: 1.0, green: 0.4, blue: 1.0, alpha: 1.0)
+            static let brightCyan = NSColor(red: 0.4, green: 1.0, blue: 1.0, alpha: 1.0)
+            static let brightWhite = NSColor(white: 0.95, alpha: 1.0)
         }
     }
 

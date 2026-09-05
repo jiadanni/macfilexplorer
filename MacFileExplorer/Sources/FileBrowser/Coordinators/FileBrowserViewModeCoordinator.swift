@@ -64,16 +64,16 @@ final class FileBrowserViewModeCoordinator {
         NSLayoutConstraint.deactivate(owner.activeConstraints)
         owner.activeConstraints.removeAll()
 
+        // Content is pinned to the container, which is a sibling of the preview
+        // pane in the split view — constraints apply regardless of preview visibility.
         if let containerView = owner.containerView {
-            if !owner.previewVisible {
-                owner.activeConstraints = [
-                    scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                    scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-                    scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                    scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor)
-                ]
-                NSLayoutConstraint.activate(owner.activeConstraints)
-            }
+            owner.activeConstraints = [
+                scrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                scrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+                scrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                scrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor)
+            ]
+            NSLayoutConstraint.activate(owner.activeConstraints)
         }
 
         // Reload data
@@ -99,22 +99,20 @@ final class FileBrowserViewModeCoordinator {
         owner.scrollView?.isHidden = true
         owner.browserView?.isHidden = true
 
-        if let collectionViewScrollView = owner.collectionViewScrollView, 
+        if let collectionViewScrollView = owner.collectionViewScrollView,
            let containerView = owner.containerView {
-            if collectionViewScrollView.superview == nil && !owner.previewVisible {
+            if collectionViewScrollView.superview == nil {
                 containerView.addSubview(collectionViewScrollView)
             }
             collectionViewScrollView.isHidden = false
 
-            if !owner.previewVisible {
-                owner.activeConstraints = [
-                    collectionViewScrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                    collectionViewScrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                    collectionViewScrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                    collectionViewScrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-                ]
-                NSLayoutConstraint.activate(owner.activeConstraints)
-            }
+            owner.activeConstraints = [
+                collectionViewScrollView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                collectionViewScrollView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                collectionViewScrollView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                collectionViewScrollView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+            ]
+            NSLayoutConstraint.activate(owner.activeConstraints)
         }
 
         configureCollectionViewLayout(for: viewMode, collectionView: collectionView)
@@ -189,20 +187,18 @@ final class FileBrowserViewModeCoordinator {
         }
 
         if let containerView = owner.containerView {
-            if browserView.superview == nil && !owner.previewVisible {
+            if browserView.superview == nil {
                 containerView.addSubview(browserView)
             }
             browserView.isHidden = false
 
-            if !owner.previewVisible {
-                owner.activeConstraints = [
-                    browserView.topAnchor.constraint(equalTo: containerView.topAnchor),
-                    browserView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-                    browserView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-                    browserView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-                ]
-                NSLayoutConstraint.activate(owner.activeConstraints)
-            }
+            owner.activeConstraints = [
+                browserView.topAnchor.constraint(equalTo: containerView.topAnchor),
+                browserView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                browserView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                browserView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+            ]
+            NSLayoutConstraint.activate(owner.activeConstraints)
         }
 
         debugLog("displayFiles: Setting up browser view, rootItem has \(owner.rootItem?.children?.count ?? 0) children")

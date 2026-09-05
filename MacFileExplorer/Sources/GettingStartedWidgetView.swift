@@ -20,7 +20,7 @@ class GettingStartedWidgetView: StartWidgetView {
     ]
 
     init() {
-        super.init(title: "Getting Started", icon: StartDesignSystem.Icons.start, dismissible: true)
+        super.init(title: "Getting Started", icon: AppDesignSystem.Icons.start, dismissible: true)
         setupContent()
     }
 
@@ -31,7 +31,7 @@ class GettingStartedWidgetView: StartWidgetView {
 
     override func setupContent() {
         // Welcome message
-        messageLabel = StartDesignSystem.createLabel(
+        messageLabel = AppDesignSystem.createLabel(
             text: "Your files, your way. Get started by exploring these powerful features.",
             style: .body
         )
@@ -41,7 +41,7 @@ class GettingStartedWidgetView: StartWidgetView {
         // Suggestions stack
         tasksStack = NSStackView()
         tasksStack.orientation = .vertical
-        tasksStack.spacing = StartDesignSystem.Spacing.sm
+        tasksStack.spacing = AppDesignSystem.Spacing.sm
         tasksStack.alignment = .leading
         tasksStack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(tasksStack)
@@ -56,7 +56,7 @@ class GettingStartedWidgetView: StartWidgetView {
             messageLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             messageLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
-            tasksStack.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: StartDesignSystem.Spacing.lg),
+            tasksStack.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: AppDesignSystem.Spacing.lg),
             tasksStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             tasksStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             tasksStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
@@ -67,12 +67,12 @@ class GettingStartedWidgetView: StartWidgetView {
         let container = NSView()
 
         // Bullet point
-        let bullet = StartDesignSystem.createLabel(text: "•", style: .body)
+        let bullet = AppDesignSystem.createLabel(text: "•", style: .body)
         bullet.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(bullet)
         
         // Suggestion text
-        let label = StartDesignSystem.createLabel(text: suggestion.title, style: .body)
+        let label = AppDesignSystem.createLabel(text: suggestion.title, style: .body)
         label.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(label)
 
@@ -82,7 +82,7 @@ class GettingStartedWidgetView: StartWidgetView {
             bullet.widthAnchor.constraint(equalToConstant: 12),
             
             label.topAnchor.constraint(equalTo: container.topAnchor),
-            label.leadingAnchor.constraint(equalTo: bullet.trailingAnchor, constant: StartDesignSystem.Spacing.sm),
+            label.leadingAnchor.constraint(equalTo: bullet.trailingAnchor, constant: AppDesignSystem.Spacing.sm),
             label.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             label.bottomAnchor.constraint(equalTo: container.bottomAnchor)
         ])

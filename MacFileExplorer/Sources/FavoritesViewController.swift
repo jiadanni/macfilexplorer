@@ -221,7 +221,7 @@ extension FavoritesViewController: NSTableViewDataSource, NSTableViewDelegate {
         textField.isBordered = false
         textField.backgroundColor = .clear
         textField.isEditable = false
-        textField.font = NSFont.systemFont(ofSize: 13)
+        textField.font = AppDesignSystem.Typography.sidebarRow
         textField.lineBreakMode = .byTruncatingTail
         textField.translatesAutoresizingMaskIntoConstraints = false
         textField.stringValue = item.name

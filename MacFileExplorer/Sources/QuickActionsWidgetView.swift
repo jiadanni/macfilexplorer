@@ -12,7 +12,7 @@ class QuickActionsWidgetView: StartWidgetView {
     private var actionsStack: NSStackView!
 
     init() {
-        super.init(title: L10n.text("Quick Actions"), icon: StartDesignSystem.Icons.settings, dismissible: false)
+        super.init(title: L10n.text("Quick Actions"), icon: AppDesignSystem.Icons.settings, dismissible: false)
         setupContent()
     }
 
@@ -24,7 +24,7 @@ class QuickActionsWidgetView: StartWidgetView {
     override func setupContent() {
         actionsStack = NSStackView()
         actionsStack.orientation = .vertical
-        actionsStack.spacing = StartDesignSystem.Spacing.sm
+        actionsStack.spacing = AppDesignSystem.Spacing.sm
         actionsStack.alignment = .leading
         actionsStack.distribution = .fillEqually
         actionsStack.translatesAutoresizingMaskIntoConstraints = false
@@ -32,10 +32,10 @@ class QuickActionsWidgetView: StartWidgetView {
 
         // Action buttons
         let actions: [(title: String, icon: String, action: Selector)] = [
-            (L10n.text("New Folder"), StartDesignSystem.Icons.newFolder, #selector(newFolderTapped)),
-            (L10n.text("Open Terminal"), StartDesignSystem.Icons.terminal, #selector(openTerminalTapped)),
-            (L10n.text("Storage Analyzer"), StartDesignSystem.Icons.storage, #selector(storageAnalyzerTapped)),
-            (L10n.text("Eject All Drives"), StartDesignSystem.Icons.eject, #selector(ejectAllTapped))
+            (L10n.text("New Folder"), AppDesignSystem.Icons.newFolder, #selector(newFolderTapped)),
+            (L10n.text("Open Terminal"), AppDesignSystem.Icons.terminal, #selector(openTerminalTapped)),
+            (L10n.text("Storage Analyzer"), AppDesignSystem.Icons.storage, #selector(storageAnalyzerTapped)),
+            (L10n.text("Eject All Drives"), AppDesignSystem.Icons.eject, #selector(ejectAllTapped))
         ]
 
         for actionInfo in actions {
