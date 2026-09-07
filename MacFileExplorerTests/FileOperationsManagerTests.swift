@@ -4,6 +4,7 @@ import XCTest
 /// Comprehensive test suite for FileOperationsManager
 ///
 /// Tests validation logic, drag & drop operations, and file operation coordination
+@MainActor
 class FileOperationsManagerTests: XCTestCase {
     
     var sut: FileOperationsManager!

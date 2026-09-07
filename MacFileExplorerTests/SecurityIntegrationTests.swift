@@ -9,6 +9,7 @@ import XCTest
 @testable import MacFileExplorer
 import Foundation
 
+@MainActor
 class SecurityIntegrationTests: XCTestCase {
     
     // MARK: - Properties

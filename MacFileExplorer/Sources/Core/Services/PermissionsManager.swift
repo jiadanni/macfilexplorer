@@ -226,9 +226,11 @@ final class PermissionsManager {
             datas.removeAll { resolveBookmarkData($0).path == url.path }
             SettingsStore.shared.grantedDirectoryBookmarks = datas
         }
-        if containsActiveURL(url) {
-            url.stopAccessingSecurityScopedResource()
-            removeActiveURL(url)
+        // Access was started on the bookmark-resolved URL, which may not be the same URL
+        // object passed here. Match by path so the access is actually balanced.
+        for activeURL in getAllActiveURLs() where activeURL.path == url.path {
+            activeURL.stopAccessingSecurityScopedResource()
+            removeActiveURL(activeURL)
         }
         var existing = SettingsStore.shared.grantedDirectories
         existing.removeAll { $0 == url.path }
@@ -373,22 +375,30 @@ final class PermissionsManager {
     }
 
     private func checkFullDiskAccess() -> PermissionStatus {
-        // A reliable way to check for Full Disk Access is to try to access a protected folder's contents.
-        // We use the user's Documents directory for this check.
-        guard let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            // This is unlikely to fail, but if it does, we can't determine the status.
-            return .notDetermined
+        // ~/Documents is governed by the "Files and Folders" TCC category, not Full Disk
+        // Access, so probing it gives false positives and can itself trigger a Documents
+        // access prompt. Instead probe paths that are ONLY readable with FDA granted,
+        // using access(_, R_OK) which never triggers a TCC prompt.
+        let home = NSHomeDirectory()
+        let fdaOnlyPaths = [
+            "\(home)/Library/Application Support/com.apple.TCC/TCC.db",
+            "\(home)/Library/Mail",
+            "\(home)/Library/Safari",
+        ]
+
+        for path in fdaOnlyPaths {
+            // Skip paths that don't exist on this machine (e.g. Mail never configured).
+            guard FileManager.default.fileExists(atPath: path) else { continue }
+            if access(path, R_OK) == 0 {
+                return .granted
+            }
+            if errno == EACCES || errno == EPERM {
+                return .denied
+            }
         }
 
-        do {
-            // Attempt to list the contents of the Documents directory.
-            // If this succeeds, we have the necessary permissions.
-            _ = try FileManager.default.contentsOfDirectory(atPath: documentsURL.path)
-            return .granted
-        } catch {
-            // If an error occurs, it's very likely due to lack of permissions, so we can infer a 'denied' state.
-            return .denied
-        }
+        // None of the probe paths exist or were conclusive.
+        return .notDetermined
     }
 
     private func checkPhotosAccess() -> PermissionStatus {

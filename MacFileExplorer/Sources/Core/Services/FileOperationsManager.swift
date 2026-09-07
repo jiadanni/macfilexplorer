@@ -8,18 +8,20 @@ protocol FileOperationsManagerDelegate: AnyObject {
     var window: NSWindow? { get }
 }
 
+@MainActor
 final class FileOperationsManager {
     weak var delegate: FileOperationsManagerDelegate?
     private let settings: SettingsStoreProtocol
     
-    init(delegate: FileOperationsManagerDelegate?, settings: SettingsStoreProtocol = SettingsStore.shared) {
+    nonisolated init(delegate: FileOperationsManagerDelegate?, settings: SettingsStoreProtocol = SettingsStore.shared) {
         self.delegate = delegate
         self.settings = settings
     }
 
     // MARK: - Validation
 
-    func isValidDestination(_ destination: URL, for urls: [URL]) -> Bool {
+    /// Pure path-containment check; no actor state touched, safe to call from anywhere.
+    nonisolated func isValidDestination(_ destination: URL, for urls: [URL]) -> Bool {
         // Resolve symlinks and standardize to prevent traversal bypasses
         let resolvedDest = destination.resolvingSymlinksInPath().standardizedFileURL
 

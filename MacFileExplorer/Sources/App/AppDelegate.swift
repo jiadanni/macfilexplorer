@@ -445,49 +445,93 @@ class AppDelegate: NSObject, NSApplicationDelegate, SettingsStoreDelegate {
         }
     }
 
+    /// Network filesystem schemes we allow mounting. Anything else (http, file, custom
+    /// schemes) is rejected before it reaches NetFS.
+    private static let allowedNetworkSchemes: Set<String> = ["smb", "afp", "nfs", "ftp", "ftps", "cifs", "webdav", "http", "https"]
+
     private func connectToNetworkLocation(_ path: String) {
-        guard let url = URL(string: path) else {
+        guard let url = URL(string: path), let scheme = url.scheme?.lowercased() else {
             showError(L10n.text("Invalid server address. Please use format: smb://server/share or afp://server/share"))
             return
         }
 
-        // Mount the network location using NetFS framework
-        // This mounts the share and returns the mount point path
-        var mountPoints: Unmanaged<CFArray>?
-        
-        let status = NetFSMountURLSync(
+        guard Self.allowedNetworkSchemes.contains(scheme) else {
+            showError(L10n.text("Unsupported server type. Use smb://, afp://, nfs://, or ftp://."))
+            return
+        }
+
+        // Mount off the main thread: a hung/unreachable server would otherwise freeze the
+        // whole app for the full network timeout. NetFSMountURLAsync runs on a private
+        // queue and reports back via its callback.
+        let progress = NSAlert()
+        progress.messageText = L10n.text("Connecting to Server")
+        progress.informativeText = url.host ?? path
+        progress.addButton(withTitle: L10n.text("Cancel"))
+        let spinner = NSProgressIndicator(frame: NSRect(x: 0, y: 0, width: 300, height: 20))
+        spinner.style = .bar
+        spinner.isIndeterminate = true
+        spinner.startAnimation(nil)
+        progress.accessoryView = spinner
+
+        var requestID: AsyncRequestID?
+        let mountQueue = DispatchQueue(label: "com.macfileexplorer.netfs-mount")
+
+        let openOptions = NSMutableDictionary()
+        openOptions[kNetFSAllowSubMountsKey] = true
+        openOptions[kNetFSSoftMountKey] = true
+
+        let status = NetFSMountURLAsync(
             url as CFURL,
             nil, // mount path (nil = default /Volumes)
             nil, // user (nil = use keychain or prompt)
             nil, // password (nil = use keychain or prompt)
-            nil, // open options
+            openOptions as CFMutableDictionary,
             nil, // mount options
-            &mountPoints
-        )
-        
-        if status == 0, let mountPointsArray = mountPoints?.takeRetainedValue() as? [String], let mountPath = mountPointsArray.first {
-            // Successfully mounted - navigate to the mount point in our app
-            let mountURL = URL(fileURLWithPath: mountPath)
-            windowController?.navigateToURL(mountURL)
-        } else {
-            // Mount failed - show error with status code for debugging
-            let errorMessage: String
-            switch status {
-            case -6600: // kNetFSBadURLError
-                errorMessage = L10n.text("Invalid server address format.")
-            case -6602: // kNetFSMountpointExistsError
-                // Already mounted - find and navigate to existing mount
-                if let existingMount = findExistingMountPoint(for: url) {
-                    windowController?.navigateToURL(existingMount)
+            &requestID,
+            mountQueue
+        ) { [weak self] mountStatus, _, mountPoints in
+            let mountArray = mountPoints as? [String]
+            DispatchQueue.main.async {
+                guard let self else { return }
+                // Dismiss the progress sheet if it's still up.
+                NSApp.stopModal()
+                progress.window.orderOut(nil)
+
+                if mountStatus == 0,
+                   let mountPath = mountArray?.first {
+                    self.windowController?.navigateToURL(URL(fileURLWithPath: mountPath))
                     return
                 }
-                errorMessage = L10n.text("This server is already mounted.")
-            case -6003: // authentication error
-                errorMessage = L10n.text("Authentication failed. Please check your credentials.")
-            default:
-                errorMessage = L10n.text("Unable to connect to server. Error code: \(status)")
+
+                let errorMessage: String
+                switch mountStatus {
+                case -6600:
+                    errorMessage = L10n.text("Invalid server address format.")
+                case -6602: // already mounted
+                    if let existingMount = self.findExistingMountPoint(for: url) {
+                        self.windowController?.navigateToURL(existingMount)
+                        return
+                    }
+                    errorMessage = L10n.text("This server is already mounted.")
+                case -6003:
+                    errorMessage = L10n.text("Authentication failed. Please check your credentials.")
+                case ECANCELED:
+                    return // user cancelled; no error dialog
+                default:
+                    errorMessage = L10n.text("Unable to connect to server. Error code: \(mountStatus)")
+                }
+                self.showError(errorMessage)
             }
-            showError(errorMessage)
+        }
+
+        guard status == 0 else {
+            showError(L10n.text("Unable to connect to server. Error code: \(status)"))
+            return
+        }
+
+        // Show the cancellable progress sheet while the async mount runs.
+        if progress.runModal() == .alertFirstButtonReturn, let requestID {
+            NetFSMountURLCancel(requestID)
         }
     }
     
