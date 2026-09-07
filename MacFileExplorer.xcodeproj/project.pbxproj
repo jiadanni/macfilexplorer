@@ -64,6 +64,7 @@
 		826BA14665778A8DA689673D /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37016D72CD8E53ED39337E9B /* KeychainStore.swift */; };
 		8A1B2C3D4E5F678901234567 /* TabButtonContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1B2C3D4E5F678901234568 /* TabButtonContainerView.swift */; };
 		8F9A1D2E5C7B4E92A3F46B81 /* StorageAnalyzerTabViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C5E8F93A4D4761B9E72C40 /* StorageAnalyzerTabViewController.swift */; };
+		908A7699D2C911E57B121A5F /* IconCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FE03EF58B8272F5704027E0 /* IconCache.swift */; };
 		91130CC2E27F90734BB97986 /* FileBrowserSelectionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF2910B7DB83FCFDA7B22D6B /* FileBrowserSelectionCoordinator.swift */; };
 		921129CF103EA5C95631022D /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 533E45BA233E6BBAE045936E /* Logging.swift */; };
 		922DA356552FC1D24A4C899D /* Help in Resources */ = {isa = PBXBuildFile; fileRef = 16F13AFA7D36527FAC1CEC06 /* Help */; };
@@ -156,6 +157,7 @@
 		1F46AEEDB309A87AEB40CEBE /* FileBrowserNavigationCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FileBrowser/Coordinators/FileBrowserNavigationCoordinator.swift; sourceTree = "<group>"; };
 		1F74C22C3ADD41E2A27FBABA /* ContextualPermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Services/ContextualPermissionManager.swift; sourceTree = "<group>"; };
 		1FBDDCAF9FC944D889F88AB7 /* FavoritesWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesWidgetView.swift; sourceTree = "<group>"; };
+		1FE03EF58B8272F5704027E0 /* IconCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = IconCache.swift; path = Core/Services/IconCache.swift; sourceTree = "<group>"; };
 		2EE3071256D14F848904E873 /* StorageProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageProgressViewController.swift; sourceTree = "<group>"; };
 		2FF66B751B289B61A2A6AF1A /* PermissionsManaging.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PermissionsManaging.swift; path = Core/Services/PermissionsManaging.swift; sourceTree = "<group>"; };
 		313C281B1524A427D6E39CD0 /* GeneralSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsViewController.swift; sourceTree = "<group>"; };
@@ -445,6 +447,7 @@
 				0C08084D0711B04C4A193557 /* FileBrowserActionHandler.swift */,
 				F3A5343017034A91D5DAA036 /* ColorManaging.swift */,
 				2FF66B751B289B61A2A6AF1A /* PermissionsManaging.swift */,
+				1FE03EF58B8272F5704027E0 /* IconCache.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -678,6 +681,7 @@
 				756E816CA38B2EE3F1B13E6E /* FileBrowserActionHandler.swift in Sources */,
 				13AC31D6C591E2853E5B2786 /* ColorManaging.swift in Sources */,
 				B36D90983A6BFD11FFEAD870 /* PermissionsManaging.swift in Sources */,
+				908A7699D2C911E57B121A5F /* IconCache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -29,6 +29,10 @@ class FileItem: Hashable {
     /// Whether this item represents a directory.
     let isDirectory: Bool
 
+    /// Whether this item is a package/bundle (`.app`, `.bundle`, …). Used for icon caching:
+    /// packages can carry a bespoke icon, so they must not share an extension-keyed entry.
+    let isPackage: Bool
+
     /// Child items if this is a directory. `nil` if not loaded, empty array if directory is empty.
     /// **Thread-safe**: Protected by childrenLock for concurrent access.
     private var _children: [FileItem]?
@@ -62,15 +66,58 @@ class FileItem: Hashable {
     
     /// File type identifier (e.g., "public.plain-text").
     private(set) var fileType: String = ""
-    
+
     /// Localized file kind description (e.g., "Folder", "Plain Text Document").
-    private(set) var kind: String = ""
-    
-    /// POSIX permissions string (e.g., "drwxr-xr-x").
-    private(set) var permissions: String = ""
-    
-    /// File owner's account name.
-    private(set) var owner: String = ""
+    ///
+    /// Computed lazily: `URLResourceValues.localizedTypeDescription` is a relatively
+    /// expensive Launch Services round-trip and only the Kind column, the sort comparator,
+    /// and the info panel need it — not every row on every scroll (P4 in the 2026 review).
+    private var _kind: String?
+    private let kindLock = NSLock()
+    var kind: String {
+        kindLock.lock()
+        defer { kindLock.unlock() }
+        if let cached = _kind { return cached }
+        let resolved: String
+        if isDirectory {
+            resolved = "Folder"
+        } else if let values = try? url.resourceValues(forKeys: [.localizedTypeDescriptionKey]),
+                  let description = values.localizedTypeDescription {
+            resolved = description
+        } else if !url.pathExtension.isEmpty {
+            resolved = "\(url.pathExtension.uppercased()) File"
+        } else {
+            resolved = "File"
+        }
+        _kind = resolved
+        return resolved
+    }
+
+    /// POSIX permissions string (e.g., "755"). Lazily loaded — info-panel only.
+    private var _permissions: String?
+    var permissions: String {
+        if let cached = _permissions { return cached }
+        loadOwnerAndPermissions()
+        return _permissions ?? ""
+    }
+
+    /// File owner's account name. Lazily loaded — info-panel only.
+    private var _owner: String?
+    var owner: String {
+        if let cached = _owner { return cached }
+        loadOwnerAndPermissions()
+        return _owner ?? ""
+    }
+
+    private func loadOwnerAndPermissions() {
+        let attributes = (try? FileManager.default.attributesOfItem(atPath: url.path)) ?? [:]
+        _owner = attributes[.ownerAccountName] as? String ?? ""
+        if let posix = attributes[.posixPermissions] as? NSNumber {
+            _permissions = String(format: "%o", posix.intValue)
+        } else {
+            _permissions = ""
+        }
+    }
     
     /// macOS Finder tags associated with this file.
     private(set) var tags: [String] = []
@@ -110,8 +157,19 @@ class FileItem: Hashable {
         
         // For cloud storage (like Google Drive), also check resource values and symlink targets
         var detectedAsDirectory = isDir.boolValue
-        
-        if let resourceValues = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .isPackageKey, .contentTypeKey, .tagNamesKey]) {
+        var detectedAsPackage = false
+
+        // Single metadata fetch covering everything the hot path (list/icon rendering)
+        // needs: directory/package/symlink flags, size, and dates. `kind`, `owner`, and
+        // `permissions` are loaded lazily on first access (see their accessors).
+        if let resourceValues = try? url.resourceValues(forKeys: [
+            .isDirectoryKey, .isSymbolicLinkKey, .isPackageKey, .contentTypeKey, .tagNamesKey,
+            .fileSizeKey, .contentModificationDateKey, .creationDateKey,
+        ]) {
+            self.size = Int64(resourceValues.fileSize ?? 0)
+            self.modificationDate = resourceValues.contentModificationDate
+            self.creationDate = resourceValues.creationDate
+
             // If content type is public.folder, it's a directory
             if let contentType = resourceValues.contentType, contentType.conforms(to: .folder) {
                 detectedAsDirectory = true
@@ -154,10 +212,11 @@ class FileItem: Hashable {
             }
             
             // Packages are treated as files unless they're also directories
-            if let isPackage = resourceValues.isPackage,
-               isPackage,
-               resourceValues.isDirectory != true {
-                detectedAsDirectory = false
+            if let isPackage = resourceValues.isPackage, isPackage {
+                detectedAsPackage = true
+                if resourceValues.isDirectory != true {
+                    detectedAsDirectory = false
+                }
             }
             if let tagNames = resourceValues.tagNames {
                 self.tags = tagNames
@@ -165,58 +224,14 @@ class FileItem: Hashable {
         }
         
         self.isDirectory = detectedAsDirectory
+        self.isPackage = detectedAsPackage
         self.isHidden = name.hasPrefix(".")
 
-        // Debug logging for cloud storage directories
-        if url.path.contains("Google Drive") {
-            debugLog("🔍 FileItem init: \(name)")
-            debugLog("   Path: \(url.path)")
-            debugLog("   isDirectory: \(detectedAsDirectory)")
-            if let rv = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey, .contentTypeKey]) {
-                debugLog("   Resource isDirectory: \(rv.isDirectory ?? false)")
-                debugLog("   Resource isSymlink: \(rv.isSymbolicLink ?? false)")
-                debugLog("   Content Type: \(rv.contentType?.identifier ?? "nil")")
-            }
-        }
-
-        // Get file attributes - with error handling for cloud storage
-        do {
-            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-            self.size = attributes[.size] as? Int64 ?? 0
-            self.modificationDate = attributes[.modificationDate] as? Date
-            self.creationDate = attributes[.creationDate] as? Date
-            self.owner = attributes[.ownerAccountName] as? String ?? ""
-
-            // Get permissions
-            if let posixPermissions = attributes[.posixPermissions] as? NSNumber {
-                self.permissions = String(format: "%o", posixPermissions.intValue)
-            }
-        } catch {
-            // For cloud storage files that might not be downloaded yet, use defaults
-            // Try to get resource values instead
-            if let resourceValues = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey, .creationDateKey]) {
-                self.size = Int64(resourceValues.fileSize ?? 0)
-                self.modificationDate = resourceValues.contentModificationDate
-                self.creationDate = resourceValues.creationDate
-            }
-        }
-
-        // Get file type and kind
         if isDirectory {
             self.fileType = "Folder"
-            self.kind = "Folder"
             children = []
         } else {
             self.fileType = url.pathExtension.uppercased()
-            // Get localized kind description from system
-            if let values = try? url.resourceValues(forKeys: [.localizedTypeDescriptionKey]),
-               let kindDescription = values.localizedTypeDescription {
-                self.kind = kindDescription
-            } else if !url.pathExtension.isEmpty {
-                self.kind = "\(url.pathExtension.uppercased()) File"
-            } else {
-                self.kind = "File"
-            }
         }
     }
 
@@ -449,16 +464,13 @@ class FileItem: Hashable {
     /// - Parameter useGrayscale: Whether to render icon in grayscale
     /// - Returns: Icon for this file item
     func icon(useGrayscale: Bool) -> NSImage {
-        if useGrayscale {
-            // Grayscale mode: use monochrome SF Symbol for folders, grayscale file icons otherwise
-            if isDirectory, let folderIcon = NSImage.mfeSymbol(named: "folder", accessibilityDescription: "Folder") {
-                return folderIcon.grayscale()
-            }
-            return NSWorkspace.shared.icon(forFile: url.path).grayscale()
-        } else {
-            // Default (Finder-style color icons)
-            return NSWorkspace.shared.icon(forFile: url.path)
-        }
+        IconCache.shared.icon(
+            for: url,
+            isDirectory: isDirectory,
+            isPackage: isPackage,
+            useGrayscale: useGrayscale,
+            folderSymbol: NSImage.mfeSymbol(named: "folder", accessibilityDescription: "Folder")
+        )
     }
 
     var isImage: Bool {
