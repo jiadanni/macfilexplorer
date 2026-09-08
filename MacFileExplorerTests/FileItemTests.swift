@@ -110,4 +110,42 @@ class FileItemTests: XCTestCase {
         XCTAssertNotNil(fileItem.fileType, "File should have a type")
         XCTAssertEqual(fileItem.fileType, "TXT", "File type should be TXT")
     }
+
+    // MARK: - Recursive search cancellation (P1)
+
+    func testRecursiveLoadStopsWhenCancelled() throws {
+        // Build a deep tree so a full walk would take many iterations.
+        var dir = tempDirectoryURL!
+        for depth in 0..<50 {
+            dir = dir.appendingPathComponent("level_\(depth)")
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            for i in 0..<20 {
+                try "x".write(to: dir.appendingPathComponent("f_\(i).txt"), atomically: true, encoding: .utf8)
+            }
+        }
+
+        let item = FileItem(url: tempDirectoryURL)
+        // Cancel immediately: the walk should abort near the first check interval,
+        // returning far fewer than the ~1000 entries in the tree.
+        let ok = item.loadChildren(recursive: true, isCancelled: { true })
+        XCTAssertTrue(ok, "Cancelled load still reports success with a partial result")
+        XCTAssertLessThan(item.children?.count ?? .max, 1000,
+                          "Cancelled recursive load should not enumerate the whole tree")
+    }
+
+    func testRecursiveLoadSkipsHeavyDirectories() throws {
+        let nodeModules = tempDirectoryURL.appendingPathComponent("node_modules")
+        try FileManager.default.createDirectory(at: nodeModules, withIntermediateDirectories: true)
+        for i in 0..<30 {
+            try "x".write(to: nodeModules.appendingPathComponent("pkg_\(i).js"), atomically: true, encoding: .utf8)
+        }
+        let real = tempDirectoryURL.appendingPathComponent("src.swift")
+        try "code".write(to: real, atomically: true, encoding: .utf8)
+
+        let item = FileItem(url: tempDirectoryURL)
+        item.loadChildren(recursive: true)
+        let paths = (item.children ?? []).map { $0.url.lastPathComponent }
+        XCTAssertTrue(paths.contains("src.swift"), "Non-skipped files are still found")
+        XCTAssertFalse(paths.contains("pkg_0.js"), "node_modules contents are skipped")
+    }
 }

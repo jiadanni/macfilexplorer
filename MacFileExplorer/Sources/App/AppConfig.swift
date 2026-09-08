@@ -14,6 +14,15 @@ enum AppConfig {
         static let progressBatchSize = 100
     }
 
+    enum Search {
+        /// How often the recursive enumerator checks for cancellation.
+        static let cancellationCheckInterval = 256
+        /// Directory names skipped during recursive search — huge, rarely searched trees.
+        static let skippedDirectoryNames: Set<String> = [".git", "node_modules", ".build", "DerivedData", ".Trash"]
+        /// Path fragments skipped during recursive search.
+        static let skippedPathFragments = ["/Library/Caches/"]
+    }
+
     enum ColumnID {
         static let name = "NameColumn"
         static let size = "SizeColumn"

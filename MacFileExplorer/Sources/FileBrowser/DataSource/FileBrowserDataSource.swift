@@ -19,6 +19,9 @@ class FileBrowserDataSource {
     private(set) var rootItem: FileItem?
     private var loadGeneration: Int = 0
     private var loadTask: Task<Void, Never>?
+    /// Flipped when a load is superseded, so an in-flight recursive enumeration on a
+    /// background thread can bail promptly instead of walking the whole subtree.
+    private var currentLoadCancelledFlag = Atomic<Bool>(wrappedValue: false)
     private var unfilteredItems: [FileItem] = []
     private var isUpdatingSilently = false
 
@@ -96,14 +99,21 @@ class FileBrowserDataSource {
         
         // Cancel any previous load and bump generation atomically
         loadTask?.cancel()
+        currentLoadCancelledFlag.wrappedValue = true
+        let cancelledFlag = Atomic<Bool>(wrappedValue: false)
+        currentLoadCancelledFlag = cancelledFlag
         let generation = nextLoadGeneration()
-        
+
         loadTask = Task {
             let result = await Task.detached(priority: .userInitiated) {
                 let item = FileItem(url: url)
                 var errorToReport: Error?
-                
-                let success = item.loadChildren(showsHiddenFiles: showsHidden, recursive: isSearch) { errorMsg in
+
+                let success = item.loadChildren(
+                    showsHiddenFiles: showsHidden,
+                    recursive: isSearch,
+                    isCancelled: { cancelledFlag.wrappedValue }
+                ) { errorMsg in
                     errorToReport = NSError(domain: "FileBrowserDataSource", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMsg])
                 }
                 

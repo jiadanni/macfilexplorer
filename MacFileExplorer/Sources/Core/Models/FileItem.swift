@@ -253,7 +253,10 @@ class FileItem: Hashable {
     // MARK: - Public Methods
 
     @discardableResult
-    func loadChildren(showsHiddenFiles: Bool = false, recursive: Bool = false, errorHandler: ((String) -> Void)? = nil) -> Bool {
+    func loadChildren(showsHiddenFiles: Bool = false,
+                      recursive: Bool = false,
+                      isCancelled: (() -> Bool)? = nil,
+                      errorHandler: ((String) -> Void)? = nil) -> Bool {
         guard isDirectory else { return false }
         var didLoadChildren = false
         defer {
@@ -335,7 +338,28 @@ class FileItem: Hashable {
             if recursive {
                 let enumerator = fileManager.enumerator(at: resolvedURL, includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey, .isReadableKey], options: options)
                 var urls: [URL] = []
+                var seen = 0
                 while let fileURL = enumerator?.nextObject() as? URL {
+                    seen += 1
+                    if seen % AppConfig.Search.cancellationCheckInterval == 0, isCancelled?() == true {
+                        debugLog("   ⏹ recursive load cancelled after \(seen) entries")
+                        // Return what we have so a superseding search can take over cleanly.
+                        children = urls.map { FileItem(url: $0) }
+                        didLoadChildren = true
+                        return true
+                    }
+
+                    // Skip huge, rarely-searched trees (node_modules, .git, caches).
+                    let lastComponent = fileURL.lastPathComponent
+                    if AppConfig.Search.skippedDirectoryNames.contains(lastComponent) {
+                        enumerator?.skipDescendants()
+                        continue
+                    }
+                    if AppConfig.Search.skippedPathFragments.contains(where: { fileURL.path.contains($0) }) {
+                        enumerator?.skipDescendants()
+                        continue
+                    }
+
                     urls.append(fileURL)
                 }
                 children = urls.map { FileItem(url: $0) }
