@@ -11,9 +11,9 @@ This project is a native macOS file explorer built with **Swift** and **AppKit**
     - `FileBrowser/`: The main browsing interface, using the **Coordinator pattern** to separate navigation, selection, filtering, preview, and display logic.
     - `Settings/`: Modular preferences UI and shared settings components.
     - `StorageAnalyzer/`: Disk usage visualization and related settings/view controllers.
-    - `Terminal/`: Intended home for integrated terminal code. Currently empty; `TerminalViewController`, `TerminalVisibilityCoordinator`, and `TerminalSettingsViewController` still live at the `Sources/` root.
-    - `Preview/`: Intended home for preview code. Currently empty; `PreviewHandler(s)` and `PreviewPaneViewController` still live at the `Sources/` root.
-    - Many other controllers (settings panes, storage analyzer, tabs, toolbar) also still sit at the `Sources/` root pending the move into their module folders. Put new files in the module folder.
+    - `Terminal/`: Integrated terminal (`TerminalViewController`) and terminal visibility state.
+    - `Preview/`: File preview handlers and preview pane logic.
+    - `FileCopy/`: Copy/move dialog, `FileOperation`, and progress UI.
     - `Sidebar/`, `Toolbar/`, `Start/`, `Utilities/`: Supporting app surfaces and shared helpers.
 - **Pure Code UI**: While the project uses some XIBs for the main menu, prefer programmatic UI construction for new components to maintain modularity and consistency.
 - **Coordinator Pattern**: Complex UI logic in the file browser is delegated to specialized coordinators (e.g., `FileBrowserSelectionCoordinator`, `FileBrowserNavigationCoordinator`).
@@ -52,5 +52,5 @@ This project is a native macOS file explorer built with **Swift** and **AppKit**
 - `MacFileExplorer/Sources/Core/Storage/SettingsStoreProtocol.swift`: Primary settings abstraction for injection and testing.
 - `MacFileExplorer/Sources/App/MainWindowController.swift`: Manages the primary window and high-level layout.
 - `MacFileExplorer/Sources/FileBrowser/Coordinators/`: Main file browser state and behavior coordinators.
-- `MacFileExplorer/Sources/TerminalViewController.swift`: PTY-backed terminal implementation and a security-sensitive code path.
+- `MacFileExplorer/Sources/Terminal/TerminalViewController.swift`: PTY-backed terminal implementation and a security-sensitive code path.
 - `README.md`: Comprehensive user guide and feature overview.
