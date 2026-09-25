@@ -3,6 +3,7 @@ import Cocoa
 class MainWindowController: NSWindowController, SplitViewControllerDelegate, SplitPaneViewControllerDelegate {
 
     private var splitViewController: SplitViewController?
+    private var windowControlAppearanceObserver: NSObjectProtocol?
 
     init() {
         // Compute a sensible default frame: half the main screen width, centered vertically and horizontally
@@ -51,7 +52,7 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
 
         // Apply custom traffic light appearance per user setting
         WindowTrafficLightManager.shared.applyToAllWindows()
-        NotificationCenter.default.addObserver(forName: Notification.Name("didChangeWindowControlAppearance"), object: nil, queue: .main) { _ in
+        windowControlAppearanceObserver = NotificationCenter.default.addObserver(forName: Notification.Name("didChangeWindowControlAppearance"), object: nil, queue: .main) { _ in
             WindowTrafficLightManager.shared.applyToAllWindows()
         }
         // Setup Split View Controller
@@ -73,6 +74,12 @@ class MainWindowController: NSWindowController, SplitViewControllerDelegate, Spl
 
         // Persist window position/size between launches
         window.setFrameAutosaveName("MainWindow")
+    }
+
+    deinit {
+        if let windowControlAppearanceObserver {
+            NotificationCenter.default.removeObserver(windowControlAppearanceObserver)
+        }
     }
 
     required init?(coder: NSCoder) {

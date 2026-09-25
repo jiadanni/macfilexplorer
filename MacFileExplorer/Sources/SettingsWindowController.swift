@@ -63,7 +63,12 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
     override func showWindow(_ sender: Any?) {
         super.showWindow(sender)
         // Observe pending settings changes to enable Apply button
+        NotificationCenter.default.removeObserver(self, name: .pendingSettingsDidChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(pendingSettingsChanged), name: .pendingSettingsDidChange, object: nil)
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self, name: .pendingSettingsDidChange, object: nil)
     }
 
     private func setupButtonBar(in containerView: NSView, settingsVC: SettingsViewController) {

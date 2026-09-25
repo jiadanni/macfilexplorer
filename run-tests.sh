@@ -57,7 +57,7 @@ TEST_RESULT=$?
 
 # Clean up
 cd -
-# rm -rf "$TEMP_DIR"
+rm -rf "$TEMP_DIR"
 
 echo ""
 if [ $TEST_RESULT -eq 0 ]; then
