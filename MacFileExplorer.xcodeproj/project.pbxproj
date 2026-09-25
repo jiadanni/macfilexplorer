@@ -114,7 +114,6 @@
 		C357D9E92ECA0EDF001BA891 /* FileCopyMoveDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E12ECA0EDF001BA891 /* FileCopyMoveDialog.swift */; };
 		C357D9EA2ECA0EDF001BA891 /* ViewOptionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E62ECA0EDF001BA891 /* ViewOptionsViewController.swift */; };
 		C357D9EB2ECA0EDF001BA891 /* ViewOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E52ECA0EDF001BA891 /* ViewOptions.swift */; };
-		C357D9EC2ECA0EDF001BA891 /* PreviewViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */; };
 		C3E3E8DF3B3B49068B6DD9C8 /* StorageCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A698595D0B4CF89651A85B /* StorageCategory.swift */; };
 		C4A6E222371DE7B849D2EA9A /* SettingsStoreProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD25000CB3988F34F6C2DB32 /* SettingsStoreProtocol.swift */; };
 		C4F1E8A3831726DD68683ABE /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 536E7006B83B9250EEBC9F98 /* L10n.swift */; };
@@ -245,7 +244,6 @@
 		C357D9DF2ECA0ECB001BA891 /* AboutWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutWindowController.swift; sourceTree = "<group>"; };
 		C357D9E12ECA0EDF001BA891 /* FileCopyMoveDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileCopyMoveDialog.swift; sourceTree = "<group>"; };
 		C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationNames.swift; sourceTree = "<group>"; };
-		C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewViewController.swift; sourceTree = "<group>"; };
 		C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressViewController.swift; sourceTree = "<group>"; };
 		C357D9E52ECA0EDF001BA891 /* ViewOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/ViewOptions.swift; sourceTree = "<group>"; };
 		C357D9E62ECA0EDF001BA891 /* ViewOptionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewOptionsViewController.swift; sourceTree = "<group>"; };
@@ -325,7 +323,6 @@
 				C357D9E12ECA0EDF001BA891 /* FileCopyMoveDialog.swift */,
 				7EEDC1A3B4C54D2F9A123457 /* FreeFormCollectionViewLayout.swift */,
 				C357D9E22ECA0EDF001BA891 /* NotificationNames.swift */,
-				C357D9E32ECA0EDF001BA891 /* PreviewViewController.swift */,
 				C357D9E42ECA0EDF001BA891 /* ProgressViewController.swift */,
 				C357D9E52ECA0EDF001BA891 /* ViewOptions.swift */,
 				C357D9E62ECA0EDF001BA891 /* ViewOptionsViewController.swift */,
@@ -599,7 +596,6 @@
 				7EEDC1A3B4C54D2F9A123456 /* FreeFormCollectionViewLayout.swift in Sources */,
 				C357D9EA2ECA0EDF001BA891 /* ViewOptionsViewController.swift in Sources */,
 				C357D9EB2ECA0EDF001BA891 /* ViewOptions.swift in Sources */,
-				C357D9EC2ECA0EDF001BA891 /* PreviewViewController.swift in Sources */,
 				617E78C00A3B9EE92A79BE33 /* PermissionsManager.swift in Sources */,
 				9F1A2B3C4D5E6F708192A1B2 /* WindowTrafficLightManager.swift in Sources */,
 				C3E3E8DF3B3B49068B6DD9C8 /* StorageCategory.swift in Sources */,
