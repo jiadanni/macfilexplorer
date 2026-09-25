@@ -230,32 +230,31 @@ class FileSystemMonitorTests: XCTestCase {
     func testMonitorStopsOnDeinit() throws {
         let expectation = XCTestExpectation(description: "Monitor callback called")
         expectation.assertForOverFulfill = false
-        
+        let callbackCount = Atomic(wrappedValue: 0)
+
         var localMonitor: FileSystemMonitor? = FileSystemMonitor(url: tempDirectoryURL) {
+            callbackCount.update { $0 += 1 }
             expectation.fulfill()
         }
-        _ = localMonitor // Silence unused warning while keeping it for deinit test
-        
-        // Create a file
-        let testFile = tempDirectoryURL.appendingPathComponent("test1.txt")
-        try "content".write(to: testFile, atomically: true, encoding: .utf8)
-        
+        weak let weakMonitor = localMonitor
+
+        try "content".write(to: tempDirectoryURL.appendingPathComponent("test1.txt"), atomically: true, encoding: .utf8)
         wait(for: [expectation], timeout: 2.0)
-        
-        // Deinit the monitor
+
+        // Releasing the last reference must actually deallocate and stop the monitor.
         localMonitor = nil
-        
-        // Create another file - callback should NOT be called
-        let testFile2 = tempDirectoryURL.appendingPathComponent("test2.txt")
-        try "content".write(to: testFile2, atomically: true, encoding: .utf8)
-        
-        // Wait a bit to ensure no callback
+        XCTAssertNil(weakMonitor, "Monitor must not be retained by its own event machinery")
+
+        // Let any already-queued events drain, then snapshot the count.
+        Thread.sleep(forTimeInterval: 0.2)
+        let countAfterDeinit = callbackCount.wrappedValue
+
+        try "content".write(to: tempDirectoryURL.appendingPathComponent("test2.txt"), atomically: true, encoding: .utf8)
         Thread.sleep(forTimeInterval: 0.5)
-        
-        // Test passes if no crash and callback was not called again
-        XCTAssertTrue(true)
+
+        XCTAssertEqual(callbackCount.wrappedValue, countAfterDeinit, "No callbacks after the monitor is released")
     }
-    
+
     func testMultipleSimultaneousMonitors() throws {
         let expectation1 = XCTestExpectation(description: "First monitor callback")
         let expectation2 = XCTestExpectation(description: "Second monitor callback")

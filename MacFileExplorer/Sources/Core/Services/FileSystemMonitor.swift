@@ -27,10 +27,13 @@ import Foundation
 ///
 /// **Thread Safety:** The callback may be invoked from any thread.
 final class FileSystemMonitor {
-    private var fileDescriptor: CInt = -1
-    private let callback: () -> Void
-    private var kqueueDescriptor: CInt = -1
-    private var eventTask: Task<Void, Never>?
+    /// Shared serial queue for all monitors' event handlers.
+    private static let eventQueue = DispatchQueue(label: "com.macfileexplorer.filesystemmonitor", qos: .utility)
+
+    // A dispatch source rather than a kevent loop in a Task: a blocking kevent
+    // call would pin a cooperative-pool thread for the monitor's lifetime, and
+    // the loop's strong capture of self prevented deinit from ever running.
+    private let source: DispatchSourceFileSystemObject?
 
     /// Initializes a file system monitor for the specified directory.
     ///
@@ -48,77 +51,28 @@ final class FileSystemMonitor {
     /// }
     /// ```
     init(url: URL, callback: @escaping () -> Void) {
-        self.callback = callback
-        startMonitoring(url: url)
+        let fileDescriptor = open(url.path, O_EVTONLY)
+        guard fileDescriptor >= 0 else {
+            debugLog("Failed to open directory for monitoring: \(url.path)")
+            source = nil
+            return
+        }
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fileDescriptor,
+            eventMask: [.write, .delete, .rename, .link],
+            queue: Self.eventQueue
+        )
+        source.setEventHandler(handler: callback)
+        source.setCancelHandler {
+            close(fileDescriptor)
+        }
+        source.resume()
+        self.source = source
     }
 
     deinit {
-        stopMonitoring()
-    }
-
-    private func startMonitoring(url: URL) {
-        // Open the directory
-        fileDescriptor = open(url.path, O_EVTONLY)
-        guard fileDescriptor >= 0 else {
-            debugLog("Failed to open directory for monitoring: \(url.path)")
-            return
-        }
-
-        kqueueDescriptor = kqueue()
-        guard kqueueDescriptor >= 0 else {
-            debugLog("Failed to create kqueue for monitoring: \(url.path)")
-            close(fileDescriptor)
-            fileDescriptor = -1
-            return
-        }
-
-        var event = kevent()
-        event.ident = UInt(fileDescriptor)
-        event.filter = Int16(EVFILT_VNODE)
-        event.flags = UInt16(EV_ADD | EV_CLEAR)
-        event.fflags = UInt32(NOTE_WRITE | NOTE_DELETE | NOTE_RENAME | NOTE_LINK)
-        event.data = 0
-        event.udata = nil
-
-        if kevent(kqueueDescriptor, &event, 1, nil, 0, nil) == -1 {
-            debugLog("Failed to register kqueue event for monitoring: \(url.path)")
-            close(kqueueDescriptor)
-            kqueueDescriptor = -1
-            close(fileDescriptor)
-            fileDescriptor = -1
-            return
-        }
-
-        eventTask = Task.detached(priority: .background) { [weak self] in
-            guard let self else { return }
-            var event = kevent()
-            while !Task.isCancelled {
-                var timeout = timespec(tv_sec: 0, tv_nsec: 250_000_000)
-                let count = kevent(self.kqueueDescriptor, nil, 0, &event, 1, &timeout)
-                if count > 0 {
-                    self.callback()
-                } else if count == 0 {
-                    continue
-                } else if errno != EINTR {
-                    break
-                }
-            }
-        }
-    }
-
-    private func stopMonitoring() {
-        eventTask?.cancel()
-        eventTask = nil
-
-        if kqueueDescriptor >= 0 {
-            close(kqueueDescriptor)
-            kqueueDescriptor = -1
-        }
-        
-        // Safety: ensure fd is closed if cancel handler wasn't called
-        if fileDescriptor >= 0 {
-            close(fileDescriptor)
-            fileDescriptor = -1
-        }
+        // The cancel handler closes the file descriptor.
+        source?.cancel()
     }
 }
