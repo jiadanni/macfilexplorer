@@ -253,6 +253,30 @@ class FileOperationsManagerTests: XCTestCase {
         XCTAssertFalse(mockDelegate.didRequestPresentSheet, "Should not show dialog when disabled")
     }
     
+    func testPerform_NilDestinationWithConfirmationDisabled_CopiesIntoCurrentDirectory() throws {
+        // Given: paste passes a nil destination meaning "current directory"
+        settingsStore.confirmCopyOperations = false
+        settingsStore.showOperationProgress = false
+        let sourceDir = tempDirectory.appendingPathComponent("src", isDirectory: true)
+        let currentDir = tempDirectory.appendingPathComponent("current", isDirectory: true)
+        try FileManager.default.createDirectory(at: sourceDir, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: currentDir, withIntermediateDirectories: true)
+        let source = sourceDir.appendingPathComponent("file.txt")
+        try "hello".write(to: source, atomically: true, encoding: .utf8)
+        let expectedCopy = currentDir.appendingPathComponent("file.txt")
+
+        // When
+        sut.perform(.copy, items: [source], destination: nil, currentDirectory: currentDir)
+
+        // Then
+        let copied = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in FileManager.default.fileExists(atPath: expectedCopy.path) },
+            object: nil
+        )
+        wait(for: [copied], timeout: 5)
+        XCTAssertFalse(mockDelegate.didRequestPresentError)
+    }
+
     func testPerform_EmptyItems_DoesNothing() {
         // Given
         let destination = tempDirectory.appendingPathComponent("dest")

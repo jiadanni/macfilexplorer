@@ -233,6 +233,10 @@ class TerminalViewController: NSViewController {
         do {
             try task.run()
             shellTask = task
+            // The child now holds its own copy of the slave end. Close ours so the
+            // master sees EOF when the shell exits; otherwise the read loop never ends.
+            close(slaveFD)
+            slaveFD = -1
             startReadingPTY()
             appendOutput("Shell session started (\(shellPath))\n", color: AppDesignSystem.Colors.success)
             lastSyncedDirectory = currentDirectory
@@ -274,28 +278,57 @@ class TerminalViewController: NSViewController {
                 }
             }
             handle.readabilityHandler = { handle in
-                let data = handle.availableData
-                if data.isEmpty {
+                // read(2) instead of availableData: once the shell exits the master
+                // returns EIO, which availableData surfaces as an uncatchable exception.
+                var buffer = [UInt8](repeating: 0, count: 4096)
+                let count = read(handle.fileDescriptor, &buffer, buffer.count)
+                if count > 0 {
+                    continuation.yield(Data(buffer[0..<count]))
+                } else if count == 0 || (errno != EAGAIN && errno != EINTR) {
                     continuation.finish()
                     handle.readabilityHandler = nil
-                } else {
-                    continuation.yield(data)
                 }
             }
         }
 
         outputTask?.cancel()
+        // Hold self weakly for the lifetime of the loop so the controller can deinit
+        // (and tear the session down) while the shell is still running.
         outputTask = Task.detached { [weak self] in
-            guard let self else { return }
+            var pending = [UInt8]()
             for await data in stream {
                 if Task.isCancelled { break }
-                if let output = String(data: data, encoding: .utf8) {
-                    await MainActor.run {
-                        self.processOutput(output)
-                    }
-                }
+                pending.append(contentsOf: data)
+                let output = TerminalViewController.takeDecodableUTF8(from: &pending)
+                guard !output.isEmpty else { continue }
+                guard let self else { break }
+                await self.processOutput(output)
             }
         }
+    }
+
+    /// Decodes the bytes in `buffer` up to the last complete UTF-8 sequence and leaves
+    /// any trailing partial sequence in `buffer` for the next read, so a character split
+    /// across PTY reads isn't lost. Invalid bytes decode as U+FFFD rather than dropping output.
+    nonisolated static func takeDecodableUTF8(from buffer: inout [UInt8]) -> String {
+        guard !buffer.isEmpty else { return "" }
+        var leadIndex = buffer.count - 1
+        var continuationBytes = 0
+        while leadIndex >= 0, continuationBytes < 3, buffer[leadIndex] & 0xC0 == 0x80 {
+            leadIndex -= 1
+            continuationBytes += 1
+        }
+        var cut = buffer.count
+        if leadIndex >= 0 {
+            let lead = buffer[leadIndex]
+            let sequenceLength = lead >= 0xF0 ? 4 : lead >= 0xE0 ? 3 : lead >= 0xC0 ? 2 : 1
+            if sequenceLength > continuationBytes + 1 {
+                cut = leadIndex
+            }
+        }
+        let output = String(decoding: buffer[0..<cut], as: UTF8.self)
+        buffer.removeFirst(cut)
+        return output
     }
 
     func processOutput(_ output: String) {
@@ -710,6 +743,13 @@ class TerminalViewController: NSViewController {
         currentDirectory = path
         debugLog("TerminalViewController: changeDirectory to \(path)")
 
+        // Quoting protects against the shell, but the PTY line discipline acts on
+        // control bytes (^C, ^U, ^D...) before the shell ever sees the quotes.
+        guard !Self.containsControlCharacters(path) else {
+            appendOutput("Skipped directory sync: path contains control characters\n", color: AppDesignSystem.Terminal.dimForeground)
+            return
+        }
+
         // Only inject the `cd` when the shell is idle at a prompt. If a command
         // is running, the string would go to that program as keystrokes; instead
         // remember the target and flush it once the shell returns to a prompt.
@@ -720,6 +760,10 @@ class TerminalViewController: NSViewController {
         }
 
         performDirectorySync(to: path)
+    }
+
+    static func containsControlCharacters(_ path: String) -> Bool {
+        path.unicodeScalars.contains { $0.value < 0x20 || $0.value == 0x7F }
     }
 
     /// Actually write the `cd` command to the shell. Caller must ensure the shell

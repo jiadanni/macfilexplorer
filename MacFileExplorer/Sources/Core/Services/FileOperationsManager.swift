@@ -81,8 +81,11 @@ final class FileOperationsManager {
     func perform(_ operation: FileOperationType, items: [URL], destination: URL?, sourcePane: FileBrowserViewController? = nil, currentDirectory: URL) {
         guard !items.isEmpty else { return }
 
-        if operation != .delete {
-            let resolvedDestination = destination ?? currentDirectory
+        // Resolve once so the confirm and no-confirm paths see the same destination;
+        // nil means "the current directory" (e.g. paste).
+        let destination: URL? = operation == .delete ? destination : (destination ?? currentDirectory)
+
+        if operation != .delete, let resolvedDestination = destination {
             guard isValidDestination(resolvedDestination, for: items) else {
                 delegate?.fileOperationsManager(self, didRequestPresentError: "Can't move or copy an item into itself or one of its subfolders.")
                 return

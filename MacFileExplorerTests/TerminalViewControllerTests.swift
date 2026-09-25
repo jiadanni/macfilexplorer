@@ -113,6 +113,42 @@ class TerminalViewControllerTests: XCTestCase {
         XCTAssertEqual(sut.lastSyncedDirectory, "/Users/second")
     }
     
+    func testChangeDirectory_WithControlCharacters_DoesNotSync() {
+        _ = sut.view
+        sut.viewDidLoad()
+        sut.processOutput("MFE_SENTINEL_12345\n")           // at prompt
+
+        let path = "/Users/evil\u{03}name"
+        sut.changeDirectory(to: path)
+        XCTAssertNotEqual(sut.lastSyncedDirectory, path,
+                          "Paths containing control bytes must never be written to the PTY")
+        XCTAssertNil(sut.pendingDirectorySync)
+    }
+
+    // MARK: - UTF-8 Decoding
+
+    func testTakeDecodableUTF8_SplitMultibyteCharacter_IsCarriedOver() {
+        let bytes = Array("a€b".utf8)                          // € is 3 bytes: E2 82 AC
+        var buffer = Array(bytes[0..<3])                        // "a" + first two bytes of €
+        XCTAssertEqual(TerminalViewController.takeDecodableUTF8(from: &buffer), "a")
+        XCTAssertEqual(buffer, [0xE2, 0x82])
+
+        buffer.append(contentsOf: bytes[3...])
+        XCTAssertEqual(TerminalViewController.takeDecodableUTF8(from: &buffer), "€b")
+        XCTAssertTrue(buffer.isEmpty)
+    }
+
+    func testTakeDecodableUTF8_CompleteInput_DecodesEverything() {
+        var buffer = Array("hello 👋".utf8)
+        XCTAssertEqual(TerminalViewController.takeDecodableUTF8(from: &buffer), "hello 👋")
+        XCTAssertTrue(buffer.isEmpty)
+    }
+
+    func testTakeDecodableUTF8_InvalidBytes_AreReplacedNotDropped() {
+        var buffer: [UInt8] = [0x61, 0xFF, 0x62]
+        XCTAssertEqual(TerminalViewController.takeDecodableUTF8(from: &buffer), "a\u{FFFD}b")
+    }
+
     // MARK: - UI Tests
     
     func testFocusInput_WithInvalidWindow() {
