@@ -11,8 +11,9 @@ This project is a native macOS file explorer built with **Swift** and **AppKit**
     - `FileBrowser/`: The main browsing interface, using the **Coordinator pattern** to separate navigation, selection, filtering, preview, and display logic.
     - `Settings/`: Modular preferences UI and shared settings components.
     - `StorageAnalyzer/`: Disk usage visualization and related settings/view controllers.
-    - `Terminal/`: Integrated terminal functionality and terminal state handling.
-    - `Preview/`: File preview handlers and preview panel logic.
+    - `Terminal/`: Intended home for integrated terminal code. Currently empty; `TerminalViewController`, `TerminalVisibilityCoordinator`, and `TerminalSettingsViewController` still live at the `Sources/` root.
+    - `Preview/`: Intended home for preview code. Currently empty; `PreviewHandler(s)` and `PreviewPaneViewController` still live at the `Sources/` root.
+    - Many other controllers (settings panes, storage analyzer, tabs, toolbar) also still sit at the `Sources/` root pending the move into their module folders. Put new files in the module folder.
     - `Sidebar/`, `Toolbar/`, `Start/`, `Utilities/`: Supporting app surfaces and shared helpers.
 - **Pure Code UI**: While the project uses some XIBs for the main menu, prefer programmatic UI construction for new components to maintain modularity and consistency.
 - **Coordinator Pattern**: Complex UI logic in the file browser is delegated to specialized coordinators (e.g., `FileBrowserSelectionCoordinator`, `FileBrowserNavigationCoordinator`).
@@ -27,7 +28,7 @@ This project is a native macOS file explorer built with **Swift** and **AppKit**
     - `./build-and-test.sh`: Quick build and launch in Debug mode.
     - `./run-tests.sh`: Executes the test suite.
     - `./install-release.sh`: Builds and optionally installs a release version.
-    - Various `.rb` scripts for managing Xcode project membership (e.g., `add_file_to_project.rb`).
+    - `tools/`: Ruby scripts for managing Xcode project membership (e.g., `tools/add_file_to_project.rb`) plus small inspection helpers.
 
 ## 📝 Coding Standards for Agents
 

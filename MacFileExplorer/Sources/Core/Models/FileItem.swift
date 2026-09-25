@@ -530,7 +530,7 @@ class FileItem: Hashable {
         return totalSize
     }
 
-    private static func calculateDirectorySize(at url: URL) -> Int64 {
+    static func calculateDirectorySize(at url: URL) -> Int64 {
         var totalSize: Int64 = 0
         let fileManager = FileManager.default
         

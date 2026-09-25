@@ -196,9 +196,12 @@ final class FileOperationsManager {
                     }
                 } else if let targetURL = targetURL {
                     // For copy/move: calculate size BEFORE operation
+                    // .size on a directory is the size of the directory entry, not its contents
                     var operationSize: Int64 = 0
                     if let attrs = try? fileManager.attributesOfItem(atPath: sourceURL.path) {
-                        operationSize = (attrs[.size] as? Int64) ?? 0
+                        operationSize = attrs[.type] as? FileAttributeType == .typeDirectory
+                            ? FileItem.calculateDirectorySize(at: sourceURL)
+                            : (attrs[.size] as? Int64) ?? 0
                     }
                     
                     // Handle name conflicts atomically via operation error handling
