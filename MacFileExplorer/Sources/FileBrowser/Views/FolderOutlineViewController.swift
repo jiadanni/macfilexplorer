@@ -111,16 +111,12 @@ class FolderOutlineViewController: NSViewController {
         outlineView.expandItem(item)
 
         if item.needsChildLoading && !isUserHomeFolder {
-            item.loadChildren(showsHiddenFiles: false) { _ in
-                Task { @MainActor [weak self] in
-                    self?.outlineView.reloadItem(item, reloadChildren: true)
-                    self?.outlineView.expandItem(item)
-                    self?.continueExpandingPath(pathComponents: pathComponents, currentItem: item, targetURL: targetURL, index: index)
-                }
-            }
-        } else {
-            continueExpandingPath(pathComponents: pathComponents, currentItem: item, targetURL: targetURL, index: index)
+            // loadChildren is synchronous; its only closure parameter is an error handler.
+            item.loadChildren(showsHiddenFiles: false)
+            outlineView.reloadItem(item, reloadChildren: true)
+            outlineView.expandItem(item)
         }
+        continueExpandingPath(pathComponents: pathComponents, currentItem: item, targetURL: targetURL, index: index)
     }
     
     private func continueExpandingPath(pathComponents: [URL], currentItem: FileItem, targetURL: URL, index: Int) {
@@ -289,11 +285,8 @@ extension FolderOutlineViewController: NSOutlineViewDataSource, NSOutlineViewDel
         }
         
         if allSucceeded {
-            targetItem.loadChildren(showsHiddenFiles: false) { _ in
-                Task { @MainActor [weak self] in
-                    self?.outlineView.reloadItem(targetItem, reloadChildren: true)
-                }
-            }
+            targetItem.loadChildren(showsHiddenFiles: false)
+            outlineView.reloadItem(targetItem, reloadChildren: true)
         }
         return allSucceeded
     }

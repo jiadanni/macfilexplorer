@@ -330,7 +330,8 @@ class StorageOverviewWidgetView: StartWidgetView {
         return totalSize
     }
 
-    private static let byteFormatter: ByteCountFormatter = {
+    // Formatters are thread-safe for formatting; formatBytes is nonisolated.
+    nonisolated(unsafe) private static let byteFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         formatter.allowedUnits = [.useGB, .useTB]

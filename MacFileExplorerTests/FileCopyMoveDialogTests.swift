@@ -3,8 +3,8 @@ import XCTest
 
 class FileCopyMoveDialogTests: XCTestCase {
     
-    func testFileOperationQueueLimit() async {
-        // Mock delegate to capture queue updates
+    func testFileOperationQueueLimit() async throws {
+        // The queue shown in the dialog is capped at 500 names plus a summary row.
         class MockDelegate: FileOperationDelegate {
             var capturedFiles: [String] = []
             func fileOperationDidStart(totalBytes: Int64, fileCount: Int) {}
@@ -15,33 +15,34 @@ class FileCopyMoveDialogTests: XCTestCase {
                 capturedFiles = files
             }
         }
-        
+
+        let fileManager = FileManager.default
+        let tempDir = fileManager.temporaryDirectory
+            .appendingPathComponent("FileOperationQueueTest-\(UUID().uuidString)")
+        let sourceDir = tempDir.appendingPathComponent("source")
+        let destDir = tempDir.appendingPathComponent("dest")
+        try fileManager.createDirectory(at: sourceDir, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: destDir, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: tempDir) }
+
+        let sourceFiles = (0..<1000).map { sourceDir.appendingPathComponent("file\($0).txt") }
+        for url in sourceFiles {
+            XCTAssertTrue(fileManager.createFile(atPath: url.path, contents: nil))
+        }
+
         let delegate = MockDelegate()
-        let sourceFiles = (0..<1000).map { URL(fileURLWithPath: "/tmp/file\($0).txt") }
         let operation = FileOperation(
             type: .copy,
             sourceFiles: sourceFiles,
-            destination: URL(fileURLWithPath: "/tmp/dest"),
+            destination: destDir,
             delegate: delegate
         )
-        
-        // We can't easily run performOperation() because it's private and complex,
-        // but we can test the logic that would be used there.
-        
-        let displayLimit = 500
-        var queueFiles = sourceFiles.prefix(displayLimit).map { $0.lastPathComponent }
-        if sourceFiles.count > displayLimit {
-            queueFiles.append("... and \(sourceFiles.count - displayLimit) more items")
-        }
-        
-        XCTAssertEqual(queueFiles.count, 501)
-        XCTAssertEqual(queueFiles.last, "... and 500 more items")
-        XCTAssertEqual(queueFiles.first, "file0.txt")
-    }
-    
-    func testFileOperationThrottling() async {
-        // This tests the logic of sendProgress (which is private, so we test its behavior if possible)
-        // Since we can't easily call private methods, we'll just verify the code during review.
+        operation.start()
+        await operation.waitUntilFinished()
+
+        XCTAssertEqual(delegate.capturedFiles.count, 501)
+        XCTAssertEqual(delegate.capturedFiles.first, "file0.txt")
+        XCTAssertEqual(delegate.capturedFiles.last, "... and 500 more items")
     }
 
     func testCancellingCrossVolumeMoveKeepsSourceFile() async throws {

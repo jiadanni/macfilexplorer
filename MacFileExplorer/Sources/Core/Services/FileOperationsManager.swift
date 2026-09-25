@@ -13,7 +13,7 @@ final class FileOperationsManager {
     weak var delegate: FileOperationsManagerDelegate?
     private let settings: SettingsStoreProtocol
     
-    nonisolated init(delegate: FileOperationsManagerDelegate?, settings: SettingsStoreProtocol = SettingsStore.shared) {
+    init(delegate: FileOperationsManagerDelegate?, settings: SettingsStoreProtocol = SettingsStore.shared) {
         self.delegate = delegate
         self.settings = settings
     }
@@ -60,8 +60,8 @@ final class FileOperationsManager {
     
     // MARK: - Drag & Drop Helpers
     
-    func preferredDragOperation(from info: NSDraggingInfo, modifierFlags: NSEvent.ModifierFlags = NSApp.currentEvent?.modifierFlags ?? []) -> FileOperationType? {
-        let osModifierFlags = modifierFlags
+    func preferredDragOperation(from info: NSDraggingInfo, modifierFlags: NSEvent.ModifierFlags? = nil) -> FileOperationType? {
+        let osModifierFlags = modifierFlags ?? NSApp.currentEvent?.modifierFlags ?? []
         let sourceMask = info.draggingSourceOperationMask
 
         if osModifierFlags.contains(.option), sourceMask.contains(.copy) {

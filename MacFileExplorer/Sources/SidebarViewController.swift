@@ -150,7 +150,6 @@ class SidebarViewController: NSViewController {
             guard totalHeight > 0 else { return }
             
             let mainDividerThickness = mainSplitView.dividerThickness
-            let bottomDividerThickness = bottomSplitView.dividerThickness
             let headerHeight: CGFloat = 20.0
             
             // Calculate ideal heights based on content

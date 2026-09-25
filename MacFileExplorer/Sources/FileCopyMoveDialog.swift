@@ -396,7 +396,10 @@ class FileOperation {
         for sourceURL in sourceFiles {
             var sourceSize: Int64 = 0
 
-            if let enumerator = fileManager.enumerator(at: sourceURL, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
+            // enumerator(at:) returns an empty (non-nil) enumerator for a plain file,
+            // so only take this branch for real directories.
+            let isDirectory = (try? sourceURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+            if isDirectory, let enumerator = fileManager.enumerator(at: sourceURL, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
                 var yieldCounter = 0
                 while let fileURL = enumerator.nextObject() as? URL {
                     if Task.isCancelled || isCancelled { return }

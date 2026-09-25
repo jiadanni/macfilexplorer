@@ -259,12 +259,10 @@ extension StorageAnalyzerWindowController: StorageAnalyzerDelegate {
             self?.progressViewController?.setScanFailed(error: error)
         }
 
-        // Schedule hide after delay in a detached task so cancellation of the local Task doesn't prevent cleanup
-        Task.detached { [weak self] in
+        // Hide after a short delay so the failure message is readable
+        Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 2_000_000_000)
-            await MainActor.run {
-                self?.hideProgressSheet()
-            }
+            self?.hideProgressSheet()
         }
     }
 
