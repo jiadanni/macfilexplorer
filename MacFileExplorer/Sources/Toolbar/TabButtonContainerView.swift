@@ -2,33 +2,40 @@ import Cocoa
 
 class TabButtonContainerView: NSView {
     override var isFlipped: Bool { return true }
-    
+
     var isSelected: Bool = false {
-        didSet {
-            needsDisplay = true
-        }
+        didSet { needsDisplay = true }
     }
+
+    private var isHovering = false {
+        didSet { needsDisplay = true }
+    }
+    private var trackingArea: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingArea { removeTrackingArea(trackingArea) }
+        let area = NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect], owner: self, userInfo: nil)
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    override func mouseEntered(with event: NSEvent) { isHovering = true }
+    override func mouseExited(with event: NSEvent) { isHovering = false }
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
 
         let path = NSBezierPath(topRoundedRect: bounds, cornerRadius: 6.0)
-        
-        let fillColor = isSelected ? NSColor.customAccentColor.withAlphaComponent(0.15) : NSColor.windowBackgroundColor
-        fillColor.setFill()
-        path.fill()
-        
-        NSColor.gridColor.setStroke()
-        path.stroke()
-        
         if isSelected {
-            // Erase the bottom line to merge with the view below
-            let eraseLine = NSBezierPath()
-            eraseLine.move(to: NSPoint(x: bounds.minX, y: bounds.maxY))
-            eraseLine.line(to: NSPoint(x: bounds.maxX, y: bounds.maxY))
-            NSColor.windowBackgroundColor.setStroke()
-            eraseLine.lineWidth = 2.0
-            eraseLine.stroke()
+            // Raised tab in the content color, with a faint top highlight
+            AppDesignSystem.Chrome.contentBackground.setFill()
+            path.fill()
+            AppDesignSystem.Chrome.hairline.setFill()
+            NSRect(x: bounds.minX + 6, y: bounds.minY, width: bounds.width - 12, height: 1).fill()
+        } else if isHovering {
+            AppDesignSystem.Chrome.controlHoverFill.setFill()
+            path.fill()
         }
     }
 }

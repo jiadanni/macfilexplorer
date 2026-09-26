@@ -14,5 +14,7 @@ extension FileBrowserViewController: FileBrowserNavigationCoordinatorDelegate {
             history: state.history,
             currentIndex: state.currentIndex
         )
+        // Folders can carry their own stored sort; reflect it in the header indicator.
+        syncSortDisplay()
     }
 }

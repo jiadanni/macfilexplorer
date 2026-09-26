@@ -34,7 +34,7 @@ extension FileBrowserViewController: ToolbarDelegate {
     func toolbarDidChangeSortColumn(_ column: String, ascending: Bool) {
         sortColumn = column
         sortAscending = ascending
-        toolbarViewController.updateSortDisplay(column: column, ascending: ascending)
+        syncSortDisplay()
 
         var prefs = settings.folderSortPreferences
         prefs[currentDirectory.path] = "\(column)|\(ascending ? "asc" : "desc")"
@@ -93,5 +93,21 @@ extension FileBrowserViewController {
 
     func updateSplitButtonsState(_ canAddMore: Bool) {
         toolbarViewController?.updateSplitButtonsState(canAddMore: canAddMore)
+    }
+
+    /// Mirrors the current sort in the toolbar menu and the list column headers.
+    func syncSortDisplay() {
+        toolbarViewController?.updateSortDisplay(column: sortColumn, ascending: sortAscending)
+        guard let outlineView else { return }
+        for column in outlineView.tableColumns {
+            guard let headerCell = column.headerCell as? ChromeTableHeaderCell else { continue }
+            headerCell.sortAscending = column.identifier.rawValue == sortColumn ? sortAscending : nil
+        }
+        outlineView.headerView?.needsDisplay = true
+    }
+
+    /// Edit ▸ Find (⌘F). Reached through the responder chain from the focused pane.
+    @objc func focusSearchField(_ sender: Any?) {
+        toolbarViewController?.focusSearchField()
     }
 }

@@ -61,7 +61,10 @@ final class FileBrowserOutlineCoordinator: NSObject, NSOutlineViewDataSource, NS
         case AppConfig.ColumnID.type:
             value = fileItem.kind
         case AppConfig.ColumnID.size:
-            value = ByteCountFormatter.string(fromByteCount: fileItem.size, countStyle: .file)
+            // Folders without a computed size show an em dash rather than "Zero KB"
+            value = fileItem.isDirectory && fileItem.size == 0
+                ? "—"
+                : ByteCountFormatter.string(fromByteCount: fileItem.size, countStyle: .file)
         case AppConfig.ColumnID.dateCreated:
             value = fileItem.creationDate.map { dateFormatter.string(from: $0) } ?? ""
         case "TagsColumn":
@@ -94,19 +97,33 @@ final class FileBrowserOutlineCoordinator: NSObject, NSOutlineViewDataSource, NS
         view.imageView = imageView
         let textField = NSTextField(labelWithString: "")
         textField.translatesAutoresizingMaskIntoConstraints = false
+        textField.lineBreakMode = .byTruncatingTail
         view.addSubview(textField)
         view.textField = textField
+
+        // Name column: primary text with icon. Metadata columns: secondary,
+        // tabular digits, sizes right-aligned.
+        let isNameColumn = identifier.rawValue == "Cell_\(AppConfig.ColumnID.name)"
+        if !isNameColumn {
+            textField.textColor = .secondaryLabelColor
+            textField.font = NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular)
+            if identifier.rawValue == "Cell_\(AppConfig.ColumnID.size)" {
+                textField.alignment = .right
+            }
+        }
+
         NSLayoutConstraint.activate([
             imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 4),
             imageView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            imageView.widthAnchor.constraint(equalToConstant: 16),
+            // Metadata cells carry no icon; collapse the image slot so text starts at the column edge.
+            imageView.widthAnchor.constraint(equalToConstant: isNameColumn ? 16 : 0),
             imageView.heightAnchor.constraint(equalToConstant: 16),
             
-            textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
-            textField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -4),
-            textField.topAnchor.constraint(equalTo: view.topAnchor, constant: 2),
-            textField.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -2)
+            textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: isNameColumn ? 6 : 4),
+            textField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: isNameColumn ? -4 : -10),
+            textField.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
+        imageView.isHidden = !isNameColumn
         return view
     }
     
@@ -117,7 +134,11 @@ final class FileBrowserOutlineCoordinator: NSObject, NSOutlineViewDataSource, NS
     }
     
     func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
-        return 22.0
+        return 28.0
+    }
+
+    func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
+        RoundedSelectionRowView(selectionStyle: .accent, drawsStripes: true)
     }
     
     // MARK: - NSOutlineView Drag & Drop

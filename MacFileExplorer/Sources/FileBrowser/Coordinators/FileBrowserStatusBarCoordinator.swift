@@ -23,7 +23,7 @@ final class FileBrowserStatusBarCoordinator: NSObject, StatusBarDelegate {
         statusBarViewController.setZoomControlsVisible(shouldShow)
     }
     
-    func updateFileInformation(selectedCount: Int, totalSize: Int64, diskSpace: String) {
-        statusBarViewController?.updateFileInformation(selectedCount: selectedCount, totalSize: totalSize, diskSpace: diskSpace)
+    func updateFileInformation(selectedCount: Int, totalSize: Int64, itemCount: Int, diskSpace: String) {
+        statusBarViewController?.updateFileInformation(selectedCount: selectedCount, totalSize: totalSize, itemCount: itemCount, diskSpace: diskSpace)
     }
 }

@@ -4,90 +4,92 @@ protocol StatusBarDelegate: AnyObject {
     func zoomLevelDidChange(to level: Double)
 }
 
+/// Footer under the file list: selection summary on the left, free space
+/// (and the zoom slider for icon views) on the right.
 class StatusBarViewController: NSViewController {
+
+    static let height: CGFloat = 26
 
     weak var delegate: StatusBarDelegate?
 
     private var statusLabel: NSTextField!
-    private var centerLabel: NSTextField!
+    private var diskSpaceLabel: NSTextField!
     private var zoomSlider: NSSlider!
     private var zoomPercentageLabel: NSTextField!
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 800, height: 22)) // Standard status bar height
+        view = ChromeSurfaceView(fillColor: AppDesignSystem.Chrome.contentBackground)
+        view.frame = NSRect(x: 0, y: 0, width: 800, height: Self.height)
         setupUI()
-        updateZoomPercentageLabel() // Initialize the percentage label
+        updateZoomPercentageLabel()
     }
 
     private func setupUI() {
-        view.wantsLayer = true
-        view.layer?.backgroundColor = AppDesignSystem.Colors.widgetBackground.cgColor
+        let topBorder = HairlineView()
+        view.addSubview(topBorder)
 
-        // Left Status Label (for disk space info)
-        statusLabel = NSTextField(labelWithString: L10n.text("Ready"))
-        statusLabel.translatesAutoresizingMaskIntoConstraints = false
-        statusLabel.font = AppDesignSystem.Typography.caption
-        statusLabel.textColor = AppDesignSystem.Colors.inactive
+        // Left: selection / item count
+        statusLabel = makeLabel(L10n.text("Ready"))
         statusLabel.lineBreakMode = .byTruncatingTail
         statusLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         statusLabel.setAccessibilityLabel(L10n.text("Status"))
-        statusLabel.setAccessibilityRole(.staticText)
         view.addSubview(statusLabel)
 
-        // Center Label (for file selection info)
-        centerLabel = NSTextField(labelWithString: "")
-        centerLabel.translatesAutoresizingMaskIntoConstraints = false
-        centerLabel.font = AppDesignSystem.Typography.caption
-        centerLabel.textColor = AppDesignSystem.Colors.inactive
-        centerLabel.lineBreakMode = .byTruncatingTail
-        centerLabel.alignment = .center
-        centerLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        centerLabel.setAccessibilityLabel(L10n.text("Selection details"))
-        centerLabel.setAccessibilityRole(.staticText)
-        view.addSubview(centerLabel)
+        // Right: available disk space
+        diskSpaceLabel = makeLabel("")
+        diskSpaceLabel.alignment = .right
+        diskSpaceLabel.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+        diskSpaceLabel.setAccessibilityLabel(L10n.text("Available disk space"))
+        view.addSubview(diskSpaceLabel)
 
-        // Zoom Slider
+        // Zoom controls (icon views only)
         zoomSlider = NSSlider()
         zoomSlider.translatesAutoresizingMaskIntoConstraints = false
+        zoomSlider.controlSize = .small
         zoomSlider.minValue = 0.5
         zoomSlider.maxValue = 2.0
-        zoomSlider.floatValue = 1.0 // Default zoom
+        zoomSlider.floatValue = 1.0
         zoomSlider.target = self
         zoomSlider.action = #selector(zoomSliderChanged(_:))
-        zoomSlider.setAccessibilityRole(.slider)
         zoomSlider.setAccessibilityLabel(L10n.text("Zoom level"))
         view.addSubview(zoomSlider)
 
-        // Zoom Percentage Label
-        zoomPercentageLabel = NSTextField(labelWithString: String(format: L10n.text("%d%%"), 100))
-        zoomPercentageLabel.translatesAutoresizingMaskIntoConstraints = false
-        zoomPercentageLabel.font = AppDesignSystem.Typography.caption
-        zoomPercentageLabel.textColor = AppDesignSystem.Colors.inactive
+        zoomPercentageLabel = makeLabel(String(format: L10n.text("%d%%"), 100))
         zoomPercentageLabel.alignment = .right
-        zoomPercentageLabel.setAccessibilityRole(.staticText)
         zoomPercentageLabel.setAccessibilityLabel(L10n.text("Zoom percentage"))
         view.addSubview(zoomPercentageLabel)
 
+        let rightStack = NSStackView(views: [diskSpaceLabel, zoomPercentageLabel, zoomSlider])
+        rightStack.orientation = .horizontal
+        rightStack.spacing = 8
+        rightStack.setCustomSpacing(4, after: zoomPercentageLabel)
+        rightStack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(rightStack)
+
         NSLayoutConstraint.activate([
-            // Left label
-            statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+            topBorder.topAnchor.constraint(equalTo: view.topAnchor),
+            topBorder.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            topBorder.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+
+            statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             statusLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            statusLabel.widthAnchor.constraint(equalToConstant: 200),
+            statusLabel.trailingAnchor.constraint(lessThanOrEqualTo: rightStack.leadingAnchor, constant: -12),
 
-            // Center label
-            centerLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            centerLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            centerLabel.widthAnchor.constraint(lessThanOrEqualToConstant: 300),
+            rightStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            rightStack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
 
-            // Right side - zoom controls
-            zoomPercentageLabel.trailingAnchor.constraint(equalTo: zoomSlider.leadingAnchor, constant: -5),
-            zoomPercentageLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            zoomPercentageLabel.widthAnchor.constraint(equalToConstant: 40),
-
-            zoomSlider.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
-            zoomSlider.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            zoomSlider.widthAnchor.constraint(equalToConstant: 100)
+            zoomPercentageLabel.widthAnchor.constraint(equalToConstant: 36),
+            zoomSlider.widthAnchor.constraint(equalToConstant: 90)
         ])
+    }
+
+    private func makeLabel(_ text: String) -> NSTextField {
+        let label = NSTextField(labelWithString: text)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = AppDesignSystem.Typography.captionMonospacedDigits
+        label.textColor = .secondaryLabelColor
+        label.setAccessibilityRole(.staticText)
+        return label
     }
 
     // MARK: - Public Methods
@@ -95,39 +97,28 @@ class StatusBarViewController: NSViewController {
     func updateStatus(message: String) {
         statusLabel.stringValue = message
     }
-    
+
     func setZoomControlsVisible(_ visible: Bool) {
         zoomSlider.isHidden = !visible
         zoomPercentageLabel.isHidden = !visible
     }
-    
-    func updateFileInformation(selectedCount: Int, totalSize: Int64, diskSpace: String?) {
+
+    func updateFileInformation(selectedCount: Int, totalSize: Int64, itemCount: Int, diskSpace: String?) {
         if selectedCount > 0 {
             let formattedSize = ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
-            let itemText = selectedCount == 1 ? L10n.text("item") : L10n.text("items")
-            statusLabel.stringValue = String(format: L10n.text("%d %@ selected, %@"), selectedCount, itemText, formattedSize)
-            // Show disk space in center when files are selected
-            if let diskSpace = diskSpace {
-                centerLabel.stringValue = String(format: L10n.text("%@ available"), diskSpace)
-            } else {
-                centerLabel.stringValue = ""
-            }
+            statusLabel.stringValue = String(format: L10n.text("%d of %d selected, %@"), selectedCount, itemCount, formattedSize)
         } else {
-            statusLabel.stringValue = L10n.text("Ready")
-            // Show disk space in center when no files are selected
-            if let diskSpace = diskSpace {
-                centerLabel.stringValue = String(format: L10n.text("%@ available"), diskSpace)
-            } else {
-                centerLabel.stringValue = ""
-            }
+            let itemText = itemCount == 1 ? L10n.text("item") : L10n.text("items")
+            statusLabel.stringValue = String(format: L10n.text("%d %@"), itemCount, itemText)
         }
+        diskSpaceLabel.stringValue = diskSpace.map { String(format: L10n.text("%@ available"), $0) } ?? ""
     }
-    
+
     func setZoomLevel(_ level: Double) {
         zoomSlider.doubleValue = level
         updateZoomPercentageLabel()
     }
-    
+
     private func updateZoomPercentageLabel() {
         let zoomPercentage = Int(zoomSlider.doubleValue * 100)
         zoomPercentageLabel.stringValue = String(format: L10n.text("%d%%"), zoomPercentage)

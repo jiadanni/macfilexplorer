@@ -127,6 +127,7 @@
 		E010E822F5B6962C1C72A271 /* StorageSettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0330B936510D968B8821EE52 /* StorageSettingsViewController.swift */; };
 		E351B29A6543AF26A693A062 /* SettingsTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A396B5CC11AE1AF9E5DF55E1 /* SettingsTypes.swift */; };
 		E8B6E57A8136E5E2406883DF /* FileBrowserDialogHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DAEC933609FB68D93999CF3 /* FileBrowserDialogHelper.swift */; };
+		EF1AF9AC679E55987714349E /* ChromeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D6CFD21D10BCE6233E4A5E9 /* ChromeViews.swift */; };
 		EFA8CDAAEF2E685A3DA0B208 /* FileBrowserZoomCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A05903544F0D31564E1CA1F8 /* FileBrowserZoomCoordinator.swift */; };
 		F0B10C20D30E40F50A60B70D /* FileOperationsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0B10C20D30E40F50A60B70C /* FileOperationsManager.swift */; };
 		F2F1F3B120814DC8BD4B145A /* StorageOverviewWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABBBCC2BFE824B9CB573D557 /* StorageOverviewWidgetView.swift */; };
@@ -169,6 +170,7 @@
 		4A238D08CA21829F4316AD59 /* FileBrowserQuickLookCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FileBrowserQuickLookCoordinator.swift; path = FileBrowser/Coordinators/FileBrowserQuickLookCoordinator.swift; sourceTree = "<group>"; };
 		4B1FADE6425CA28DEED521D3 /* NSColor+CustomAccentColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Utilities/NSColor+CustomAccentColor.swift"; sourceTree = "<group>"; };
 		4CCF47DFCFAE193F05B95700 /* FileOperationsSettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings/FileOperationsSettingsViewController.swift; sourceTree = "<group>"; };
+		4D6CFD21D10BCE6233E4A5E9 /* ChromeViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ChromeViews.swift; path = App/ChromeViews.swift; sourceTree = "<group>"; };
 		4ECCD8AED13C7753EF4D2613 /* FileBrowserDragDropHandler.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = FileBrowserDragDropHandler.swift; path = FileBrowser/UI/FileBrowserDragDropHandler.swift; sourceTree = "<group>"; };
 		4F42A041AC2EE71E4CDDECBC /* Localizable.strings */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.strings; name = Localizable.strings; path = Localizable.strings; sourceTree = "<group>"; };
 		4F5F16F04A2BB42D6771DDDB /* FavoritesViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Sidebar/FavoritesViewController.swift; sourceTree = "<group>"; };
@@ -445,6 +447,7 @@
 				F3A5343017034A91D5DAA036 /* ColorManaging.swift */,
 				2FF66B751B289B61A2A6AF1A /* PermissionsManaging.swift */,
 				1FE03EF58B8272F5704027E0 /* IconCache.swift */,
+				4D6CFD21D10BCE6233E4A5E9 /* ChromeViews.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -678,6 +681,7 @@
 				13AC31D6C591E2853E5B2786 /* ColorManaging.swift in Sources */,
 				B36D90983A6BFD11FFEAD870 /* PermissionsManaging.swift in Sources */,
 				908A7699D2C911E57B121A5F /* IconCache.swift in Sources */,
+				EF1AF9AC679E55987714349E /* ChromeViews.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

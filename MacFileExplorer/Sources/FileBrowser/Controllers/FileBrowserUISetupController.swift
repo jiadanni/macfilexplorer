@@ -75,14 +75,20 @@ final class FileBrowserUISetupController {
         vc.previewPaneCoordinator.setup(in: splitView, owner: vc)
         
         // Create outline view and scroll view
-        let outline = NSOutlineView()
+        let outline = InsetOutlineView()
+        outline.leadingContentInset = 8
         outline.dataSource = vc.outlineCoordinator
         outline.delegate = vc.outlineCoordinator
         outline.autoresizesOutlineColumn = false
         outline.allowsMultipleSelection = true
         outline.allowsColumnReordering = true
         outline.allowsColumnResizing = true
-        outline.usesAlternatingRowBackgroundColors = true
+        // Stripes and selection are drawn by RoundedSelectionRowView
+        outline.usesAlternatingRowBackgroundColors = false
+        outline.style = .fullWidth
+        outline.backgroundColor = AppDesignSystem.Chrome.contentBackground
+        outline.intercellSpacing = NSSize(width: 0, height: 0)
+        outline.gridStyleMask = []
         outline.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
         
         let scroll = NSScrollView()
@@ -90,6 +96,8 @@ final class FileBrowserUISetupController {
         scroll.hasVerticalScroller = true
         scroll.hasHorizontalScroller = true
         scroll.autohidesScrollers = true
+        scroll.drawsBackground = true
+        scroll.backgroundColor = AppDesignSystem.Chrome.contentBackground
         scroll.translatesAutoresizingMaskIntoConstraints = false
         
         vc.outlineView = outline
@@ -122,15 +130,15 @@ final class FileBrowserUISetupController {
         let dateModifiedColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(AppConfig.ColumnID.dateModified))
         dateModifiedColumn.title = "Date Modified"
         dateModifiedColumn.minWidth = 80
-        dateModifiedColumn.width = 120
+        dateModifiedColumn.width = 170
         dateModifiedColumn.resizingMask = .userResizingMask
         outline?.addTableColumn(dateModifiedColumn)
         
         // Type column
         let typeColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(AppConfig.ColumnID.type))
-        typeColumn.title = "Type"
+        typeColumn.title = "Kind"
         typeColumn.minWidth = 60
-        typeColumn.width = 100
+        typeColumn.width = 110
         typeColumn.resizingMask = .userResizingMask
         outline?.addTableColumn(typeColumn)
         
@@ -138,8 +146,9 @@ final class FileBrowserUISetupController {
         let sizeColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(AppConfig.ColumnID.size))
         sizeColumn.title = "Size"
         sizeColumn.minWidth = 60
-        sizeColumn.width = 80
+        sizeColumn.width = 90
         sizeColumn.resizingMask = .userResizingMask
+        sizeColumn.headerCell.alignment = .right
         outline?.addTableColumn(sizeColumn)
         
         // Date Created column
@@ -157,6 +166,14 @@ final class FileBrowserUISetupController {
         tagsColumn.width = 100
         tagsColumn.resizingMask = .userResizingMask
         outline?.addTableColumn(tagsColumn)
+
+        // Flat header styling (keeps each column's title and alignment)
+        for column in outline?.tableColumns ?? [] {
+            let headerCell = ChromeTableHeaderCell(textCell: column.title)
+            headerCell.alignment = column.headerCell.alignment
+            column.headerCell = headerCell
+        }
+        outline?.cornerView = nil
     }
     
     // MARK: - Outline View Behavior
@@ -199,7 +216,7 @@ final class FileBrowserUISetupController {
             toolbarView.topAnchor.constraint(equalTo: vc.view.topAnchor),
             toolbarView.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor),
             toolbarView.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor),
-            toolbarView.heightAnchor.constraint(equalToConstant: 84),
+            toolbarView.heightAnchor.constraint(equalToConstant: ToolbarViewController.height),
 
             // SplitView (Container + Preview) in middle
             splitView.topAnchor.constraint(equalTo: toolbarView.bottomAnchor),
@@ -211,7 +228,7 @@ final class FileBrowserUISetupController {
             statusBarView.leadingAnchor.constraint(equalTo: vc.view.leadingAnchor),
             statusBarView.trailingAnchor.constraint(equalTo: vc.view.trailingAnchor),
             statusBarView.bottomAnchor.constraint(equalTo: vc.view.bottomAnchor),
-            statusBarView.heightAnchor.constraint(equalToConstant: 24)
+            statusBarView.heightAnchor.constraint(equalToConstant: StatusBarViewController.height)
         ])
     }
 }

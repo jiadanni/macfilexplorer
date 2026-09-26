@@ -227,45 +227,84 @@ class GenericPreviewHandler: PreviewHandler {
         return true // Fallback
     }
     
-    func createView(for file: FileItem) -> NSView {
-         let stackView = NSStackView()
-        stackView.translatesAutoresizingMaskIntoConstraints = false
-        stackView.orientation = .vertical
-        stackView.spacing = 8
-        stackView.alignment = .leading
-        stackView.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("dMMMyjmm")
+        return formatter
+    }()
 
-        // Icon and name row
-        let iconNameStack = NSStackView()
-        iconNameStack.orientation = .horizontal
-        iconNameStack.spacing = 12
-        iconNameStack.alignment = .centerY
+    /// Centered info card: large icon, name, "Kind · Size", then a
+    /// Modified / Where grid under a hairline.
+    func createView(for file: FileItem) -> NSView {
+        let settings = PreviewHandlerSettings.store
 
         let iconView = NSImageView()
-        iconView.image = file.icon(useGrayscale: PreviewHandlerSettings.store.useGrayscaleIcons)
-        iconView.imageScaling = .scaleProportionallyDown
+        iconView.image = file.icon(useGrayscale: settings.useGrayscaleIcons)
+        iconView.imageScaling = .scaleProportionallyUpOrDown
         iconView.translatesAutoresizingMaskIntoConstraints = false
-        iconView.widthAnchor.constraint(equalToConstant: 64).isActive = true
-        iconView.heightAnchor.constraint(equalToConstant: 64).isActive = true
-        iconNameStack.addArrangedSubview(iconView)
+        iconView.widthAnchor.constraint(equalToConstant: 72).isActive = true
+        iconView.heightAnchor.constraint(equalToConstant: 72).isActive = true
 
-        let nameLabel = NSTextField(labelWithString: file.displayName(showExtensions: PreviewHandlerSettings.store.showFileExtensions))
-        nameLabel.font = NSFont.boldSystemFont(ofSize: 14)
-        nameLabel.lineBreakMode = .byTruncatingTail
-        iconNameStack.addArrangedSubview(nameLabel)
+        let nameLabel = NSTextField(wrappingLabelWithString: file.displayName(showExtensions: settings.showFileExtensions))
+        nameLabel.font = NSFont.systemFont(ofSize: 14, weight: .semibold)
+        nameLabel.alignment = .center
+        nameLabel.maximumNumberOfLines = 3
 
-        stackView.addArrangedSubview(iconNameStack)
+        // sizeString uses "--" for folders without a computed size
+        let sizeText = file.sizeString == "--" ? "—" : file.sizeString
+        let summaryLabel = NSTextField(labelWithString: "\(file.kind) · \(sizeText)")
+        summaryLabel.font = AppDesignSystem.Typography.caption
+        summaryLabel.textColor = .secondaryLabelColor
+        summaryLabel.alignment = .center
+        summaryLabel.lineBreakMode = .byTruncatingTail
 
-        // Separator
-        let separator = NSBox()
-        separator.boxType = .separator
-        stackView.addArrangedSubview(separator)
-        separator.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -40).isActive = true
-        
-        // Info
-        stackView.addArrangedSubview(NSTextField(labelWithString: "Kind: \(file.url.pathExtension.uppercased())"))
-        stackView.addArrangedSubview(NSTextField(labelWithString: "Size: \(file.sizeString)"))
-        
+        let titleStack = NSStackView(views: [nameLabel, summaryLabel])
+        titleStack.orientation = .vertical
+        titleStack.alignment = .centerX
+        titleStack.spacing = 2
+
+        let divider = HairlineView()
+
+        let whereText = (file.url.deletingLastPathComponent().path as NSString).abbreviatingWithTildeInPath
+        let modifiedText = file.modificationDate.map { Self.dateFormatter.string(from: $0) } ?? "—"
+        let grid = NSGridView(views: [
+            [Self.metadataKey(L10n.text("Modified")), Self.metadataValue(modifiedText)],
+            [Self.metadataKey(L10n.text("Where")), Self.metadataValue(whereText)]
+        ])
+        grid.rowSpacing = 6
+        grid.columnSpacing = 12
+        grid.column(at: 1).xPlacement = .trailing
+
+        let stackView = NSStackView(views: [iconView, titleStack, divider, grid])
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.orientation = .vertical
+        stackView.alignment = .centerX
+        stackView.spacing = 16
+        stackView.edgeInsets = NSEdgeInsets(top: 32, left: 20, bottom: 20, right: 20)
+        stackView.setCustomSpacing(12, after: divider)
+
+        NSLayoutConstraint.activate([
+            titleStack.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -40),
+            divider.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -40),
+            grid.widthAnchor.constraint(equalTo: stackView.widthAnchor, constant: -40)
+        ])
         return stackView
+    }
+
+    private static func metadataKey(_ text: String) -> NSTextField {
+        let label = NSTextField(labelWithString: text)
+        label.font = AppDesignSystem.Typography.caption
+        label.textColor = .secondaryLabelColor
+        label.setContentCompressionResistancePriority(.required, for: .horizontal)
+        return label
+    }
+
+    private static func metadataValue(_ text: String) -> NSTextField {
+        let label = NSTextField(labelWithString: text)
+        label.font = AppDesignSystem.Typography.caption
+        label.alignment = .right
+        label.lineBreakMode = .byTruncatingMiddle
+        label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return label
     }
 }

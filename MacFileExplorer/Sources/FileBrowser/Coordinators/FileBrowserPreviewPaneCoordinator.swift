@@ -138,6 +138,9 @@ class FileBrowserPreviewPaneCoordinator: NSObject, NSSplitViewDelegate {
         guard previewPaneViewController == nil else { return }
         
         let previewVC = PreviewPaneViewController()
+        previewVC.onCloseRequested = { [weak self] in
+            self?.setPreviewPaneVisible(false)
+        }
         previewPaneViewController = previewVC
 
         // Ensure proper view-controller containment so lifecycle events are delivered

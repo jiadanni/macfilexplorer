@@ -39,7 +39,7 @@ class LocationsViewController: NSViewController {
     }
     
     var contentHeight: CGFloat {
-        let rowHeight: CGFloat = 22
+        let rowHeight = SidebarMetrics.rowHeight
         let rowCount = CGFloat(driveItems.count)
         return rowCount * rowHeight
     }
@@ -60,7 +60,7 @@ class LocationsViewController: NSViewController {
         tableView = NSTableView()
         tableView.headerView = nil
         tableView.rowSizeStyle = .small
-        tableView.style = .sourceList
+        tableView.style = .plain
         tableView.backgroundColor = .clear
         tableView.intercellSpacing = NSSize(width: 0, height: 0)
         tableView.delegate = self
@@ -82,6 +82,7 @@ class LocationsViewController: NSViewController {
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        scrollView.drawsBackground = false
         scrollView.documentView = tableView
         
         view.addSubview(scrollView)
@@ -107,7 +108,7 @@ class LocationsViewController: NSViewController {
                     let resourceValues = try volumeURL.resourceValues(forKeys: [.volumeNameKey])
                     let volumeName = resourceValues.volumeName ?? volumeURL.lastPathComponent
                     let icon = workspace.icon(forFile: volumeURL.path)
-                    driveItems.append(SidebarItem(name: volumeName, url: volumeURL, icon: icon))
+                    driveItems.append(SidebarItem(name: volumeName, url: volumeURL, icon: icon, detail: Self.freeSpaceDescription(for: volumeURL)))
                 } catch {
                     debugLog("Error reading volume info: \(error)")
                 }
@@ -225,6 +226,14 @@ class LocationsViewController: NSViewController {
         ejectDrive(item: driveItems[row])
     }
     
+    /// "105 GB free" for a mounted volume, or nil when capacity is unavailable.
+    static func freeSpaceDescription(for volumeURL: URL) -> String? {
+        guard let values = try? volumeURL.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]),
+              let bytes = values.volumeAvailableCapacityForImportantUsage, bytes > 0 else { return nil }
+        let formatted = ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+        return String(format: L10n.text("%@ free"), formatted)
+    }
+
     private func isRemovableDrive(url: URL) -> Bool {
         do {
             let resourceValues = try url.resourceValues(forKeys: [.volumeIsEjectableKey, .volumeIsRemovableKey])
@@ -260,9 +269,9 @@ extension LocationsViewController: NSTableViewDataSource, NSTableViewDelegate {
         
         cellView.addSubview(imageView)
         cellView.addSubview(textField)
-        
-        var constraints: [NSLayoutConstraint] = []
-        
+
+        // Trailing accessory: eject button for removable drives, otherwise free space
+        let accessory: NSView?
         if isRemovableDrive(url: item.url) {
             let ejectButton = HoverButton()
             ejectButton.translatesAutoresizingMaskIntoConstraints = false
@@ -272,42 +281,41 @@ extension LocationsViewController: NSTableViewDataSource, NSTableViewDelegate {
             ejectButton.target = self
             ejectButton.action = #selector(ejectButtonAction(_:))
             ejectButton.tag = row
-            cellView.addSubview(ejectButton)
-            
-            constraints = [
-                imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                imageView.widthAnchor.constraint(equalToConstant: 16),
-                imageView.heightAnchor.constraint(equalToConstant: 16),
-                
-                textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
-                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                textField.trailingAnchor.constraint(equalTo: ejectButton.leadingAnchor, constant: -4),
-                
-                ejectButton.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4),
-                ejectButton.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                ejectButton.widthAnchor.constraint(equalToConstant: 16),
-                ejectButton.heightAnchor.constraint(equalToConstant: 16)
-            ]
+            ejectButton.widthAnchor.constraint(equalToConstant: 16).isActive = true
+            ejectButton.heightAnchor.constraint(equalToConstant: 16).isActive = true
+            accessory = ejectButton
+        } else if let detail = item.detail {
+            let detailLabel = NSTextField(labelWithString: detail)
+            detailLabel.font = AppDesignSystem.Typography.captionMonospacedDigits
+            detailLabel.textColor = .tertiaryLabelColor
+            detailLabel.translatesAutoresizingMaskIntoConstraints = false
+            detailLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+            accessory = detailLabel
         } else {
-             constraints = [
-                imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-                imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                imageView.widthAnchor.constraint(equalToConstant: 16),
-                imageView.heightAnchor.constraint(equalToConstant: 16),
-                
-                textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
-                textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-                textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
+            accessory = nil
+        }
+
+        var constraints = SidebarMetrics.iconAndLabelConstraints(imageView: imageView, textField: textField, in: cellView, trailingTo: accessory?.leadingAnchor)
+        if let accessory {
+            cellView.addSubview(accessory)
+            constraints += [
+                accessory.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -SidebarMetrics.iconLeading),
+                accessory.centerYAnchor.constraint(equalTo: cellView.centerYAnchor)
             ]
         }
-        
+        textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        imageView.contentTintColor = .secondaryLabelColor
+
         NSLayoutConstraint.activate(constraints)
         return cellView
     }
     
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
-        return 22
+        return SidebarMetrics.rowHeight
+    }
+
+    func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        SidebarMetrics.makeRowView()
     }
     
     func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int, proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation {

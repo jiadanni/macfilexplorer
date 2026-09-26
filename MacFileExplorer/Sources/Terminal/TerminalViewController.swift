@@ -12,9 +12,12 @@ class TerminalViewController: NSViewController {
     private var headerView: NSView!
     private var closeButton: NSButton!
     private var titleLabel: NSTextField!
+    private var subtitleLabel: NSTextField!
     private var scrollView: NSScrollView!
     private var textView: NSTextView!
-    private var currentDirectory: String = ""
+    private var currentDirectory: String = "" {
+        didSet { updateHeaderSubtitle() }
+    }
     private var commandHistory: [String] = []
     private var historyIndex = 0
     private(set) var promptLocation: Int = 0
@@ -82,34 +85,44 @@ class TerminalViewController: NSViewController {
     private func setupUI() {
         view.wantsLayer = true
         view.layer?.backgroundColor = AppDesignSystem.Terminal.background.cgColor
+        // The terminal keeps a fixed dark theme; resolve semantic colors (scrollers,
+        // header buttons) against the dark appearance regardless of system setting.
+        view.appearance = NSAppearance(named: .darkAqua)
 
-        // Create header view
+        // Header: "Terminal  zsh — ~/path" with a close button and a hairline below
         headerView = NSView()
         headerView.translatesAutoresizingMaskIntoConstraints = false
         headerView.wantsLayer = true
         headerView.layer?.backgroundColor = AppDesignSystem.Terminal.headerBackground.cgColor
         view.addSubview(headerView)
 
-        // Create title label
         titleLabel = NSTextField(labelWithString: L10n.text("Terminal"))
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.textColor = AppDesignSystem.Terminal.foreground
+        titleLabel.textColor = AppDesignSystem.Terminal.headerTitleColor
         titleLabel.font = AppDesignSystem.Terminal.headerTitleFont
+        titleLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
         titleLabel.setAccessibilityLabel(L10n.text("Terminal"))
         titleLabel.setAccessibilityRole(.staticText)
         headerView.addSubview(titleLabel)
 
-        // Create close button
-        closeButton = NSButton()
-        closeButton.translatesAutoresizingMaskIntoConstraints = false
-        closeButton.bezelStyle = .texturedRounded
-        closeButton.image = NSImage.mfeSymbol(named: "xmark", accessibilityDescription: "Close Terminal")
-        closeButton.target = self
-        closeButton.action = #selector(closeButtonClicked(_:))
-        closeButton.isBordered = false
-        closeButton.setAccessibilityRole(.button)
-        closeButton.setAccessibilityLabel(L10n.text("Close Terminal"))
+        subtitleLabel = NSTextField(labelWithString: "")
+        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        subtitleLabel.textColor = AppDesignSystem.Terminal.headerSubtitleColor
+        subtitleLabel.font = AppDesignSystem.Terminal.headerSubtitleFont
+        subtitleLabel.lineBreakMode = .byTruncatingHead
+        subtitleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        headerView.addSubview(subtitleLabel)
+
+        let closeIcon = ToolbarIconButton(symbolName: "xmark", accessibilityDescription: L10n.text("Close Terminal"))
+        closeIcon.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        closeIcon.toolTip = L10n.text("Hide Terminal")
+        closeIcon.target = self
+        closeIcon.action = #selector(closeButtonClicked(_:))
+        closeButton = closeIcon
         headerView.addSubview(closeButton)
+
+        let headerDivider = HairlineView(color: AppDesignSystem.Terminal.headerDivider)
+        headerView.addSubview(headerDivider)
 
         // Create scroll view for terminal output
         scrollView = NSScrollView()
@@ -128,7 +141,7 @@ class TerminalViewController: NSViewController {
         textView.backgroundColor = AppDesignSystem.Terminal.background
         textView.textColor = AppDesignSystem.Terminal.foreground
         textView.font = AppDesignSystem.Typography.monospace()
-        textView.textContainerInset = NSSize(width: 10, height: 10)
+        textView.textContainerInset = NSSize(width: 12, height: 12)
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
         textView.autoresizingMask = [.width, .height]
@@ -148,15 +161,23 @@ class TerminalViewController: NSViewController {
             headerView.topAnchor.constraint(equalTo: view.topAnchor),
             headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            headerView.heightAnchor.constraint(equalToConstant: 26),
+            headerView.heightAnchor.constraint(equalToConstant: 30),
 
-            titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 8),
+            titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
             titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+
+            subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 8),
+            subtitleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            subtitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: closeButton.leadingAnchor, constant: -8),
 
             closeButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -8),
             closeButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            closeButton.widthAnchor.constraint(equalToConstant: 20),
-            closeButton.heightAnchor.constraint(equalToConstant: 20),
+            closeButton.widthAnchor.constraint(equalToConstant: 22),
+            closeButton.heightAnchor.constraint(equalToConstant: 22),
+
+            headerDivider.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
+            headerDivider.trailingAnchor.constraint(equalTo: headerView.trailingAnchor),
+            headerDivider.bottomAnchor.constraint(equalTo: headerView.bottomAnchor),
 
             scrollView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -647,6 +668,14 @@ class TerminalViewController: NSViewController {
             close(masterFD)
             masterFD = -1
         }
+    }
+
+    /// "zsh — ~/Desktop" next to the header title.
+    private func updateHeaderSubtitle() {
+        guard let subtitleLabel else { return }
+        let shellName = URL(fileURLWithPath: getShellPath()).lastPathComponent
+        let directory = (currentDirectory as NSString).abbreviatingWithTildeInPath
+        subtitleLabel.stringValue = directory.isEmpty ? shellName : "\(shellName) — \(directory)"
     }
 
     private func getShellPath() -> String {

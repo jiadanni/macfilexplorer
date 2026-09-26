@@ -152,10 +152,10 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
     var isFreeFormEnabled: Bool = true
     
     // Helpers
+    /// Locale-aware "21 Jul 2026, 01:14"-style dates for list columns.
     let shortDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
+        formatter.setLocalizedDateFormatFromTemplate("dMMMyjmm")
         return formatter
     }()
 
@@ -337,7 +337,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
         
         // Update toolbar display
         toolbarViewController?.updateViewModeDisplay(for: currentViewMode)
-        toolbarViewController?.updateSortDisplay(column: sortColumn, ascending: sortAscending)
+        syncSortDisplay()
         
         // Set handler delegates once during setup (avoid reassigning on every event)
         keyboardHandler.delegate = actionHandler
@@ -434,7 +434,7 @@ class FileBrowserViewController: NSViewController, NSMenuDelegate, NSGestureReco
             FileBrowserActionHelper.getAvailableDiskSpace(for: currentDirectory)
         )
         
-        statusBarCoordinator.updateFileInformation(selectedCount: selectedCount, totalSize: totalSize, diskSpace: diskSpace ?? "Unknown")
+        statusBarCoordinator.updateFileInformation(selectedCount: selectedCount, totalSize: totalSize, itemCount: dataSource.numberOfItems, diskSpace: diskSpace ?? "Unknown")
         delegate?.fileBrowser(self, didUpdateSelection: selectedCount, totalSize: totalSize)
         delegate?.fileBrowser(self, didUpdateDiskSpace: diskSpace)
     }

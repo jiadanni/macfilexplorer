@@ -22,16 +22,14 @@ class SidebarViewController: NSViewController {
     }
 
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 600))
+        view = ChromeSurfaceView(fillColor: AppDesignSystem.Chrome.barBackground)
+        view.frame = NSRect(x: 0, y: 0, width: 200, height: 600)
         setupUI()
     }
     
     private func setupUI() {
-        view.wantsLayer = true
-        view.layer?.backgroundColor = AppDesignSystem.Colors.widgetBackground.cgColor
-
-        // Create the top-level split view
-        let mainSplitView = NSSplitView()
+        // Create the top-level split view (sections stay resizable, dividers are invisible)
+        let mainSplitView = SidebarSplitView()
         mainSplitView.isVertical = false
         mainSplitView.dividerStyle = .thin
         mainSplitView.translatesAutoresizingMaskIntoConstraints = false
@@ -45,7 +43,7 @@ class SidebarViewController: NSViewController {
         ])
 
         // Create the nested split view for the bottom sections
-        let bottomSplitView = NSSplitView()
+        let bottomSplitView = SidebarSplitView()
         bottomSplitView.isVertical = false
         bottomSplitView.dividerStyle = .thin
 
@@ -55,7 +53,7 @@ class SidebarViewController: NSViewController {
         addChild(favoritesVC)
         
         let favoritesContainer = NSView()
-        let favoritesHeader = createSectionHeader(title: "FAVORITES")
+        let favoritesHeader = createSectionHeader(title: L10n.text("Favorites"))
         favoritesVC.view.translatesAutoresizingMaskIntoConstraints = false
         
         // Ensure favoritesVC view has a minimum height
@@ -82,7 +80,7 @@ class SidebarViewController: NSViewController {
         addChild(locationsVC)
         
         let locationsContainer = NSView()
-        let locationsHeader = createSectionHeader(title: "LOCATIONS")
+        let locationsHeader = createSectionHeader(title: L10n.text("Locations"))
         locationsVC.view.translatesAutoresizingMaskIntoConstraints = false
         locationsVC.view.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
         
@@ -107,7 +105,7 @@ class SidebarViewController: NSViewController {
         addChild(folderOutlineVC)
         
         let folderContainer = NSView()
-        let folderHeader = createSectionHeader(title: "FOLDER EXPLORER")
+        let folderHeader = createSectionHeader(title: L10n.text("Folders"))
         folderOutlineVC.view.translatesAutoresizingMaskIntoConstraints = false
         folderOutlineVC.view.heightAnchor.constraint(greaterThanOrEqualToConstant: 150).isActive = true
         
@@ -150,7 +148,7 @@ class SidebarViewController: NSViewController {
             guard totalHeight > 0 else { return }
             
             let mainDividerThickness = mainSplitView.dividerThickness
-            let headerHeight: CGFloat = 20.0
+            let headerHeight = SidebarMetrics.headerHeight
             
             // Calculate ideal heights based on content
             let favoritesContentHeight = favoritesVC.contentHeight + headerHeight
@@ -183,14 +181,15 @@ class SidebarViewController: NSViewController {
 
         let label = NSTextField(labelWithString: title)
         label.font = AppDesignSystem.Typography.sidebarHeader
-        label.textColor = AppDesignSystem.Colors.inactive
+        label.textColor = .tertiaryLabelColor
         label.translatesAutoresizingMaskIntoConstraints = false
+        label.setAccessibilityRole(.staticText)
         headerView.addSubview(label)
 
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 10),
-            label.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            headerView.heightAnchor.constraint(equalToConstant: 20),
+            label.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: SidebarMetrics.iconLeading),
+            label.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -4),
+            headerView.heightAnchor.constraint(equalToConstant: SidebarMetrics.headerHeight),
             headerView.widthAnchor.constraint(greaterThanOrEqualToConstant: 0)
         ])
 
@@ -217,4 +216,11 @@ extension SidebarViewController: SidebarDelegate {
     func sidebarDidSelectLocation(_ url: URL) {
         delegate?.sidebarDidSelectLocation(url)
     }
+}
+
+/// Split view whose dividers stay draggable but aren't drawn, so the sidebar
+/// sections read as one continuous list (per the design).
+private final class SidebarSplitView: NSSplitView {
+    override var dividerThickness: CGFloat { 6 }
+    override func drawDivider(in rect: NSRect) {}
 }

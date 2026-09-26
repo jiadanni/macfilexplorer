@@ -54,6 +54,61 @@ struct AppDesignSystem {
         }
     }
 
+    // MARK: - Window Chrome
+
+    /// Surface colors for the main window chrome (sidebar, toolbar, tab strip,
+    /// file list, status bar). Dark values follow the "File Explorer Redesign"
+    /// mock; light values are tuned counterparts so the app still honours the
+    /// system appearance.
+    struct Chrome {
+        private static func dynamic(light: NSColor, dark: NSColor) -> NSColor {
+            NSColor(name: nil) { appearance in
+                appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
+            }
+        }
+
+        /// Sidebar and toolbar surface (#262626)
+        static let barBackground = dynamic(light: NSColor(white: 0.93, alpha: 1), dark: NSColor(white: 0.149, alpha: 1))
+
+        /// File list / preview surface (#1E1E1E)
+        static let contentBackground = dynamic(light: .white, dark: NSColor(white: 0.118, alpha: 1))
+
+        /// Tab strip surface, one step darker than content (#1A1A1A)
+        static let tabStripBackground = dynamic(light: NSColor(white: 0.88, alpha: 1), dark: NSColor(white: 0.102, alpha: 1))
+
+        /// Strong divider between chrome regions (toolbar bottom, sidebar edge)
+        static let barBorder = dynamic(light: NSColor(white: 0, alpha: 0.12), dark: NSColor(white: 0, alpha: 0.5))
+
+        /// Hairline inside content areas (column header, status bar, preview edge)
+        static let hairline = dynamic(light: NSColor(white: 0, alpha: 0.08), dark: NSColor(white: 1, alpha: 0.06))
+
+        /// Background of grouped controls such as the view-mode pill and search field
+        static let controlFill = dynamic(light: NSColor(white: 0, alpha: 0.05), dark: NSColor(white: 1, alpha: 0.06))
+
+        /// Selected segment inside the view-mode pill
+        static let controlSelectedFill = dynamic(light: .white, dark: NSColor(white: 1, alpha: 0.14))
+
+        /// Hover fill for borderless toolbar buttons
+        static let controlHoverFill = dynamic(light: NSColor(white: 0, alpha: 0.06), dark: NSColor(white: 1, alpha: 0.08))
+
+        /// Alternate-row stripe in the file list
+        static let rowStripe = dynamic(light: NSColor(white: 0, alpha: 0.03), dark: NSColor(white: 1, alpha: 0.025))
+
+        /// Neutral sidebar row selection
+        static let sidebarSelection = dynamic(light: NSColor(white: 0, alpha: 0.08), dark: NSColor(white: 1, alpha: 0.1))
+
+        /// Tint for folder glyphs in the sidebar (#5AC8FA)
+        static let folderTint = dynamic(
+            light: NSColor(srgbRed: 0.10, green: 0.60, blue: 0.85, alpha: 1),
+            dark: NSColor(srgbRed: 0.353, green: 0.784, blue: 0.980, alpha: 1)
+        )
+
+        /// Fill behind an "on" toggle button (accent @ 18%)
+        static var toggleOnFill: NSColor {
+            NSColor.customAccentColor.withAlphaComponent(0.18)
+        }
+    }
+
     // MARK: - Typography
 
     struct Typography {
@@ -80,6 +135,15 @@ struct AppDesignSystem {
 
         /// Sidebar row label (Favorites, Locations, Folder Explorer rows)
         static let sidebarRow = NSFont.systemFont(ofSize: 13, weight: .regular)
+
+        /// Current folder name in the toolbar
+        static let toolbarTitle = NSFont.systemFont(ofSize: 15, weight: .semibold)
+
+        /// Breadcrumb path under the toolbar title
+        static let toolbarSubtitle = NSFont.systemFont(ofSize: 11, weight: .regular)
+
+        /// Numeric caption (status bar, free-space labels) with aligned digits
+        static let captionMonospacedDigits = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
 
         /// Monospaced text (terminal output/input)
         static func monospace(weight: NSFont.Weight = .regular) -> NSFont {
@@ -151,12 +215,16 @@ struct AppDesignSystem {
     /// Colors for the Terminal panel, which intentionally keeps a fixed
     /// dark theme regardless of the system's light/dark appearance.
     struct Terminal {
-        static let background = NSColor(white: 0.1, alpha: 1.0)
-        static let headerBackground = NSColor(white: 0.15, alpha: 1.0)
+        static let background = NSColor(white: 0.094, alpha: 1.0)
+        static let headerBackground = background
+        static let headerDivider = NSColor(white: 1, alpha: 0.05)
         static let foreground = NSColor(white: 0.9, alpha: 1.0)
         static let brightForeground = NSColor(white: 0.95, alpha: 1.0)
-        static let dimForeground = NSColor.darkGray
-        static let headerTitleFont = NSFont.boldSystemFont(ofSize: 12)
+        static let dimForeground = NSColor(white: 1, alpha: 0.35)
+        static let headerTitleColor = NSColor(white: 1, alpha: 0.55)
+        static let headerSubtitleColor = NSColor(white: 1, alpha: 0.3)
+        static let headerTitleFont = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        static let headerSubtitleFont = NSFont.systemFont(ofSize: 11, weight: .regular)
 
         /// ANSI 16-color palette (SGR codes 30-37, 90-97)
         enum ANSI {

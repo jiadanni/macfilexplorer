@@ -36,11 +36,15 @@ class FolderOutlineViewController: NSViewController {
     }
     
     private func setupUI() {
-        outlineView = NSOutlineView()
+        let insetOutline = InsetOutlineView()
+        insetOutline.leadingContentInset = SidebarMetrics.rowInset
+        outlineView = insetOutline
         outlineView.headerView = nil
         outlineView.rowSizeStyle = .small
-        outlineView.style = .sourceList
+        outlineView.style = .plain
         outlineView.backgroundColor = .clear
+        outlineView.rowHeight = SidebarMetrics.folderRowHeight
+        outlineView.indentationPerLevel = 14
         outlineView.intercellSpacing = NSSize(width: 0, height: 0)
         outlineView.delegate = self
         outlineView.dataSource = self
@@ -63,6 +67,7 @@ class FolderOutlineViewController: NSViewController {
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        scrollView.drawsBackground = false
         scrollView.documentView = outlineView
         
         view.addSubview(scrollView)
@@ -242,7 +247,7 @@ extension FolderOutlineViewController: NSOutlineViewDataSource, NSOutlineViewDel
     }
     
     func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
-        return AccentTableRowView()
+        return SidebarMetrics.makeRowView()
     }
     
     func outlineViewSelectionDidChange(_ notification: Notification) {

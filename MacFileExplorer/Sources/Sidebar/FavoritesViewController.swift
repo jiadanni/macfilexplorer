@@ -24,7 +24,7 @@ class FavoritesViewController: NSViewController {
     }
 
     var contentHeight: CGFloat {
-        let rowHeight: CGFloat = 22
+        let rowHeight = SidebarMetrics.rowHeight
         let rowCount = CGFloat(favoriteItems.count)
         return rowCount * rowHeight
     }
@@ -48,7 +48,7 @@ class FavoritesViewController: NSViewController {
         tableView = NSTableView()
         tableView.headerView = nil
         tableView.rowSizeStyle = .small
-        tableView.style = .sourceList
+        tableView.style = .plain
         tableView.backgroundColor = .clear
         tableView.intercellSpacing = NSSize(width: 0, height: 0)
         tableView.delegate = self
@@ -71,6 +71,7 @@ class FavoritesViewController: NSViewController {
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
+        scrollView.drawsBackground = false
         scrollView.documentView = tableView
         
         view.addSubview(scrollView)
@@ -83,6 +84,8 @@ class FavoritesViewController: NSViewController {
         ])
     }
     
+    private static let folderGlyph: NSImage = NSImage.mfeSymbol(named: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(for: .folder)
+
     func loadFavorites() {
         let fileManager = FileManager.default
         let workspace = NSWorkspace.shared
@@ -95,7 +98,7 @@ class FavoritesViewController: NSViewController {
         let applicationsURL = URL(fileURLWithPath: "/Applications")
         
         // Use system icons
-        let folderIcon = NSImage.mfeSymbol(named: "folder", accessibilityDescription: nil) ?? NSWorkspace.shared.icon(for: .folder)
+        let folderIcon = Self.folderGlyph
         let desktopIcon = NSImage.mfeSymbol(named: "desktopcomputer", accessibilityDescription: nil) ?? folderIcon
         let documentIcon = NSImage.mfeSymbol(named: "doc", accessibilityDescription: nil) ?? folderIcon
         let downloadIcon = NSImage.mfeSymbol(named: "arrow.down.circle", accessibilityDescription: nil) ?? folderIcon
@@ -105,7 +108,7 @@ class FavoritesViewController: NSViewController {
             SidebarItem(name: "Desktop", url: desktopURL, icon: desktopIcon),
             SidebarItem(name: "Documents", url: documentsURL, icon: documentIcon),
             SidebarItem(name: "Downloads", url: downloadsURL, icon: downloadIcon),
-            SidebarItem(name: "Applications", url: applicationsURL, icon: workspace.icon(forFile: applicationsURL.path)),
+            SidebarItem(name: "Applications", url: applicationsURL, icon: NSImage.mfeSymbol(named: "square.grid.2x2", accessibilityDescription: nil) ?? workspace.icon(forFile: applicationsURL.path)),
             SidebarItem(name: "Home", url: homeURL, icon: homeIcon)
         ]
         
@@ -120,7 +123,9 @@ class FavoritesViewController: NSViewController {
         let workspace = NSWorkspace.shared
         for path in savedPaths {
             let url = URL(fileURLWithPath: path)
-            let icon = workspace.icon(forFile: path)
+            let icon = url.hasDirectoryPath || (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+                ? Self.folderGlyph
+                : workspace.icon(forFile: path)
             let name = url.lastPathComponent
             if !favoriteItems.contains(where: { $0.url == url }) {
                 favoriteItems.append(SidebarItem(name: name, url: url, icon: icon))
@@ -135,7 +140,8 @@ class FavoritesViewController: NSViewController {
     }
 
              func addFavorite(item: FileItem) {
-        let sidebarItem = SidebarItem(name: item.name, url: item.url, icon: item.icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons))
+        let icon = item.isDirectory ? Self.folderGlyph : item.icon(useGrayscale: SettingsStore.shared.useGrayscaleIcons)
+        let sidebarItem = SidebarItem(name: item.name, url: item.url, icon: icon)
         if !favoriteItems.contains(where: { $0.url == sidebarItem.url }) {
             favoriteItems.append(sidebarItem)
             tableView.reloadData()
@@ -229,22 +235,22 @@ extension FavoritesViewController: NSTableViewDataSource, NSTableViewDelegate {
         cellView.addSubview(imageView)
         cellView.addSubview(textField)
         
-        NSLayoutConstraint.activate([
-            imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: 4),
-            imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-            imageView.widthAnchor.constraint(equalToConstant: 16),
-            imageView.heightAnchor.constraint(equalToConstant: 16),
-            
-            textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 6),
-            textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
-            textField.trailingAnchor.constraint(equalTo: cellView.trailingAnchor, constant: -4)
-        ])
+        // Template glyphs (SF Symbols) take the accent tint, per the design
+        if item.icon?.isTemplate == true {
+            imageView.contentTintColor = .customAccentColor
+        }
+
+        NSLayoutConstraint.activate(SidebarMetrics.iconAndLabelConstraints(imageView: imageView, textField: textField, in: cellView))
         
         return cellView
     }
     
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
-        return 22
+        return SidebarMetrics.rowHeight
+    }
+
+    func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        SidebarMetrics.makeRowView()
     }
     
     // Drag & Drop

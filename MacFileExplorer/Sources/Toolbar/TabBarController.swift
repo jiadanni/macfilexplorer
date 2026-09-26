@@ -55,66 +55,87 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         }
     }
 
-    private func setupUI() {
-        // Create tab bar container at the top
-        tabBarContainer = NSView()
-        tabBarContainer.translatesAutoresizingMaskIntoConstraints = false
-        tabBarContainer.wantsLayer = true
-        tabBarContainer.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+    static let stripHeight: CGFloat = 32
+    private static let tabHeight: CGFloat = 26
 
-        // Add bottom border for visual separation
-        let separator = NSBox()
-        separator.boxType = .separator
-        separator.translatesAutoresizingMaskIntoConstraints = false
+    private func setupUI() {
+        // Tab strip: one step darker than the content; the selected tab is
+        // raised in the content color so it reads as attached to the pane below.
+        let strip = ChromeSurfaceView(fillColor: AppDesignSystem.Chrome.tabStripBackground)
+        strip.translatesAutoresizingMaskIntoConstraints = false
+        tabBarContainer = strip
+
+        let separator = HairlineView()
         tabBarContainer.addSubview(separator)
 
         view.addSubview(tabBarContainer)
 
-        // Create stack view for tab buttons
         tabButtonsStackView = NSStackView()
         tabButtonsStackView.translatesAutoresizingMaskIntoConstraints = false
         tabButtonsStackView.orientation = .horizontal
-        tabButtonsStackView.spacing = -1
-        tabButtonsStackView.alignment = .centerY
+        tabButtonsStackView.spacing = 2
+        tabButtonsStackView.alignment = .bottom
         tabBarContainer.addSubview(tabButtonsStackView)
 
-        // Create tab view
+        let newTabButton = ToolbarIconButton(symbolName: "plus", accessibilityDescription: L10n.text("New Tab"))
+        newTabButton.toolTip = L10n.text("New Tab")
+        newTabButton.target = self
+        newTabButton.action = #selector(newTabButtonClicked(_:))
+        tabBarContainer.addSubview(newTabButton)
+
         tabView = NSTabView()
         tabView.tabViewType = .noTabsNoBorder
         tabView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(tabView)
 
-        // Constrain tab bar to top
         NSLayoutConstraint.activate([
             tabBarContainer.topAnchor.constraint(equalTo: view.topAnchor),
             tabBarContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tabBarContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tabBarContainer.heightAnchor.constraint(equalToConstant: 28),
+            tabBarContainer.heightAnchor.constraint(equalToConstant: Self.stripHeight),
 
-            tabButtonsStackView.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor, constant: 4),
-            tabButtonsStackView.trailingAnchor.constraint(lessThanOrEqualTo: tabBarContainer.trailingAnchor, constant: -4),
-            tabButtonsStackView.topAnchor.constraint(equalTo: tabBarContainer.topAnchor),
-            tabButtonsStackView.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor, constant: -1),
+            tabButtonsStackView.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor, constant: 8),
+            tabButtonsStackView.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor),
+            tabButtonsStackView.heightAnchor.constraint(equalToConstant: Self.tabHeight),
+
+            newTabButton.leadingAnchor.constraint(equalTo: tabButtonsStackView.trailingAnchor, constant: 2),
+            newTabButton.trailingAnchor.constraint(lessThanOrEqualTo: tabBarContainer.trailingAnchor, constant: -8),
+            newTabButton.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor, constant: -1),
+            newTabButton.widthAnchor.constraint(equalToConstant: 26),
+            newTabButton.heightAnchor.constraint(equalToConstant: 24),
 
             separator.leadingAnchor.constraint(equalTo: tabBarContainer.leadingAnchor),
             separator.trailingAnchor.constraint(equalTo: tabBarContainer.trailingAnchor),
             separator.bottomAnchor.constraint(equalTo: tabBarContainer.bottomAnchor),
-            separator.heightAnchor.constraint(equalToConstant: 1)
-        ])
 
-        // Constrain tab view below tab bar
-        NSLayoutConstraint.activate([
             tabView.topAnchor.constraint(equalTo: tabBarContainer.bottomAnchor),
             tabView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tabView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tabView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+        // Keep the "+" button beside the last tab, but let tabs squeeze first when crowded.
+        tabButtonsStackView.setClippingResistancePriority(.defaultLow, for: .horizontal)
+    }
+
+    /// Updates a tab title in place, keeping the selected/unselected styling.
+    private func setTitle(_ title: String, forTabButtonAt index: Int) {
+        guard let button = tabButtons.safe(at: index) else { return }
+        let isSelected = index == currentTabIndex
+        button.attributedTitle = NSAttributedString(string: title, attributes: [
+            .font: NSFont.systemFont(ofSize: 13, weight: isSelected ? .medium : .regular),
+            .foregroundColor: isSelected ? NSColor.labelColor : NSColor.secondaryLabelColor
+        ])
+        button.setAccessibilityLabel("\(title) tab")
+    }
+
+    @objc private func newTabButtonClicked(_ sender: Any) {
+        addNewTab()
     }
 
     private func createTabButtonContainer(title: String, index: Int, showClose: Bool) -> NSView {
         let container = TabButtonContainerView()
         container.translatesAutoresizingMaskIntoConstraints = false
-        
+
         let isSelected = index == currentTabIndex
         container.isSelected = isSelected
 
@@ -128,87 +149,50 @@ class TabBarController: NSViewController, SplitPaneViewControllerDelegate {
         button.target = self
         button.action = #selector(tabButtonClicked(_:))
         button.tag = index
-        button.font = NSFont.systemFont(ofSize: 13)
-        button.alignment = .center
+        button.alignment = .left
+        button.lineBreakMode = .byTruncatingTail
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.wantsLayer = true
-        button.layer?.backgroundColor = NSColor.clear.cgColor
-
-        if isSelected {
-            button.contentTintColor = NSColor.labelColor
-            button.font = NSFont.systemFont(ofSize: 13, weight: .medium)
-        } else {
-            button.contentTintColor = NSColor.secondaryLabelColor
-            button.font = NSFont.systemFont(ofSize: 13)
-        }
-
+        button.attributedTitle = NSAttributedString(string: title, attributes: [
+            .font: NSFont.systemFont(ofSize: 13, weight: isSelected ? .medium : .regular),
+            .foregroundColor: isSelected ? NSColor.labelColor : NSColor.secondaryLabelColor
+        ])
+        button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         container.addSubview(button)
 
-        // Make the entire container clickable by adding a click gesture recognizer.
-        // This ensures the hit area isn't limited to the centered title button.
+        // Make the entire container clickable, not just the title.
         let clickRecognizer = NSClickGestureRecognizer(target: self, action: #selector(tabContainerClicked(_:)))
         clickRecognizer.buttonMask = 0x1 // left mouse button
         container.addGestureRecognizer(clickRecognizer)
 
-        var closeButton: NSButton?
+        var constraints: [NSLayoutConstraint] = [
+            button.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 14),
+            button.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            container.heightAnchor.constraint(equalToConstant: Self.tabHeight),
+            container.widthAnchor.constraint(greaterThanOrEqualToConstant: 90),
+            container.widthAnchor.constraint(lessThanOrEqualToConstant: 220)
+        ]
+
         if showClose {
-            let cb = NSButton()
-            cb.image = NSImage.mfeSymbol(named: "xmark", accessibilityDescription: "Close")
-            cb.bezelStyle = .shadowlessSquare
-            cb.isBordered = false
-            cb.setButtonType(.momentaryChange)
-            cb.imageScaling = .scaleProportionallyDown
-            cb.setAccessibilityRole(.button)
-            cb.setAccessibilityLabel("Close \(title) tab")
-            cb.contentTintColor = isSelected ? NSColor.secondaryLabelColor : NSColor.tertiaryLabelColor
-            cb.translatesAutoresizingMaskIntoConstraints = false
-            cb.target = self
-            cb.action = #selector(closeTabButtonClicked(_:))
-            cb.tag = index
-            cb.wantsLayer = true
-            cb.layer?.cornerRadius = 3
-
-            container.addSubview(cb)
-            closeButton = cb
-            NSLayoutConstraint.activate([
-                cb.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -6),
-                cb.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-                cb.widthAnchor.constraint(equalToConstant: 16),
-                cb.heightAnchor.constraint(equalToConstant: 16)
-            ])
-        }
-
-        // Core constraints: center the title, vertically stretch, and set container size
-        let centerConstraint = button.centerXAnchor.constraint(equalTo: container.centerXAnchor)
-        let topConstraint = button.topAnchor.constraint(equalTo: container.topAnchor)
-        let bottomConstraint = button.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -1)
-        let heightConstraint = container.heightAnchor.constraint(equalToConstant: 28)
-        button.lineBreakMode = .byTruncatingTail
-        let widthConstraint = container.widthAnchor.constraint(greaterThanOrEqualToConstant: 130)
-        let maxWidthConstraint = container.widthAnchor.constraint(lessThanOrEqualToConstant: 250)
-
-        var edgeConstraints: [NSLayoutConstraint] = []
-        if let cb = closeButton {
-            // Prefer centering; but ensure the title doesn't run into the close button or left edge.
-            let trailingToClose = button.trailingAnchor.constraint(lessThanOrEqualTo: cb.leadingAnchor, constant: -4)
-            let leadingToEdge = button.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 8)
-            trailingToClose.priority = .defaultHigh
-            leadingToEdge.priority = NSLayoutConstraint.Priority.defaultHigh
-            edgeConstraints.append(contentsOf: [trailingToClose, leadingToEdge])
+            let closeButton = ToolbarIconButton(symbolName: "xmark", accessibilityDescription: "Close \(title) tab")
+            closeButton.target = self
+            closeButton.action = #selector(closeTabButtonClicked(_:))
+            closeButton.tag = index
+            closeButton.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 9, weight: .semibold)
+            container.addSubview(closeButton)
+            tabCloseButtons.append(closeButton)
+            constraints += [
+                closeButton.leadingAnchor.constraint(equalTo: button.trailingAnchor, constant: 8),
+                closeButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -6),
+                closeButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                closeButton.widthAnchor.constraint(equalToConstant: 18),
+                closeButton.heightAnchor.constraint(equalToConstant: 18)
+            ]
         } else {
-            let leadingToEdge = button.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 8)
-            let trailingToEdge = button.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor, constant: -8)
-            leadingToEdge.priority = NSLayoutConstraint.Priority.defaultHigh
-            trailingToEdge.priority = NSLayoutConstraint.Priority.defaultHigh
-            edgeConstraints.append(contentsOf: [leadingToEdge, trailingToEdge])
+            constraints.append(button.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -14))
         }
+        NSLayoutConstraint.activate(constraints)
 
-        // Activate with center constraints required and edge constraints lower priority so centering wins
-        NSLayoutConstraint.activate([centerConstraint, topConstraint, bottomConstraint, heightConstraint, widthConstraint, maxWidthConstraint] + edgeConstraints)
-
-        // Track for updates
         tabButtons.append(button)
-        if let cb = closeButton { tabCloseButtons.append(cb) }
         // Tag the container with the index for hit-testing in the click handler
         container.identifier = NSUserInterfaceItemIdentifier("\(index)")
         return container
@@ -551,7 +535,7 @@ extension TabBarController {
                 if tabItem.label != "Settings" { tabItem.label = "Settings" }
             }
             if currentTabIndex < tabButtons.count, tabButtons[currentTabIndex].title != "Settings" {
-                tabButtons[currentTabIndex].title = "Settings"
+                setTitle("Settings", forTabButtonAt: currentTabIndex)
             }
         } else if currentTabIndex < tabs.count, tabs[currentTabIndex] is StorageAnalyzerTabViewController {
             if currentTabIndex < tabView.numberOfTabViewItems {
@@ -559,7 +543,7 @@ extension TabBarController {
                 if tabItem.label != "Storage Analyzer" { tabItem.label = "Storage Analyzer" }
             }
             if currentTabIndex < tabButtons.count, tabButtons[currentTabIndex].title != "Storage Analyzer" {
-                tabButtons[currentTabIndex].title = "Storage Analyzer"
+                setTitle("Storage Analyzer", forTabButtonAt: currentTabIndex)
             }
         } else {
             // Update tab label with current directory name
@@ -570,7 +554,7 @@ extension TabBarController {
                 tabItem.label = directoryName
             }
             if currentTabIndex < tabButtons.count {
-                tabButtons[currentTabIndex].title = directoryName
+                setTitle(directoryName, forTabButtonAt: currentTabIndex)
             }
         }
 

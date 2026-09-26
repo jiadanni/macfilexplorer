@@ -17,6 +17,9 @@ class PreviewPaneViewController: NSViewController {
     private var headerView: NSView!
     private var titleLabel: NSTextField!
     private var closeButton: NSButton!
+    private final class FlippedView: NSView {
+        override var isFlipped: Bool { true }
+    }
     private var contentScrollView: NSScrollView!
     private var contentView: NSView!
     private var quickActionsView: NSView!
@@ -37,53 +40,62 @@ class PreviewPaneViewController: NSViewController {
         didSet { updateLayoutForPosition() }
     }
 
+    /// Invoked by the header close button; the owning coordinator hides the pane.
+    var onCloseRequested: (() -> Void)?
+
     override func loadView() {
-        view = NSView(frame: NSRect(x: 0, y: 0, width: 350, height: 600))
+        let surface = ChromeSurfaceView(fillColor: AppDesignSystem.Chrome.contentBackground)
+        surface.frame = NSRect(x: 0, y: 0, width: 260, height: 600)
+        view = surface
         view.translatesAutoresizingMaskIntoConstraints = false
-        
+
         // Prevent layout issues
         view.setContentHuggingPriority(.defaultLow, for: .horizontal)
         view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        
+
         setupUI()
     }
-    
-    private func setupUI() {
-        view.wantsLayer = true
-        view.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
 
+    private func setupUI() {
         containerView = NSView()
         containerView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerView)
 
-        // Header
+        // Header: "Preview" caption + current file name, matching the terminal header
         headerView = NSView()
         headerView.translatesAutoresizingMaskIntoConstraints = false
-        headerView.wantsLayer = true
-        headerView.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         containerView.addSubview(headerView)
 
-        titleLabel = NSTextField(labelWithString: "Preview")
+        let captionLabel = NSTextField(labelWithString: L10n.text("Preview"))
+        captionLabel.translatesAutoresizingMaskIntoConstraints = false
+        captionLabel.font = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        captionLabel.textColor = .secondaryLabelColor
+        captionLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+        headerView.addSubview(captionLabel)
+
+        titleLabel = NSTextField(labelWithString: "")
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.font = NSFont.boldSystemFont(ofSize: 13)
+        titleLabel.font = NSFont.systemFont(ofSize: 11)
+        titleLabel.textColor = .tertiaryLabelColor
+        titleLabel.lineBreakMode = .byTruncatingMiddle
+        titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         titleLabel.setAccessibilityIdentifier("PreviewTitle")
         headerView.addSubview(titleLabel)
 
-        closeButton = NSButton()
-        closeButton.translatesAutoresizingMaskIntoConstraints = false
-        closeButton.bezelStyle = .texturedSquare
-        closeButton.isBordered = false
-        closeButton.title = "×"
-        closeButton.font = NSFont.systemFont(ofSize: 18)
-        closeButton.target = self
-        closeButton.action = #selector(closeButtonClicked)
+        let closeIcon = ToolbarIconButton(symbolName: "xmark", accessibilityDescription: L10n.text("Close Preview"))
+        closeIcon.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
+        closeIcon.toolTip = L10n.text("Hide Preview Pane")
+        closeIcon.target = self
+        closeIcon.action = #selector(closeButtonClicked)
+        closeButton = closeIcon
         headerView.addSubview(closeButton)
+
+        let headerDivider = HairlineView()
+        headerView.addSubview(headerDivider)
 
         // Quick Actions (keep layout but hide by default)
         quickActionsView = NSView()
         quickActionsView.translatesAutoresizingMaskIntoConstraints = false
-        quickActionsView.wantsLayer = true
-        quickActionsView.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         quickActionsView.isHidden = true
         containerView.addSubview(quickActionsView)
         setupQuickActions()
@@ -95,9 +107,10 @@ class PreviewPaneViewController: NSViewController {
         contentScrollView.hasHorizontalScroller = true
         contentScrollView.autohidesScrollers = true
         contentScrollView.borderType = .noBorder
+        contentScrollView.drawsBackground = false
         containerView.addSubview(contentScrollView)
         
-        contentView = NSView()
+        contentView = FlippedView()
         contentView.translatesAutoresizingMaskIntoConstraints = false
         contentScrollView.documentView = contentView
 
@@ -110,16 +123,24 @@ class PreviewPaneViewController: NSViewController {
             headerView.topAnchor.constraint(equalTo: containerView.topAnchor),
             headerView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             headerView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            headerView.heightAnchor.constraint(equalToConstant: 32),
+            headerView.heightAnchor.constraint(equalToConstant: 30),
 
-            titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 12),
+            captionLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
+            captionLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+
+            titleLabel.leadingAnchor.constraint(equalTo: captionLabel.trailingAnchor, constant: 8),
             titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: closeButton.leadingAnchor, constant: -8),
 
             closeButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -8),
             closeButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-            closeButton.widthAnchor.constraint(equalToConstant: 20),
-            closeButton.heightAnchor.constraint(equalToConstant: 20),
-            
+            closeButton.widthAnchor.constraint(equalToConstant: 22),
+            closeButton.heightAnchor.constraint(equalToConstant: 22),
+
+            headerDivider.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
+            headerDivider.trailingAnchor.constraint(equalTo: headerView.trailingAnchor),
+            headerDivider.bottomAnchor.constraint(equalTo: headerView.bottomAnchor),
+
             quickActionsView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             quickActionsView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
             quickActionsView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor), // Anchored to bottom
@@ -159,7 +180,7 @@ class PreviewPaneViewController: NSViewController {
         resetPreview()
         
         guard let fileItem = fileItem else {
-            titleLabel.stringValue = "Preview"
+            titleLabel.stringValue = ""
             return
         }
         
@@ -194,7 +215,7 @@ class PreviewPaneViewController: NSViewController {
     func resetPreview() {
         contentView.subviews.forEach { $0.removeFromSuperview() }
         quickActionsView.isHidden = true
-        titleLabel.stringValue = "Preview"
+        titleLabel.stringValue = ""
         currentHandler = nil
     }
     
@@ -203,9 +224,7 @@ class PreviewPaneViewController: NSViewController {
     }
     
     @objc private func closeButtonClicked() {
-        // Handle close
-        view.isHidden = true
-        // Logic to notify parent split view controller might be needed here to actually collapse
+        onCloseRequested?()
     }
     
     @objc private func rotateButtonClicked() {

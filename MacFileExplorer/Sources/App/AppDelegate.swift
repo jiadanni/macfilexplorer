@@ -110,6 +110,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, SettingsStoreDelegate {
         editMenu.addItem(withTitle: "Paste", action: #selector(pasteSelection(_:)), keyEquivalent: "v")
         editMenu.addItem(NSMenuItem.separator())
         editMenu.addItem(withTitle: "Select All", action: #selector(NSStandardKeyBindingResponding.selectAll(_:)), keyEquivalent: "a")
+        editMenu.addItem(NSMenuItem.separator())
+        // Nil target: resolved through the responder chain to the focused pane's FileBrowserViewController.
+        editMenu.addItem(withTitle: "Find", action: #selector(FileBrowserViewController.focusSearchField(_:)), keyEquivalent: "f")
 
         let editMenuItem = NSMenuItem()
         editMenuItem.submenu = editMenu

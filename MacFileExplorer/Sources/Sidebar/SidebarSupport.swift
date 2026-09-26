@@ -8,23 +8,36 @@ struct SidebarItem {
     let name: String
     let url: URL
     let icon: NSImage?
+    /// Optional trailing caption, e.g. free space for a volume
+    var detail: String? = nil
 }
 
-// Custom table row view with accent color selection
-class AccentTableRowView: NSTableRowView {
-    override func drawSelection(in dirtyRect: NSRect) {
-        if selectionHighlightStyle != .none {
-            let selectionRect = bounds
-            AppDesignSystem.Colors.selectionOverlay.setFill()
-            let selectionPath = NSBezierPath(roundedRect: selectionRect, xRadius: AppDesignSystem.Spacing.xs, yRadius: AppDesignSystem.Spacing.xs)
-            selectionPath.fill()
-        }
+/// Shared row metrics for the sidebar sections so Favorites, Locations and
+/// Folders line up on the same icon/text columns.
+enum SidebarMetrics {
+    static let rowHeight: CGFloat = 28
+    static let folderRowHeight: CGFloat = 24
+    static let headerHeight: CGFloat = 24
+    /// Inset of the rounded selection from the sidebar edges
+    static let rowInset: CGFloat = 10
+    /// Icon leading offset inside a flat (non-outline) row
+    static let iconLeading: CGFloat = 20
+
+    static func makeRowView() -> NSTableRowView {
+        RoundedSelectionRowView(selectionStyle: .neutral, horizontalInset: rowInset)
     }
 
-    override var isEmphasized: Bool {
-        didSet {
-            needsDisplay = true
-        }
+    static func iconAndLabelConstraints(imageView: NSView, textField: NSView, in cellView: NSView, leading: CGFloat = iconLeading, trailingTo trailingAnchor: NSLayoutXAxisAnchor? = nil) -> [NSLayoutConstraint] {
+        [
+            imageView.leadingAnchor.constraint(equalTo: cellView.leadingAnchor, constant: leading),
+            imageView.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+            imageView.widthAnchor.constraint(equalToConstant: 16),
+            imageView.heightAnchor.constraint(equalToConstant: 16),
+
+            textField.leadingAnchor.constraint(equalTo: imageView.trailingAnchor, constant: 8),
+            textField.centerYAnchor.constraint(equalTo: cellView.centerYAnchor),
+            textField.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor ?? cellView.trailingAnchor, constant: trailingAnchor == nil ? -iconLeading : -6)
+        ]
     }
 }
 
