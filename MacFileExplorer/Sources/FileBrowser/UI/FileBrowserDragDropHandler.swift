@@ -38,6 +38,9 @@ class FileBrowserDragDropHandler {
         
         guard delegate.isValidDestination(destinationURL, for: urls) else { return [] }
         guard let op = delegate.preferredDragOperation(from: info) else { return [] }
+        if op == .move, urls.allSatisfy({ FileOperationsManager.isDirectChild($0, of: destinationURL) }) {
+            return []
+        }
         
         return op == .copy ? .copy : .move
     }
@@ -63,6 +66,9 @@ class FileBrowserDragDropHandler {
         
         guard delegate.isValidDestination(destinationURL, for: urls) else { return false }
         guard let op = delegate.preferredDragOperation(from: info) else { return false }
+        if op == .move, urls.allSatisfy({ FileOperationsManager.isDirectChild($0, of: destinationURL) }) {
+            return false
+        }
         
         delegate.performFileOperation(op, items: urls, destination: destinationURL, sourcePane: delegate.dragSourceFileBrowser(from: info))
         return true

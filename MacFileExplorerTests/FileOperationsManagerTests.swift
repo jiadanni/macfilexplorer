@@ -277,6 +277,50 @@ class FileOperationsManagerTests: XCTestCase {
         XCTAssertFalse(mockDelegate.didRequestPresentError)
     }
 
+    func testPerform_WithConfirmationEnabled_DialogSurvivesAndCompletesCopy() throws {
+        // Given: the dialog is only referenced by the manager once perform() returns
+        settingsStore.confirmCopyOperations = true
+        let source = tempDirectory.appendingPathComponent("file.txt")
+        try "hello".write(to: source, atomically: true, encoding: .utf8)
+        let destination = tempDirectory.appendingPathComponent("dest", isDirectory: true)
+        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+
+        // When
+        sut.perform(.copy, items: [source], destination: destination, currentDirectory: tempDirectory)
+
+        // Then: completion reaches the dialog (and through it the manager's delegate)
+        let refreshed = XCTNSPredicateExpectation(
+            predicate: NSPredicate { [mockDelegate] _, _ in mockDelegate?.didRequestRefresh == true },
+            object: nil
+        )
+        wait(for: [refreshed], timeout: 5)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent("file.txt").path))
+    }
+
+    func testPerform_MoveIntoOwnParentFolder_IsNoOp() throws {
+        // Given: a file dropped onto a sibling file resolves to its own folder
+        settingsStore.confirmMoveOperations = true
+        settingsStore.autoRenameOnConflict = true
+        let source = tempDirectory.appendingPathComponent("file.txt")
+        try "hello".write(to: source, atomically: true, encoding: .utf8)
+
+        // When
+        sut.perform(.move, items: [source], destination: tempDirectory, currentDirectory: tempDirectory)
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.1))
+
+        // Then
+        XCTAssertNil(mockDelegate.window?.attachedSheet)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: tempDirectory.appendingPathComponent("file (1).txt").path))
+    }
+
+    func testIsDirectChild() {
+        let folder = tempDirectory.appendingPathComponent("folder", isDirectory: true)
+        XCTAssertTrue(FileOperationsManager.isDirectChild(folder.appendingPathComponent("a.txt"), of: folder))
+        XCTAssertFalse(FileOperationsManager.isDirectChild(folder.appendingPathComponent("sub/a.txt"), of: folder))
+        XCTAssertFalse(FileOperationsManager.isDirectChild(tempDirectory.appendingPathComponent("a.txt"), of: folder))
+    }
+
     func testPerform_EmptyItems_DoesNothing() {
         // Given
         let destination = tempDirectory.appendingPathComponent("dest")

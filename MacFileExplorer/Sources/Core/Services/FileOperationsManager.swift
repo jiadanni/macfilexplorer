@@ -12,6 +12,9 @@ protocol FileOperationsManagerDelegate: AnyObject {
 final class FileOperationsManager {
     weak var delegate: FileOperationsManagerDelegate?
     private let settings: SettingsStoreProtocol
+    /// Copy/move dialogs are presented as sheets, which retain only the window,
+    /// so the controller (and the FileOperation it owns) must be kept alive here.
+    private var activeDialogs: [ObjectIdentifier: FileCopyMoveDialog] = [:]
     
     init(delegate: FileOperationsManagerDelegate?, settings: SettingsStoreProtocol = SettingsStore.shared) {
         self.delegate = delegate
@@ -58,6 +61,12 @@ final class FileOperationsManager {
         return true
     }
     
+    nonisolated static func isDirectChild(_ item: URL, of directory: URL) -> Bool {
+        let parent = item.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
+        let dir = directory.resolvingSymlinksInPath().standardizedFileURL
+        return parent.path == dir.path
+    }
+
     // MARK: - Drag & Drop Helpers
     
     func preferredDragOperation(from info: NSDraggingInfo, modifierFlags: NSEvent.ModifierFlags? = nil) -> FileOperationType? {
@@ -79,11 +88,17 @@ final class FileOperationsManager {
     // MARK: - Operations
 
     func perform(_ operation: FileOperationType, items: [URL], destination: URL?, sourcePane: FileBrowserViewController? = nil, currentDirectory: URL) {
-        guard !items.isEmpty else { return }
-
         // Resolve once so the confirm and no-confirm paths see the same destination;
         // nil means "the current directory" (e.g. paste).
         let destination: URL? = operation == .delete ? destination : (destination ?? currentDirectory)
+
+        // Moving an item into the folder it already lives in is a no-op (e.g. a file
+        // accidentally dropped onto a sibling file); don't rename or fail on it.
+        var items = items
+        if operation == .move, let destination {
+            items = items.filter { !Self.isDirectChild($0, of: destination) }
+        }
+        guard !items.isEmpty else { return }
 
         if operation != .delete, let resolvedDestination = destination {
             guard isValidDestination(resolvedDestination, for: items) else {
@@ -130,6 +145,12 @@ final class FileOperationsManager {
                 let opType: FileCopyMoveDialog.OperationType = (operation == .copy) ? .copy : .move
                 let confirmationDialog = FileCopyMoveDialog(operationType: opType, sourceFiles: items, destination: destination ?? currentDirectory)
                 
+                let dialogID = ObjectIdentifier(confirmationDialog)
+                activeDialogs[dialogID] = confirmationDialog
+                confirmationDialog.onClose = { [weak self] in
+                    self?.activeDialogs[dialogID] = nil
+                }
+
                 confirmationDialog.onCompletion = { [weak self] in
                     guard let self else { return }
                     self.delegate?.fileOperationsManagerDidRequestRefresh(self)

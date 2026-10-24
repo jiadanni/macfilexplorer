@@ -19,6 +19,8 @@ class FileCopyMoveDialog: NSWindowController {
     private var totalBytesProcessed: Int64 = 0
     private var totalBytesToProcess: Int64 = 0
     var onCompletion: (() -> Void)?
+    /// Called once when the dialog is dismissed so the owner can release it.
+    var onClose: (() -> Void)?
 
     enum OperationType {
         case copy
@@ -193,6 +195,9 @@ class FileCopyMoveDialog: NSWindowController {
         } else {
             close()
         }
+        let handler = onClose
+        onClose = nil
+        handler?()
     }
 
     private func updateSpeed() {
