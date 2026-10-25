@@ -237,15 +237,23 @@ final class PermissionsManager {
         SettingsStore.shared.grantedDirectories = existing
     }
 
+    /// True if `url` is a granted directory or lies inside one (the same containment rule
+    /// `ensureAccess` uses), so subfolders of a granted folder remain browsable.
     func hasGrantedDirectory(_ url: URL) -> Bool {
+        let target = url.standardizedFileURL.path
+
+        func covers(_ grantedPath: String) -> Bool {
+            let granted = URL(fileURLWithPath: grantedPath).standardizedFileURL.path
+            return target == granted || target.hasPrefix(granted.hasSuffix("/") ? granted : granted + "/")
+        }
+
         if isSandboxed() {
             let datas = SettingsStore.shared.grantedDirectoryBookmarks
             if !datas.isEmpty {
-                return datas.contains { resolveBookmarkData($0).path == url.path }
+                return datas.contains { covers(resolveBookmarkData($0).path) }
             }
         }
-        let existing = SettingsStore.shared.grantedDirectories
-        return existing.contains(url.path)
+        return SettingsStore.shared.grantedDirectories.contains { covers($0) }
     }
 
     // MARK: - Bookmark Resolution

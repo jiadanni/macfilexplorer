@@ -19,6 +19,9 @@ class TerminalViewControllerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         sut = TerminalViewController()
+        // These tests feed the legacy un-nonced marker/sentinel forms; the nonce
+        // behaviour has its own tests below.
+        sut.markerNonce = nil
         mockDelegate = MockTerminalViewControllerDelegate()
         sut.delegate = mockDelegate
     }
@@ -262,5 +265,54 @@ class TerminalViewControllerTests: XCTestCase {
         sut.processOutput("stray output\n")
         XCTAssertEqual(sut.promptLocation, pinned, "promptLocation stays pinned until a new prompt (133;A) arrives")
     }
-}
 
+    // MARK: - Hardening: marker nonce, split escapes, secret prompts
+
+    func testNoncedMarkers_RejectForgedAndAcceptAuthentic() {
+        sut.markerNonce = "abc123"
+        var markers: [TerminalViewController.SemanticMarker] = []
+
+        // Output from `cat`, a build log or a remote host cannot know the nonce.
+        _ = sut.stripControlSequences("\u{1B}]133;B\u{07}", markers: &markers)
+        _ = sut.stripControlSequences("\u{1B}]133;B;wrong\u{07}", markers: &markers)
+        XCTAssertTrue(markers.isEmpty, "Markers without the session nonce must be ignored")
+
+        _ = sut.stripControlSequences("\u{1B}]133;B;abc123\u{07}\u{1B}]133;D;3;abc123\u{07}\u{1B}]133;D;abc123\u{07}", markers: &markers)
+        XCTAssertEqual(markers, [.promptEnd, .commandEnd(3), .commandEnd(nil)])
+    }
+
+    func testSplitIncompleteEscape_HoldsBackUnfinishedSequences() {
+        let esc = "\u{1B}"
+        func split(_ text: String) -> (String, String) {
+            let result = TerminalViewController.splitIncompleteEscape(text)
+            return (result.complete, result.pending)
+        }
+
+        XCTAssertTrue(split("abc") == ("abc", ""))
+        XCTAssertTrue(split("abc\(esc)[31mred") == ("abc\(esc)[31mred", ""), "A finished CSI is complete")
+        XCTAssertTrue(split("abc\(esc)[3") == ("abc", "\(esc)[3"), "An unfinished CSI is held back")
+        XCTAssertTrue(split("x\(esc)") == ("x", esc), "A lone trailing ESC is held back")
+        XCTAssertTrue(split("x\(esc)]133;B\u{07}y") == ("x\(esc)]133;B\u{07}y", ""), "A BEL-terminated OSC is complete")
+        XCTAssertTrue(split("x\(esc)]133;B") == ("x", "\(esc)]133;B"), "An unterminated OSC is held back")
+        XCTAssertTrue(split("x\(esc)]133;B\(esc)") == ("x", "\(esc)]133;B\(esc)"), "A possible ST is held back")
+        XCTAssertTrue(split("x\(esc)]133;B\(esc)\\y") == ("x\(esc)]133;B\(esc)\\y", ""), "An ST-terminated OSC is complete")
+    }
+
+    func testSequenceSplitAcrossReads_StillYieldsMarker() {
+        _ = sut.view
+        sut.viewDidLoad()
+        sut.processOutput("MFE_SENTINEL_12345\n")
+        sut.processOutput("prompt$ \u{1B}]133;")
+        XCTAssertFalse(sut.textViewStringForTesting.contains("133"), "Fragment must not be printed")
+        sut.processOutput("B\u{07}")
+        XCTAssertTrue(sut.isAtPrompt)
+    }
+
+    func testLooksLikeSecretPrompt() {
+        XCTAssertTrue(TerminalViewController.looksLikeSecretPrompt("[sudo] password for me:"))
+        XCTAssertTrue(TerminalViewController.looksLikeSecretPrompt("Enter passphrase for key '/x': "))
+        XCTAssertTrue(TerminalViewController.looksLikeSecretPrompt("me@host's Password:"))
+        XCTAssertFalse(TerminalViewController.looksLikeSecretPrompt("grep password config.txt"))
+        XCTAssertFalse(TerminalViewController.looksLikeSecretPrompt("user@host:~$ "))
+    }
+}

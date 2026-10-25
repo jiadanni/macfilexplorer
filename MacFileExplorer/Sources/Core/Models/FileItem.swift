@@ -315,8 +315,7 @@ class FileItem: Hashable {
             }
             
             // Use non-localized comparison during initialization to avoid ICU crashes
-            children = safeRootItems.sorted { $0.lastPathComponent.caseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
-                .map { FileItem(url: $0) }
+            children = FileItem.sortedByName(safeRootItems).map { FileItem(url: $0) }
             didLoadChildren = true
             
             children?.forEach { child in
@@ -336,6 +335,7 @@ class FileItem: Hashable {
             }
 
             if recursive {
+                options.insert(.skipsPackageDescendants)
                 let enumerator = fileManager.enumerator(at: resolvedURL, includingPropertiesForKeys: [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey, .isReadableKey], options: options)
                 var urls: [URL] = []
                 var seen = 0
@@ -384,8 +384,7 @@ class FileItem: Hashable {
             }
 
             // Use non-localized comparison during initialization to avoid ICU crashes
-            children = urls.sorted { $0.lastPathComponent.caseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
-                .map { FileItem(url: $0) }
+            children = FileItem.sortedByName(urls).map { FileItem(url: $0) }
 
             // Only initialize children array for subdirectories, don't recursively load
             children?.forEach { child in
@@ -441,6 +440,14 @@ class FileItem: Hashable {
             children = []
             return false
         }
+    }
+
+    /// Case-insensitive name sort that extracts each name once instead of re-deriving
+    /// `lastPathComponent` on both sides of every comparison.
+    private static func sortedByName(_ urls: [URL]) -> [URL] {
+        urls.map { (name: $0.lastPathComponent, url: $0) }
+            .sorted { $0.name.caseInsensitiveCompare($1.name) == .orderedAscending }
+            .map { $0.url }
     }
 
     private func loadChildrenWithEnumerator(fileManager: FileManager, baseURL: URL, resolvedURL: URL, showsHiddenFiles: Bool) -> [FileItem]? {
@@ -536,7 +543,7 @@ class FileItem: Hashable {
         
         guard let enumerator = fileManager.enumerator(at: url,
                                                        includingPropertiesForKeys: [.isRegularFileKey, .fileAllocatedSizeKey, .totalFileAllocatedSizeKey],
-                                                       options: [.skipsHiddenFiles]) else {
+                                                       options: []) else {
             return 0
         }
         
@@ -565,11 +572,11 @@ class FileItem: Hashable {
             // Check if user has enabled folder size calculation
             let showFolderSizes = SettingsStore.shared.showFolderSizes
             if showFolderSizes && size > 0 {
-                return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+                return FileBrowserActionHelper.formatFileSize(size)
             }
             return "--"
         }
-        return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+        return FileBrowserActionHelper.formatFileSize(size)
     }
 
     var formattedDate: String {

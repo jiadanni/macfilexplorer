@@ -66,4 +66,45 @@ class TextPreviewHandlerTests: XCTestCase {
 
         XCTAssertEqual(textView.string, smallContent)
     }
+
+    // MARK: - Special files must not hang or exhaust the app
+
+    func testFIFOIsNotOpenedBlocking() throws {
+        let fifo = tempDirectory.appendingPathComponent("pipe.txt")
+        XCTAssertEqual(mkfifo(fifo.path, 0o600), 0)
+
+        let view = TextPreviewHandler().createView(for: FileItem(url: fifo))
+
+        XCTAssertFalse(view is NSScrollView, "A FIFO is not a regular file and must not be read")
+    }
+
+    func testSymlinkToDeviceIsRefused() throws {
+        let link = tempDirectory.appendingPathComponent("zero.txt")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: URL(fileURLWithPath: "/dev/zero"))
+
+        let view = TextPreviewHandler().createView(for: FileItem(url: link))
+
+        XCTAssertFalse(view is NSScrollView, "Reading /dev/zero through a symlink must be refused, not buffered forever")
+    }
+
+    func testReadBoundedPrefixCapsRegularFiles() throws {
+        let file = tempDirectory.appendingPathComponent("big.txt")
+        try Data(repeating: 0x61, count: 5000).write(to: file)
+
+        let result = TextPreviewHandler.readBoundedPrefix(of: file, limit: 1000)
+
+        XCTAssertEqual(result?.data.count, 1000)
+        XCTAssertEqual(result?.truncated, true)
+        XCTAssertEqual(TextPreviewHandler.readBoundedPrefix(of: file, limit: 10_000)?.truncated, false)
+    }
+
+    func testUnsupportedEncodingShowsMessageInsteadOfBlankView() throws {
+        let file = tempDirectory.appendingPathComponent("latin1.txt")
+        try Data([0x63, 0x61, 0x66, 0xE9]).write(to: file) // "café" in Latin-1, invalid UTF-8
+
+        let view = TextPreviewHandler().createView(for: FileItem(url: file))
+
+        XCTAssertFalse(view is NSScrollView)
+        XCTAssertFalse(view.subviews.isEmpty, "A message must explain why there is no preview")
+    }
 }

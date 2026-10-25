@@ -8,6 +8,22 @@ Severity: **High** = data loss, privilege/trust-boundary failure, or a feature t
 
 ---
 
+## Remediation status (added after the first fixes)
+
+> The findings below describe the code **as reviewed**. A follow-up change set addressed most of them. **None of it has been compiled or run** (the work was done in a Linux environment without Swift/Xcode), so treat it as unverified until the new CI workflow (`.github/workflows/ci.yml`) and the added tests pass on macOS.
+
+**Fixed:** S2 (bounded, regular-file-only text preview; single image source), S3 (password prompts are collected privately and never rendered/recorded; no history for input to running programs), S4 (per-session marker nonce, un-exported from child processes; managed `mfe-integration.zsh`; injected commands skip history), S5 + R5 (single allowlisted/type-checked `SettingsPortability`; `Data` exported as base64), S6 + R1 (POSIX-based copy: symlinks copied as links, broken links kept, `O_EXCL`, 0600/0700 until finished, `copyfile` metadata/xattrs/ACLs, partial-destination cleanup, errors instead of silent skips), S7 (file-URL-only pasteboard reads, favorites index check), S8 (file IDs captured at request time), S9 (pinned npm dep, no quarantine stripping), R2 (shared `FileDropTransfer`: honest cursor, validation, no overwrite, error sheet, ⌥/cross-volume copy), R3 (rename persists, conflict + extension-change checks), R4 (moving into the same folder is a no-op), R6 (keychain write checked before dropping the defaults copy), R7 (granted-folder containment), R9 (per-scan generation token, stateful pause control, inode-based cycle detection, mount-point exclusion, bounded cache, throttled progress, visible trash errors), R10 (cut marker constant), R11 (extended SGR colours, split-sequence buffering, partial writes, SIGHUP on close, validated shell, Ctrl-C/D/Z forwarding, multi-line paste flattening), P2/P3/P4/P7 (name-precomputed sorting, package skipping, strict date ordering, no directory pre-walk for moves, shared byte formatter, bounded sort-preference table, scrollback/history caps), C9 (CI, working SwiftLint config, regression tests for the above).
+
+**Not done — needs a decision or a larger change:**
+- **S1/C1** trust model: whether to stay unsandboxed (recommended) is a product decision; the dead sandbox-era code (`URLValidation`, bookmark/keychain paths, Camera/Mic rows) is still there. Removing files also needs Xcode-project edits.
+- **C2** a single `FileOperationService` actor (the engines are now consistent in behaviour, but still separate).
+- **C3** replacing the terminal with an emulator (e.g. SwiftTerm). Not fixed: Tab completion, full-screen TUI apps, and a proper controlling TTY for job control (Ctrl-C forwarding is best effort **[verify on macOS]**).
+- **R8** live refresh via `FileSystemMonitor`: not wired in, because a reload resets list state and that needs interactive testing.
+- **P1** output coalescing, **P5** analyzer double metadata fetch and whole-tree memory, **P6** main-thread `loadChildren` in the tree/column views, **C4** strict concurrency, **C6** undo, **C7/C8** settings model and localisation.
+- Smaller: Get Info stub, paste clearing the cut before the operation finishes, folder-size feature has no caller, `isHidden` vs `.skipsHiddenFiles`, "Founder" strings (may be an intentional rename), `findDuplicates` heuristics.
+
+---
+
 ## 0. Summary
 
 The code is tidier than the docs make it sound (off-main directory loading with generation tokens, bounded history, `trashItem` for deletes, correct single-quote shell escaping, hardened runtime on). The problems are mostly **conceptual**: the app has a security story it does not actually implement, and the same file operation is implemented five different ways with different safety properties.

@@ -71,15 +71,11 @@ if [ $? -eq 0 ]; then
             # Remove old version if it exists
             if [ -d "/Applications/MacFileExplorer.app" ]; then
                 echo "⚠️  Removing old version..."
-                sudo rm -rf "/Applications/MacFileExplorer.app"
+                sudo rm -rf -- "/Applications/MacFileExplorer.app"
             fi
 
             # Copy new version
             sudo cp -r "$APP_PATH" /Applications/
-
-            # Remove quarantine attribute
-            echo "🔓 Removing quarantine attribute..."
-            sudo xattr -cr /Applications/MacFileExplorer.app
 
             echo ""
             echo "✅ Installation complete!"
@@ -104,7 +100,6 @@ if [ $? -eq 0 ]; then
             echo ""
             echo "To install manually:"
             echo "  sudo cp -r \"$APP_PATH\" /Applications/"
-            echo "  sudo xattr -cr /Applications/MacFileExplorer.app"
         fi
 
         echo ""

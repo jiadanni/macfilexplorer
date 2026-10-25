@@ -388,3 +388,61 @@ private final class SettingsStoreDelegateSpy: SettingsStoreDelegate {
         onHiddenChange?(isVisible)
     }
 }
+
+// MARK: - Settings import / export
+
+final class SettingsPortabilityTests: XCTestCase {
+    private var suiteName: String!
+    private var store: SettingsStore!
+
+    override func setUp() {
+        super.setUp()
+        suiteName = "com.macfileexplorer.portability.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        store = SettingsStore(defaults: defaults)
+    }
+
+    override func tearDown() {
+        UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
+        store = nil
+        super.tearDown()
+    }
+
+    func testExportDoesNotCrashOnDataValuesAndRoundTrips() throws {
+        let payload = Data([1, 2, 3, 4])
+        store.setValue(payload, forKey: UserDefaults.Keys.globalFolderColor.rawValue)
+
+        let exported = try SettingsPortability.exportData(from: store)
+
+        store.setValue(Data([9]), forKey: UserDefaults.Keys.globalFolderColor.rawValue)
+        let result = try SettingsPortability.importData(exported, into: store)
+        XCTAssertTrue(result.applied.contains(UserDefaults.Keys.globalFolderColor.rawValue))
+        XCTAssertEqual(store.value(forKey: UserDefaults.Keys.globalFolderColor.rawValue) as? Data, payload)
+    }
+
+    func testImportRejectsUnknownKeysPermissionStateAndWrongTypes() throws {
+        store.setValue(true, forKey: UserDefaults.Keys.showFileExtensions.rawValue)
+        let file: [String: Any] = [
+            "NSUserKeyEquivalents": ["Paste": "@x"],                 // not an app preference
+            "AppleLanguages": ["xx"],                                // not an app preference
+            "grantedDirectories": ["/"],                             // permission state
+            UserDefaults.Keys.grantedDirectoriesPaths.rawValue: ["/"],
+            UserDefaults.Keys.showFileExtensions.rawValue: "yes",    // wrong type (Bool expected)
+            UserDefaults.Keys.showStatusBar.rawValue: false          // valid
+        ]
+        let data = try JSONSerialization.data(withJSONObject: file)
+
+        let result = try SettingsPortability.importData(data, into: store)
+
+        XCTAssertEqual(result.applied, [UserDefaults.Keys.showStatusBar.rawValue])
+        XCTAssertNil(store.value(forKey: "NSUserKeyEquivalents"))
+        XCTAssertNil(store.value(forKey: "AppleLanguages"))
+        XCTAssertNil(store.value(forKey: "grantedDirectories"))
+        XCTAssertEqual(store.value(forKey: UserDefaults.Keys.showFileExtensions.rawValue) as? Bool, true)
+    }
+
+    func testImportRejectsNonObjectJSON() {
+        XCTAssertThrowsError(try SettingsPortability.importData(Data("[1,2]".utf8), into: store))
+    }
+}

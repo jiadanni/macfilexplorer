@@ -232,17 +232,9 @@ final class AdvancedSettingsViewController: NSViewController {
     }
 
     private func performExport(to url: URL) {
-        // Collect all settings
-        var settings: [String: Any] = [:]
-        for key in UserDefaults.Keys.allCases {
-            if let value = settingsStore.value(forKey: key.rawValue) {
-                settings[key.rawValue] = value
-            }
-        }
-
         do {
-            let jsonData = try JSONSerialization.data(withJSONObject: settings, options: .prettyPrinted)
-            try jsonData.write(to: url)
+            let jsonData = try SettingsPortability.exportData(from: settingsStore)
+            try jsonData.write(to: url, options: .atomic)
 
             let alert = NSAlert()
             alert.messageText = "Export Successful"
@@ -263,18 +255,15 @@ final class AdvancedSettingsViewController: NSViewController {
     private func performImport(from url: URL) {
         do {
             let jsonData = try Data(contentsOf: url)
-            guard let settings = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
-                throw NSError(domain: "com.macfileexplorer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid settings file format"])
-            }
-
-            // Import settings
-            for (key, value) in settings {
-                settingsStore.setValue(value, forKey: key)
-            }
+            let result = try SettingsPortability.importData(jsonData, into: settingsStore)
 
             let alert = NSAlert()
             alert.messageText = "Import Successful"
-            alert.informativeText = "Your settings have been imported successfully. Please restart the application for all changes to take effect."
+            var message = "Imported \(result.applied.count) setting(s). Please restart the application for all changes to take effect."
+            if !result.ignored.isEmpty {
+                message += "\n\nIgnored \(result.ignored.count) unrecognised or incompatible entr\(result.ignored.count == 1 ? "y" : "ies")."
+            }
+            alert.informativeText = message
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
             alert.runModal()

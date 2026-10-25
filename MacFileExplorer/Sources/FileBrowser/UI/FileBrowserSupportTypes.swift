@@ -150,7 +150,7 @@ final class RootFileBrowserView: NSView {
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         setHighlighted(false)
         guard let delegate = dropDelegate else { return false }
-        guard let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else { return false }
+        guard let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] else { return false }
         let op = delegate.rootViewPreferredOperation(for: sender)
         guard op != [] else { return false }
         delegate.rootViewPerformDrop(urls: urls, operation: op == .copy ? .copy : .move, info: sender)

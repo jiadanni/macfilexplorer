@@ -58,6 +58,12 @@ final class FileOperationsManager {
         return true
     }
     
+    /// For a move, removes items that already live in `destination` (moving them is a no-op).
+    nonisolated static func droppingNoOpMoves(_ items: [URL], operation: FileOperationType, destination: URL?) -> [URL] {
+        guard operation == .move, let target = destination else { return items }
+        return items.filter { !FileOperation.isSameDirectory($0.deletingLastPathComponent(), target) }
+    }
+
     // MARK: - Drag & Drop Helpers
     
     func preferredDragOperation(from info: NSDraggingInfo, modifierFlags: NSEvent.ModifierFlags? = nil) -> FileOperationType? {
@@ -84,6 +90,14 @@ final class FileOperationsManager {
         // Resolve once so the confirm and no-confirm paths see the same destination;
         // nil means "the current directory" (e.g. paste).
         let destination: URL? = operation == .delete ? destination : (destination ?? currentDirectory)
+
+        // Moving an item into the folder it already lives in is a no-op, not a rename.
+        let items = Self.droppingNoOpMoves(items, operation: operation, destination: destination)
+        guard !items.isEmpty else { return }
+
+        // Capture file identities now, at selection time, so the check at execution time
+        // spans any confirmation dialog rather than a few instructions.
+        let expectedIDs = items.map { FileSystemHelpers.fileID(for: $0) }
 
         if operation != .delete, let resolvedDestination = destination {
             guard isValidDestination(resolvedDestination, for: items) else {
@@ -123,7 +137,7 @@ final class FileOperationsManager {
                     if response == .alertFirstButtonReturn {
                         // Proceed with delete
                         // Note: Auto-rename is irrelevant for delete (uses Trash)
-                        self.execute(operation, items: items, destination: destination, sourcePane: sourcePane, autoRename: false)
+                        self.execute(operation, items: items, destination: destination, sourcePane: sourcePane, autoRename: false, expectedIDs: expectedIDs)
                     }
                 }
             } else {
@@ -149,11 +163,11 @@ final class FileOperationsManager {
             // Execute immediately without confirmation
             // NOTE: Auto-rename defaults to setting if skipping dialog
             let autoRename = settings.autoRenameOnConflict
-            execute(operation, items: items, destination: destination, sourcePane: sourcePane, autoRename: autoRename)
+            execute(operation, items: items, destination: destination, sourcePane: sourcePane, autoRename: autoRename, expectedIDs: expectedIDs)
         }
     }
     
-    private func execute(_ operation: FileOperationType, items: [URL], destination: URL?, sourcePane: FileBrowserViewController?, autoRename: Bool) {
+    private func execute(_ operation: FileOperationType, items: [URL], destination: URL?, sourcePane: FileBrowserViewController?, autoRename: Bool, expectedIDs: [FileID?]) {
         let showProgress = settings.showOperationProgress
         let progressVC = showProgress ? ProgressViewController() : nil
         
@@ -174,8 +188,8 @@ final class FileOperationsManager {
             for (index, sourceURL) in items.enumerated() {
                 let targetURL = destination?.appendingPathComponent(sourceURL.lastPathComponent)
                 
-                // Capture FileID at the start for TOCTOU validation
-                let sourceFileID = FileSystemHelpers.fileID(for: sourceURL)
+                // FileID captured when the operation was requested (before any confirmation)
+                let sourceFileID = index < expectedIDs.count ? expectedIDs[index] : nil
                 let sourcePath = sourceURL.path
                 
                 if operation == .delete {
@@ -195,13 +209,17 @@ final class FileOperationsManager {
                         }
                     }
                 } else if let targetURL = targetURL {
-                    // For copy/move: calculate size BEFORE operation
-                    // .size on a directory is the size of the directory entry, not its contents
+                    // For copy/move: size for the metrics log, taken BEFORE the operation.
+                    // .size on a directory is the size of the directory entry, not its contents,
+                    // and walking a tree just to log it would double the I/O of a move that is
+                    // normally a single rename, so only copies of directories are measured.
                     var operationSize: Int64 = 0
                     if let attrs = try? fileManager.attributesOfItem(atPath: sourceURL.path) {
-                        operationSize = attrs[.type] as? FileAttributeType == .typeDirectory
-                            ? FileItem.calculateDirectorySize(at: sourceURL)
-                            : (attrs[.size] as? Int64) ?? 0
+                        if attrs[.type] as? FileAttributeType == .typeDirectory {
+                            operationSize = operation == .copy ? FileItem.calculateDirectorySize(at: sourceURL) : 0
+                        } else {
+                            operationSize = (attrs[.size] as? Int64) ?? 0
+                        }
                     }
                     
                     // Handle name conflicts atomically via operation error handling
@@ -241,7 +259,7 @@ final class FileOperationsManager {
                             // Atomic error: file exists and auto-rename is enabled, try with new name
                             let nameWithoutExt = (sourceURL.lastPathComponent as NSString).deletingPathExtension
                             let ext = (sourceURL.lastPathComponent as NSString).pathExtension
-                            let newName = ext.isEmpty ? "\(nameWithoutExt) \(attemptCount + 1)" : "\(nameWithoutExt) \(attemptCount + 1).\(ext)"
+                            let newName = ext.isEmpty ? "\(nameWithoutExt) (\(attemptCount + 1))" : "\(nameWithoutExt) (\(attemptCount + 1)).\(ext)"
                             finalURL = (targetURL.deletingLastPathComponent()).appendingPathComponent(newName)
                             attemptCount += 1
                         } catch {
@@ -274,5 +292,84 @@ final class FileOperationsManager {
                 }
             }
         }
+    }
+}
+
+// MARK: - Folder drops (sidebar / outline)
+
+/// Shared implementation for dropping files onto a folder row in the sidebar or the folder
+/// tree. Those views used to call `FileManager.moveItem` directly while advertising a
+/// *copy* cursor, with no validation, conflict handling or error reporting.
+@MainActor
+enum FileDropTransfer {
+    /// File URLs on the dragging pasteboard (non-file URLs are ignored).
+    static func fileURLs(from info: NSDraggingInfo) -> [URL] {
+        let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        return info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL] ?? []
+    }
+
+    /// The operation to show and perform, or `[]` if the drop is not allowed.
+    /// Copies when ⌥ is held or the destination is on another volume (as Finder does).
+    static func operation(for urls: [URL], destination: URL, optionKeyHeld: Bool, sourceMask: NSDragOperation) -> NSDragOperation {
+        guard !urls.isEmpty, FileOperationsManager(delegate: nil).isValidDestination(destination, for: urls) else { return [] }
+        let isCopy = optionKeyHeld || urls.contains { !sameVolume($0, destination) }
+        // Moving everything into the folder it already lives in would do nothing.
+        if !isCopy, urls.allSatisfy({ FileOperation.isSameDirectory($0.deletingLastPathComponent(), destination) }) {
+            return []
+        }
+        let desired: NSDragOperation = isCopy ? .copy : .move
+        if sourceMask.contains(desired) { return desired }
+        // A source that only offers copy can still be honoured as a copy; never turn a
+        // requested copy into a move.
+        return desired == .move && sourceMask.contains(.copy) ? .copy : []
+    }
+
+    /// Performs the transfer. Existing items are never overwritten; every failure is
+    /// collected and shown to the user.
+    @discardableResult
+    static func perform(_ operation: NSDragOperation, urls: [URL], into destination: URL, window: NSWindow?) -> Bool {
+        let fileManager = FileManager.default
+        var failures: [String] = []
+
+        for source in urls {
+            let name = source.lastPathComponent
+            if operation == .move, FileOperation.isSameDirectory(source.deletingLastPathComponent(), destination) { continue }
+            let target = destination.appendingPathComponent(name)
+            if FileOperation.sourceKind(at: target) != .missing {
+                failures.append("'\(name)' already exists in '\(destination.lastPathComponent)'.")
+                continue
+            }
+            do {
+                if operation == .copy {
+                    try fileManager.copyItem(at: source, to: target)
+                } else {
+                    try fileManager.moveItem(at: source, to: target)
+                }
+            } catch {
+                failures.append("'\(name)': \(error.localizedDescription)")
+            }
+        }
+
+        if !failures.isEmpty {
+            let alert = NSAlert()
+            alert.messageText = operation == .copy ? "Some items could not be copied" : "Some items could not be moved"
+            alert.informativeText = failures.prefix(8).joined(separator: "\n")
+                + (failures.count > 8 ? "\n… and \(failures.count - 8) more." : "")
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            if let window {
+                alert.beginSheetModal(for: window)
+            } else {
+                alert.runModal()
+            }
+        }
+        return failures.isEmpty
+    }
+
+    private static func sameVolume(_ lhs: URL, _ rhs: URL) -> Bool {
+        let a = try? lhs.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier
+        let b = try? rhs.resourceValues(forKeys: [.volumeIdentifierKey]).volumeIdentifier
+        guard let a = a ?? nil, let b = b ?? nil else { return true }
+        return a.isEqual(b)
     }
 }

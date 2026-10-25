@@ -181,6 +181,7 @@ class FileCopyMoveDialog: NSWindowController {
                 
                 if shouldCancel {
                     self?.operation?.cancel()
+                    self?.onCompletion?()
                     self?.closeWindow()
                 }
             }
@@ -266,6 +267,8 @@ extension FileCopyMoveDialog: FileOperationDelegate {
             alert.addButton(withTitle: "OK")
             
             alert.beginSheetModal(for: window) { [weak self] _ in
+                // Items handled before the failure may already have been copied or moved.
+                self?.onCompletion?()
                 self?.closeWindow()
             }
         }
@@ -338,6 +341,9 @@ class FileOperation {
 
     @Atomic private var isPaused = false
     @Atomic private var isCancelled = false
+    /// True once the destination root of the item currently being copied exists, so a
+    /// failed copy only ever discards what this operation itself created.
+    @Atomic private var rootCreated = false
     private var lastUpdateTimestamp: CFAbsoluteTime = 0
     private let updateInterval: TimeInterval = 0.1 // 100ms throttle
 
@@ -397,8 +403,8 @@ class FileOperation {
             var sourceSize: Int64 = 0
 
             // enumerator(at:) returns an empty (non-nil) enumerator for a plain file,
-            // so only take this branch for real directories.
-            let isDirectory = (try? sourceURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+            // so only take this branch for real directories (not symlinks to directories).
+            let isDirectory = Self.sourceKind(at: sourceURL) == .directory
             if isDirectory, let enumerator = fileManager.enumerator(at: sourceURL, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]) {
                 var yieldCounter = 0
                 while let fileURL = enumerator.nextObject() as? URL {
@@ -469,9 +475,15 @@ class FileOperation {
             let fileName = sourceURL.lastPathComponent
             let destinationURL = destination.appendingPathComponent(fileName)
 
+            // Moving an item into the folder it already lives in is a no-op, not a rename.
+            if type == .move && Self.isSameDirectory(sourceURL.deletingLastPathComponent(), destination) {
+                bytesProcessed += sourceSizes[sourceURL] ?? 0
+                continue
+            }
+
             // Check for conflict and handle auto-rename if needed
             var finalDestination = destinationURL
-            if fileManager.fileExists(atPath: destinationURL.path) {
+            if fileManager.fileExists(atPath: destinationURL.path) || Self.sourceKind(at: destinationURL) != .missing {
                 if SettingsStore.shared.autoRenameOnConflict {
                     finalDestination = generateUniqueURL(for: destinationURL)
                 } else {
@@ -480,6 +492,7 @@ class FileOperation {
                 }
             }
 
+            rootCreated = false
             do {
                 if type == .move && isOnSameVolume(sourceURL, destination) {
                     // Fast atomic move on same volume
@@ -487,9 +500,16 @@ class FileOperation {
                     bytesProcessed += sourceSizes[sourceURL] ?? 0
                     sendProgress(currentFile: fileName, bytesProcessed: bytesProcessed, totalBytes: totalSize)
                 } else {
-                    // Copy (or cross-volume move) - handle recursively for progress
-                    try await processRecursively(at: sourceURL, to: finalDestination, totalSize: totalSize, bytesProcessed: &bytesProcessed)
-                    
+                    // Copy (or cross-volume move) - handle recursively for progress.
+                    // Any failure here discards what *we* created at the destination; the
+                    // source is only removed after the whole copy has succeeded.
+                    do {
+                        try await processRecursively(at: sourceURL, to: finalDestination, totalSize: totalSize, bytesProcessed: &bytesProcessed, isRoot: true)
+                    } catch {
+                        if rootCreated { try? fileManager.removeItem(at: finalDestination) }
+                        throw error
+                    }
+
                     if type == .move {
                         // If it was a cross-volume move, we copied it. Now delete source.
                         try fileManager.removeItem(at: sourceURL)
@@ -497,7 +517,7 @@ class FileOperation {
                 }
             } catch is CancellationError {
                 // Cancelled mid-copy: discard the partial destination, keep the source intact.
-                try? fileManager.removeItem(at: finalDestination)
+                if rootCreated { try? fileManager.removeItem(at: finalDestination) }
                 return
             } catch {
                 delegate?.fileOperationDidFail(error: "Failed to \(type == .copy ? "copy" : "move") '\(fileName)': \(error.localizedDescription)")
@@ -529,13 +549,66 @@ class FileOperation {
         }
     }
 
-    private func processRecursively(at source: URL, to destination: URL, totalSize: Int64, bytesProcessed: inout Int64) async throws {
-        let fileManager = FileManager.default
-        var isDirectory: ObjCBool = false
-        guard fileManager.fileExists(atPath: source.path, isDirectory: &isDirectory) else { return }
+    // MARK: - Copy primitives
 
-        if isDirectory.boolValue {
-            try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+    enum SourceKind: Equatable {
+        case regular, directory, symlink, other, missing
+    }
+
+    /// Classifies an item *without* following symlinks, so links are copied as links
+    /// (never dereferenced) and broken links are not mistaken for missing files.
+    static func sourceKind(at url: URL) -> SourceKind {
+        var info = stat()
+        guard lstat(url.path, &info) == 0 else { return .missing }
+        switch info.st_mode & S_IFMT {
+        case S_IFREG: return .regular
+        case S_IFDIR: return .directory
+        case S_IFLNK: return .symlink
+        default: return .other
+        }
+    }
+
+    static func isSameDirectory(_ lhs: URL, _ rhs: URL) -> Bool {
+        lhs.resolvingSymlinksInPath().standardizedFileURL.path == rhs.resolvingSymlinksInPath().standardizedFileURL.path
+    }
+
+    private static func posixError(_ code: Int32, _ context: String) -> NSError {
+        NSError(domain: NSPOSIXErrorDomain, code: Int(code),
+                userInfo: [NSLocalizedDescriptionKey: "\(context): \(String(cString: strerror(code)))"])
+    }
+
+    /// Copies permissions, ownership (best effort), timestamps, ACLs and extended
+    /// attributes (including `com.apple.quarantine` and Finder tags). Failures are
+    /// logged rather than fatal: the data has already been copied correctly.
+    private static func copyMetadata(from source: URL, to destination: URL) {
+        let flags = copyfile_flags_t(COPYFILE_STAT | COPYFILE_XATTR | COPYFILE_ACL | COPYFILE_NOFOLLOW_SRC | COPYFILE_NOFOLLOW_DST)
+        if copyfile(source.path, destination.path, nil, flags) != 0 {
+            debugLog("copyfile metadata failed for \(destination.path): \(String(cString: strerror(errno)))")
+        }
+    }
+
+    private func processRecursively(at source: URL, to destination: URL, totalSize: Int64, bytesProcessed: inout Int64, isRoot: Bool = false) async throws {
+        let fileManager = FileManager.default
+
+        switch Self.sourceKind(at: source) {
+        case .missing:
+            throw Self.posixError(ENOENT, "'\(source.lastPathComponent)' disappeared during the operation")
+
+        case .other:
+            throw Self.posixError(ENOTSUP, "'\(source.lastPathComponent)' is a device, socket or pipe and cannot be copied")
+
+        case .symlink:
+            let target = try fileManager.destinationOfSymbolicLink(atPath: source.path)
+            try fileManager.createSymbolicLink(atPath: destination.path, withDestinationPath: target)
+            if isRoot { rootCreated = true }
+            Self.copyMetadata(from: source, to: destination)
+
+        case .directory:
+            // Created private (0700) and given the source's real permissions only after
+            // its contents are in place, so nothing is readable early.
+            try fileManager.createDirectory(at: destination, withIntermediateDirectories: false,
+                                            attributes: [.posixPermissions: 0o700])
+            if isRoot { rootCreated = true }
             let contents = try fileManager.contentsOfDirectory(at: source, includingPropertiesForKeys: nil)
             for item in contents {
                 if Task.isCancelled || isCancelled { throw CancellationError() }
@@ -543,42 +616,38 @@ class FileOperation {
                     await control.wait()
                 }
 
-                let itemName = item.lastPathComponent
-                let itemDestination = destination.appendingPathComponent(itemName)
+                let itemDestination = destination.appendingPathComponent(item.lastPathComponent)
                 try await processRecursively(at: item, to: itemDestination, totalSize: totalSize, bytesProcessed: &bytesProcessed)
             }
-            
-            // Copy directory attributes after contents are processed
-            let attributes = try fileManager.attributesOfItem(atPath: source.path)
-            try fileManager.setAttributes(attributes, ofItemAtPath: destination.path)
-        } else {
-            try await chunkedCopy(from: source, to: destination, totalSize: totalSize, bytesProcessed: &bytesProcessed)
+            Self.copyMetadata(from: source, to: destination)
+
+        case .regular:
+            try await chunkedCopy(from: source, to: destination, totalSize: totalSize, bytesProcessed: &bytesProcessed, isRoot: isRoot)
         }
     }
 
-    private func chunkedCopy(from source: URL, to destination: URL, totalSize: Int64, bytesProcessed: inout Int64) async throws {
+    private func chunkedCopy(from source: URL, to destination: URL, totalSize: Int64, bytesProcessed: inout Int64, isRoot: Bool) async throws {
         let fileManager = FileManager.default
         let fileName = source.lastPathComponent
-        
-        guard let inputStream = InputStream(url: source) else {
-            throw NSError(domain: "FileOperation", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to open source file for reading"])
-        }
-        guard let outputStream = OutputStream(url: destination, append: false) else {
-            throw NSError(domain: "FileOperation", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to open destination file for writing"])
-        }
 
-        inputStream.open()
-        outputStream.open()
-        defer {
-            inputStream.close()
-            outputStream.close()
-        }
+        let inputFD = open(source.path, O_RDONLY | O_NOFOLLOW)
+        guard inputFD >= 0 else { throw Self.posixError(errno, "Failed to open '\(fileName)' for reading") }
+        defer { close(inputFD) }
+
+        // O_EXCL: never truncate or write through something that appeared since the
+        // conflict check. Created 0600 and fixed up by copyMetadata once complete.
+        let outputFD = open(destination.path, O_WRONLY | O_CREAT | O_EXCL, 0o600)
+        guard outputFD >= 0 else { throw Self.posixError(errno, "Failed to create '\(fileName)' at the destination") }
+        if isRoot { rootCreated = true }
+        var outputClosed = false
+        defer { if !outputClosed { close(outputFD) } }
 
         let bufferSize = 1024 * 1024 // 1MB buffer
         let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
         defer { buffer.deallocate() }
 
-        while inputStream.hasBytesAvailable {
+        var chunkCount = 0
+        while true {
             if Task.isCancelled || isCancelled {
                 try? fileManager.removeItem(at: destination) // Cleanup partial file
                 throw CancellationError()
@@ -587,33 +656,40 @@ class FileOperation {
                 await control.wait()
             }
 
-            let bytesRead = inputStream.read(buffer, maxLength: bufferSize)
+            let bytesRead = read(inputFD, buffer, bufferSize)
             if bytesRead < 0 {
-                throw inputStream.streamError ?? NSError(domain: "FileOperation", code: 3, userInfo: [NSLocalizedDescriptionKey: "Read error"])
-            } else if bytesRead == 0 {
-                break
+                if errno == EINTR { continue }
+                throw Self.posixError(errno, "Failed to read '\(fileName)'")
             }
+            if bytesRead == 0 { break }
 
-            var bytesWrittenTotal = 0
-            while bytesWrittenTotal < bytesRead {
-                let bytesWritten = outputStream.write(buffer.advanced(by: bytesWrittenTotal), maxLength: bytesRead - bytesWrittenTotal)
-                if bytesWritten < 0 {
-                    throw outputStream.streamError ?? NSError(domain: "FileOperation", code: 4, userInfo: [NSLocalizedDescriptionKey: "Write error"])
+            var written = 0
+            while written < bytesRead {
+                let n = write(outputFD, buffer.advanced(by: written), bytesRead - written)
+                if n < 0 {
+                    if errno == EINTR { continue }
+                    throw Self.posixError(errno, "Failed to write '\(fileName)'")
                 }
-                bytesWrittenTotal += bytesWritten
+                if n == 0 { throw Self.posixError(EIO, "Failed to write '\(fileName)'") }
+                written += n
             }
 
             bytesProcessed += Int64(bytesRead)
             sendProgress(currentFile: fileName, bytesProcessed: bytesProcessed, totalBytes: totalSize)
-            
-            if bytesRead % (10 * bufferSize) == 0 {
+
+            chunkCount += 1
+            if chunkCount % 8 == 0 {
                 await Task.yield()
             }
         }
-        
-        // Copy file attributes
-        let attributes = try fileManager.attributesOfItem(atPath: source.path)
-        try fileManager.setAttributes(attributes, ofItemAtPath: destination.path)
+
+        if close(outputFD) != 0 {
+            outputClosed = true
+            throw Self.posixError(errno, "Failed to finish writing '\(fileName)'")
+        }
+        outputClosed = true
+
+        Self.copyMetadata(from: source, to: destination)
     }
 
     private func generateUniqueURL(for url: URL) -> URL {

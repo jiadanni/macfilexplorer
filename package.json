@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "@utcp/code-mode": "^1.0.5"
+    "@utcp/code-mode": "1.0.5"
   }
 }

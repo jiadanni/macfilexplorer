@@ -163,7 +163,25 @@ class FileBrowserDataSource {
     func persistSortPreferences() {
         var prefs = settings.folderSortPreferences
         prefs[currentDirectory.path] = "\(sortColumn)|\(sortAscending ? "asc" : "desc")"
+        // Every folder the user ever re-sorted would otherwise be remembered (and its path
+        // stored in the preferences plist) forever; keep the table bounded.
+        let maxEntries = 500
+        if prefs.count > maxEntries {
+            for key in prefs.keys.sorted().prefix(prefs.count - maxEntries) where key != currentDirectory.path {
+                prefs.removeValue(forKey: key)
+            }
+        }
         settings.folderSortPreferences = prefs
+    }
+
+    /// Strict weak ordering that sorts items without a date last in both directions
+    /// (returning `false` whenever a date was missing made the comparator inconsistent).
+    private static func isOrdered(_ lhs: Date?, before rhs: Date?, ascending: Bool) -> Bool {
+        switch (lhs, rhs) {
+        case let (a?, b?): return ascending ? a < b : a > b
+        case (_?, nil): return true
+        default: return false
+        }
     }
 
     private func compareItems(_ item1: FileItem, _ item2: FileItem) -> Bool {
@@ -175,11 +193,9 @@ class FileBrowserDataSource {
             if item1.isDirectory != item2.isDirectory { return item1.isDirectory }
             return sortAscending ? item1.size < item2.size : item1.size > item2.size
         case AppConfig.ColumnID.dateModified:
-            guard let date1 = item1.modificationDate, let date2 = item2.modificationDate else { return false }
-            return sortAscending ? date1 < date2 : date1 > date2
+            return Self.isOrdered(item1.modificationDate, before: item2.modificationDate, ascending: sortAscending)
         case AppConfig.ColumnID.dateCreated:
-            guard let date1 = item1.creationDate, let date2 = item2.creationDate else { return false }
-            return sortAscending ? date1 < date2 : date1 > date2
+            return Self.isOrdered(item1.creationDate, before: item2.creationDate, ascending: sortAscending)
         case AppConfig.ColumnID.type:
             return sortAscending ? item1.kind < item2.kind : item1.kind > item2.kind
         default:

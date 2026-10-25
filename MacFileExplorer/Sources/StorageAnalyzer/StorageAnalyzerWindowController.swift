@@ -334,13 +334,8 @@ extension StorageAnalyzerWindowController: StorageListViewDelegate {
         alert.beginSheetModal(for: window) { [weak self] response in
             guard let self = self else { return }
             if response == .alertFirstButtonReturn {
-                for item in items {
-                    do {
-                        try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
-                    } catch {
-                        debugLog("Failed to trash item: \(error)")
-                    }
-                }
+                let failures = StorageTrash.moveToTrash(items)
+                StorageTrash.presentFailures(failures, in: self.window)
 
                 // Rescan after deletion
                 if let url = self.rootURL {

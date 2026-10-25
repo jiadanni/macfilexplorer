@@ -266,34 +266,22 @@ extension FolderOutlineViewController: NSOutlineViewDataSource, NSOutlineViewDel
     
     func outlineView(_ outlineView: NSOutlineView, validateDrop info: NSDraggingInfo, proposedItem item: Any?, proposedChildIndex index: Int) -> NSDragOperation {
         guard let targetItem = item as? FileItem, targetItem.isDirectory else { return [] }
-        return .copy
+        return FileDropTransfer.operation(for: FileDropTransfer.fileURLs(from: info),
+                                          destination: targetItem.url,
+                                          optionKeyHeld: NSEvent.modifierFlags.contains(.option), sourceMask: info.draggingSourceOperationMask)
     }
     
     func outlineView(_ outlineView: NSOutlineView, acceptDrop info: NSDraggingInfo, item: Any?, childIndex index: Int) -> Bool {
-        guard let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
-              let targetItem = item as? FileItem else { return false }
-        
-        let destinationURL = targetItem.url
-        let fileManager = FileManager.default
-        var allSucceeded = true
-        
-        for sourceURL in urls {
-            let fileName = sourceURL.lastPathComponent
-            let targetURL = destinationURL.appendingPathComponent(fileName)
-            if sourceURL == targetURL { continue }
-            do {
-                try fileManager.moveItem(at: sourceURL, to: targetURL)
-            } catch {
-                debugLog("Failed to move \(sourceURL) to \(targetURL): \(error)")
-                allSucceeded = false
-            }
-        }
-        
-        if allSucceeded {
-            targetItem.loadChildren(showsHiddenFiles: false)
-            outlineView.reloadItem(targetItem, reloadChildren: true)
-        }
-        return allSucceeded
+        guard let targetItem = item as? FileItem, targetItem.isDirectory else { return false }
+        let urls = FileDropTransfer.fileURLs(from: info)
+        let operation = FileDropTransfer.operation(for: urls, destination: targetItem.url, optionKeyHeld: NSEvent.modifierFlags.contains(.option), sourceMask: info.draggingSourceOperationMask)
+        guard operation != [] else { return false }
+
+        let succeeded = FileDropTransfer.perform(operation, urls: urls, into: targetItem.url, window: outlineView.window)
+        // Refresh even after a partial failure: earlier items may already have been transferred.
+        targetItem.loadChildren(showsHiddenFiles: false)
+        outlineView.reloadItem(targetItem, reloadChildren: true)
+        return succeeded
     }
 }
 
