@@ -26,7 +26,7 @@ class FileBrowserDragDropHandler {
     /// - Returns: The allowed drag operation.
     func validateDrop(_ info: NSDraggingInfo, proposedTarget item: FileItem?) -> NSDragOperation {
         guard let delegate = delegate,
-              let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
+              let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
               !urls.isEmpty else { return [] }
         
         let destinationURL: URL
@@ -54,7 +54,7 @@ class FileBrowserDragDropHandler {
     /// - Returns: Whether the drop was accepted.
     func acceptDrop(_ info: NSDraggingInfo, target item: FileItem?) -> Bool {
         guard let delegate = delegate,
-              let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
+              let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
               !urls.isEmpty else { return false }
         
         let destinationURL: URL

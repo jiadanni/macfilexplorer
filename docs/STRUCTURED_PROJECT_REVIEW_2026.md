@@ -16,7 +16,7 @@
 **Status:** Project is in active architectural debt resolution. Strong fundamentals are being obscured by **mid-refactoring transitional chaos**. The team is following a clear, phased remediation plan that addresses the core issues systematically.
 
 ### Key Strengths
-✅ **Security-First Design** - Proper sandbox awareness, security-scoped bookmarks, thread-safe permissions  
+⚠️ **Security posture** - The app ships *unsandboxed* (`app-sandbox = false`), so the sandbox/bookmark layer is inert; see `REVIEW_SECURITY_PERFORMANCE_CONCEPTS.md`  
 ✅ **Modern Swift** - Use of actors, @Atomic wrappers, proper concurrency patterns  
 ✅ **Well-Architected Services** - PermissionsManager, FileSystemHelpers, ColorManager are exemplary  
 ✅ **Comprehensive Audit Trail** - Extensive documentation of issues and remediation plans  

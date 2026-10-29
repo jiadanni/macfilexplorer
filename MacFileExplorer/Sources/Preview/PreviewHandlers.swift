@@ -22,7 +22,9 @@ class ImagePreviewHandler: PreviewHandler {
 
     func createView(for file: FileItem) -> NSView {
          // Load image logic (simplified or extracted)
-        let image = loadImageWithSizeLimit(from: file.url, maxDimension: 4096) ?? NSImage()
+        // One CGImageSource serves both the thumbnail and the metadata overlay.
+        let imageSource = CGImageSourceCreateWithURL(file.url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary)
+        let image = imageSource.flatMap { loadImageWithSizeLimit(from: $0, maxDimension: 2048) } ?? NSImage()
         
         let container = NSView()
         container.translatesAutoresizingMaskIntoConstraints = false
@@ -44,7 +46,7 @@ class ImagePreviewHandler: PreviewHandler {
         container.addSubview(imgView)
         
         // Metadata overlay
-        let metadataView = createMetadataOverlay(image: image, url: file.url)
+        let metadataView = createMetadataOverlay(image: image, source: imageSource, fileSize: file.size)
         container.addSubview(metadataView)
         
         NSLayoutConstraint.activate([
@@ -68,7 +70,7 @@ class ImagePreviewHandler: PreviewHandler {
         imgView.frameCenterRotation -= 90
     }
     
-    private func createMetadataOverlay(image: NSImage, url: URL) -> NSView {
+    private func createMetadataOverlay(image: NSImage, source: CGImageSource?, fileSize: Int64) -> NSView {
         let stackView = NSStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.orientation = .vertical
@@ -82,7 +84,7 @@ class ImagePreviewHandler: PreviewHandler {
         var width = Int(image.size.width)
         var height = Int(image.size.height)
         
-        if let imageSource = CGImageSourceCreateWithURL(url as CFURL, nil),
+        if let imageSource = source,
            let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any],
            let pixelWidth = imageProperties[kCGImagePropertyPixelWidth] as? Int,
            let pixelHeight = imageProperties[kCGImagePropertyPixelHeight] as? Int {
@@ -95,8 +97,8 @@ class ImagePreviewHandler: PreviewHandler {
         dimLabel.textColor = .white
         stackView.addArrangedSubview(dimLabel)
         
-        if let fileSize = try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64 {
-            let formattedSize = ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file)
+        if fileSize > 0 {
+            let formattedSize = FileBrowserActionHelper.formatFileSize(fileSize)
             let sizeLabel = NSTextField(labelWithString: "Size: \(formattedSize)")
             sizeLabel.font = NSFont.systemFont(ofSize: 11)
             sizeLabel.textColor = .white
@@ -107,11 +109,11 @@ class ImagePreviewHandler: PreviewHandler {
     }
     
     // Helper to avoid large image memory issues
-    private func loadImageWithSizeLimit(from url: URL, maxDimension: CGFloat) -> NSImage? {
-        guard let imageSource = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
-        
+    private func loadImageWithSizeLimit(from imageSource: CGImageSource, maxDimension: CGFloat) -> NSImage? {
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCache: false,
             kCGImageSourceThumbnailMaxPixelSize: maxDimension
         ]
         
@@ -187,36 +189,90 @@ class TextPreviewHandler: PreviewHandler {
         return textExtensions.contains(ext)
     }
     
-    func createView(for file: FileItem) -> NSView {
-        let maxPreviewBytes = 1_000_000 // 1MB limit
-        var content: String?
+    static let maxPreviewBytes = 1_000_000 // 1MB limit
 
-        if file.size > Int64(maxPreviewBytes) {
-            // Read only prefix to avoid DoS on large files
-            do {
-                let handle = try FileHandle(forReadingFrom: file.url)
-                defer { try? handle.close() }
-                if let data = try handle.read(upToCount: maxPreviewBytes) {
-                    content = String(decoding: data, as: UTF8.self) + "\n\n[Preview truncated due to file size]"
-                }
-            } catch {
-                debugLog("Error reading partial file: \(error)")
-            }
-        } else {
-            content = try? String(contentsOf: file.url, encoding: .utf8)
+    func createView(for file: FileItem) -> NSView {
+        // The cap is enforced on the bytes actually read from an opened descriptor, never
+        // on the size cached at listing time: that value is wrong for special files
+        // (FIFOs, devices reached through symlinks) and for files that have since grown.
+        guard let prefix = Self.readBoundedPrefix(of: file.url, limit: Self.maxPreviewBytes) else {
+            return Self.messageView(L10n.text("Preview unavailable: this item is not a regular, readable file."))
+        }
+        guard var content = Self.decodeText(prefix.data, truncated: prefix.truncated) else {
+            return Self.messageView(L10n.text("Preview unavailable: this file is not UTF-8 text."))
+        }
+        if prefix.truncated {
+            content += "\n\n[Preview truncated due to file size]"
         }
 
-        guard let finalContent = content else { return NSView() }
-        
         let scrollView = NSTextView.scrollableTextView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         
         guard let textView = scrollView.documentView as? NSTextView else { return NSView() }
-        textView.string = finalContent
+        textView.string = content
         textView.isEditable = false
         textView.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
         
         return scrollView
+    }
+
+    /// Reads at most `limit` bytes from `url`, and only if it is a regular file.
+    /// Opens non-blocking so a FIFO cannot hang the caller, and checks the *opened*
+    /// descriptor with `fstat` so a symlink to a device (e.g. `/dev/zero`) is refused.
+    static func readBoundedPrefix(of url: URL, limit: Int) -> (data: Data, truncated: Bool)? {
+        let fd = open(url.path, O_RDONLY | O_NONBLOCK)
+        guard fd >= 0 else { return nil }
+        defer { close(fd) }
+
+        var info = stat()
+        guard fstat(fd, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG else { return nil }
+
+        var data = Data()
+        var chunk = [UInt8](repeating: 0, count: 64 * 1024)
+        while data.count <= limit {
+            let wanted = min(chunk.count, limit + 1 - data.count)
+            let count = read(fd, &chunk, wanted)
+            if count < 0 {
+                if errno == EINTR { continue }
+                return nil
+            }
+            if count == 0 { break }
+            data.append(contentsOf: chunk[0..<count])
+        }
+        if data.count > limit {
+            return (Data(data.prefix(limit)), true)
+        }
+        return (data, false)
+    }
+
+    /// Strict UTF-8 (or BOM-marked UTF-16) decoding. A truncated prefix may end in the
+    /// middle of a multi-byte sequence, so it is decoded leniently.
+    static func decodeText(_ data: Data, truncated: Bool) -> String? {
+        if data.contains(0) && !(data.starts(with: [0xFF, 0xFE]) || data.starts(with: [0xFE, 0xFF])) {
+            return nil // binary content
+        }
+        if truncated { return String(decoding: data, as: UTF8.self) }
+        if let text = String(data: data, encoding: .utf8) { return text }
+        if data.starts(with: [0xFF, 0xFE]) || data.starts(with: [0xFE, 0xFF]) {
+            return String(data: data, encoding: .utf16)
+        }
+        return nil
+    }
+
+    private static func messageView(_ message: String) -> NSView {
+        let label = NSTextField(wrappingLabelWithString: message)
+        label.alignment = .center
+        label.textColor = .secondaryLabelColor
+        label.translatesAutoresizingMaskIntoConstraints = false
+        let container = NSView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20)
+        ])
+        return container
     }
 }
 

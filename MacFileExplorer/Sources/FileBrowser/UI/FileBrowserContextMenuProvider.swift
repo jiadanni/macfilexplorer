@@ -323,7 +323,7 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
     
     @objc func handlePaste(_ sender: Any) {
         let pasteboard = NSPasteboard.general
-        guard let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL], !fileURLs.isEmpty else { return }
+        guard let fileURLs = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !fileURLs.isEmpty else { return }
 
         let customCutMarkerType = NSPasteboard.PasteboardType(AppConfig.Pasteboard.cutMarkerType)
         let isCut = pasteboard.string(forType: customCutMarkerType) == "cut"
@@ -335,15 +335,45 @@ class FileBrowserContextMenuProvider: NSObject, NSMenuDelegate {
     
     @objc func handleRename(_ sender: Any) {
         let items = delegate?.getSelectedItems() ?? []
-        guard items.count == 1 else { return }
-        
-        if let outlineView = delegate?.getOutlineView() {
-            let row = outlineView.selectedRow
-            if row >= 0, let rowView = outlineView.rowView(atRow: row, makeIfNecessary: false),
-               let cell = rowView.view(atColumn: 0) as? NSTableCellView, let textField = cell.textField {
-                textField.isEditable = true
-                outlineView.window?.makeFirstResponder(textField)
-            }
+        guard items.count == 1, let item = items.first else { return }
+        guard let newName = FileBrowserDialogHelper.showRenameDialog(currentName: item.name) else { return }
+        renameItem(item, to: newName)
+    }
+
+    /// Renames `item` on disk. Never overwrites an existing item, and (if enabled in
+    /// settings) asks before changing a file's extension.
+    func renameItem(_ item: FileItem, to newName: String) {
+        guard newName != item.name else { return }
+
+        let source = item.url
+        let destination = source.deletingLastPathComponent().appendingPathComponent(newName)
+
+        // A case-only rename on a case-insensitive volume "exists" as the very same file.
+        let isSameFile: Bool = {
+            guard let a = FileSystemHelpers.fileID(for: source), let b = FileSystemHelpers.fileID(for: destination) else { return false }
+            return a == b
+        }()
+        if FileOperation.sourceKind(at: destination) != .missing && !isSameFile {
+            delegate?.showError("An item named '\(newName)' already exists in this folder.")
+            return
+        }
+
+        if SettingsStore.shared.warnOnExtensionChange, !item.isDirectory,
+           (item.name as NSString).pathExtension.lowercased() != (newName as NSString).pathExtension.lowercased() {
+            let alert = NSAlert()
+            alert.messageText = "Change the file extension?"
+            alert.informativeText = "Changing the extension of '\(item.name)' may make it open in a different app or stop opening at all."
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "Rename")
+            alert.addButton(withTitle: "Cancel")
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
+
+        do {
+            try FileManager.default.moveItem(at: source, to: destination)
+            delegate?.refreshDirectory()
+        } catch {
+            delegate?.showError("Failed to rename '\(item.name)': \(error.localizedDescription)")
         }
     }
     
@@ -524,7 +554,7 @@ extension FileBrowserContextMenuProvider: NSMenuItemValidation {
             return selectedItems.count == 1
             
         case #selector(handlePaste(_:)):
-            let canReadPasteboard = NSPasteboard.general.canReadObject(forClasses: [NSURL.self], options: nil)
+            let canReadPasteboard = NSPasteboard.general.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])
             return canReadPasteboard
             
         case #selector(handleNewFolder(_:)),

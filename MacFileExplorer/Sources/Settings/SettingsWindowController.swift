@@ -275,26 +275,10 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
     // MARK: - Export/Import Helpers
 
     private func exportSettings(to url: URL) {
-        var settingsDict: [String: Any] = [:]
-
-        // Export all settings keys
-        for key in UserDefaults.Keys.allCases {
-            if let value = settingsStore.value(forKey: key.rawValue) {
-                settingsDict[key.rawValue] = value
-            }
-        }
-
-        // Also export favorites
-        let favorites = settingsStore.sidebarFavorites
-        if !favorites.isEmpty {
-            settingsDict["SidebarFavorites"] = favorites
-        }
-
         do {
-            let jsonData = try JSONSerialization.data(withJSONObject: settingsDict, options: [.prettyPrinted, .sortedKeys])
-            try jsonData.write(to: url)
+            let jsonData = try SettingsPortability.exportData(from: settingsStore)
+            try jsonData.write(to: url, options: .atomic)
 
-            // Show success alert
             let alert = NSAlert()
             alert.messageText = "Export Successful"
             alert.informativeText = "Your settings have been exported successfully."
@@ -302,7 +286,6 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
             alert.addButton(withTitle: "OK")
             alert.runModal()
         } catch {
-            // Show error alert
             let alert = NSAlert()
             alert.messageText = "Export Failed"
             alert.informativeText = "Failed to export settings: \(error.localizedDescription)"
@@ -315,19 +298,15 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
     private func importSettings(from url: URL) {
         do {
             let jsonData = try Data(contentsOf: url)
-            guard let settingsDict = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
-                throw NSError(domain: "SettingsImport", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid settings file format"])
-            }
+            let result = try SettingsPortability.importData(jsonData, into: settingsStore)
 
-            // Import all settings
-            for (key, value) in settingsDict {
-                settingsStore.setValue(value, forKey: key)
-            }
-
-            // Show success alert and offer to restart
             let alert = NSAlert()
             alert.messageText = "Import Successful"
-            alert.informativeText = "Your settings have been imported successfully. Some changes may require restarting the application to take effect."
+            var message = "Imported \(result.applied.count) setting(s). Some changes may require restarting the application to take effect."
+            if !result.ignored.isEmpty {
+                message += "\n\nIgnored \(result.ignored.count) unrecognised or incompatible entr\(result.ignored.count == 1 ? "y" : "ies")."
+            }
+            alert.informativeText = message
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
             alert.runModal()
@@ -339,7 +318,6 @@ class SettingsWindowController: NSWindowController, SettingsChangeDelegate {
             // Post notification to refresh all UI
             NotificationCenter.default.post(name: .settingsDidChange, object: nil)
         } catch {
-            // Show error alert
             let alert = NSAlert()
             alert.messageText = "Import Failed"
             alert.informativeText = "Failed to import settings: \(error.localizedDescription)"

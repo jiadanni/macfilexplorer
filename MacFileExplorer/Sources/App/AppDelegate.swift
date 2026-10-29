@@ -448,8 +448,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, SettingsStoreDelegate {
         }
     }
 
-    /// Network filesystem schemes we allow mounting. Anything else (http, file, custom
-    /// schemes) is rejected before it reaches NetFS.
+    /// Network filesystem schemes we allow mounting (`ftp` and plain `http` are unencrypted;
+    /// prefer smb/afp/nfs/ftps/https). Anything else (file, custom schemes) is rejected
+    /// before it reaches NetFS.
     private static let allowedNetworkSchemes: Set<String> = ["smb", "afp", "nfs", "ftp", "ftps", "cifs", "webdav", "http", "https"]
 
     private func connectToNetworkLocation(_ path: String) {

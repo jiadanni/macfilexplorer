@@ -834,9 +834,12 @@ final class SettingsStore: SettingsStoreProtocol {
                 return decoded
             }
 
+            // Keychain empty or unavailable: fall back to the UserDefaults copy, and only
+            // migrate it (dropping the original) once the keychain write has succeeded.
             let legacy = defaults.array(forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey) as? [Data] ?? []
-            if !legacy.isEmpty, let encoded = try? JSONEncoder().encode(legacy) {
-                _ = KeychainStore.saveData(encoded, forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
+            if !legacy.isEmpty,
+               let encoded = try? JSONEncoder().encode(legacy),
+               KeychainStore.saveData(encoded, forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey) {
                 defaults.removeObject(forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
             }
             return legacy
@@ -848,9 +851,13 @@ final class SettingsStore: SettingsStoreProtocol {
                 return
             }
 
-            if let encoded = try? JSONEncoder().encode(newValue) {
-                _ = KeychainStore.saveData(encoded, forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
+            if let encoded = try? JSONEncoder().encode(newValue),
+               KeychainStore.saveData(encoded, forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey) {
                 defaults.removeObject(forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
+            } else {
+                // Keychain refused the write (locked, denied, signature change): keep the
+                // bookmarks in UserDefaults rather than losing the user's folder grants.
+                defaults.set(newValue, forKey: AppConfig.Keychain.grantedDirectoryBookmarksKey)
             }
         }
     }
@@ -923,6 +930,12 @@ final class SettingsStore: SettingsStoreProtocol {
         for key in UserDefaults.Keys.allCases {
             defaults.removeObject(forKey: key.rawValue)
         }
+        // Settings that are stored under ad-hoc keys rather than `UserDefaults.Keys`.
+        for key in SettingsPortability.additionalKeys {
+            defaults.removeObject(forKey: key)
+        }
+        defaults.removeObject(forKey: AppConfig.SettingsKeys.filterCriteria)
+        defaults.removeObject(forKey: AppConfig.SettingsKeys.searchHistory)
     }
 
     // MARK: - Compatibility Helpers
@@ -942,5 +955,120 @@ final class SettingsStore: SettingsStoreProtocol {
     
     func removeValue(forKey key: String) {
         defaults.removeObject(forKey: key)
+    }
+}
+
+// MARK: - Settings import / export
+
+/// Single, validated implementation of settings export and import.
+///
+/// Import only accepts known preference keys with a value of the same kind as the
+/// current one, so a settings file can neither plant arbitrary `UserDefaults` keys
+/// (menu key-equivalents, language, ...) nor overwrite the granted-folder allow-list.
+/// Export converts `Data` values to base64 because `JSONSerialization` raises an
+/// uncatchable Objective-C exception for them.
+enum SettingsPortability {
+    /// Keys stored outside `UserDefaults.Keys` that are still user preferences.
+    static let additionalKeys: [String] = ["SidebarFavorites", "GlobalFolderColors"]
+
+    /// Permission state is deliberately never exported or imported.
+    private static let excludedKeys: Set<String> = [
+        UserDefaults.Keys.grantedDirectoriesPaths.rawValue,
+        UserDefaults.Keys.grantedDirectoryBookmarks.rawValue,
+        UserDefaults.Keys.grantedDirectoryBookmarksMigrated.rawValue
+    ]
+
+    static var allowedKeys: Set<String> {
+        Set(UserDefaults.Keys.allCases.map { $0.rawValue })
+            .subtracting(excludedKeys)
+            .union(additionalKeys)
+    }
+
+    private static let dataMarker = "__mfe_data_base64__"
+
+    enum PortabilityError: LocalizedError {
+        case invalidFormat
+        var errorDescription: String? { "Invalid settings file format" }
+    }
+
+    // MARK: Export
+
+    static func exportData(from store: SettingsStoreProtocol) throws -> Data {
+        var snapshot: [String: Any] = [:]
+        for key in allowedKeys.sorted() {
+            guard let value = store.value(forKey: key), let safe = jsonSafe(value) else { continue }
+            snapshot[key] = safe
+        }
+        guard JSONSerialization.isValidJSONObject(snapshot) else { throw PortabilityError.invalidFormat }
+        return try JSONSerialization.data(withJSONObject: snapshot, options: [.prettyPrinted, .sortedKeys])
+    }
+
+    private static func jsonSafe(_ value: Any) -> Any? {
+        switch value {
+        case let data as Data:
+            return [dataMarker: data.base64EncodedString()]
+        case let number as NSNumber:
+            return number.doubleValue.isFinite ? number : nil
+        case let string as String:
+            return string
+        case let array as [Any]:
+            return array.compactMap { jsonSafe($0) }
+        case let dictionary as [String: Any]:
+            return dictionary.compactMapValues { jsonSafe($0) }
+        default:
+            return nil // Date, URL, ... are not part of the portable format
+        }
+    }
+
+    private static func decoded(_ value: Any) -> Any? {
+        switch value {
+        case is NSNull:
+            return nil
+        case let dictionary as [String: Any]:
+            if dictionary.count == 1, let encoded = dictionary[dataMarker] as? String {
+                return Data(base64Encoded: encoded)
+            }
+            return dictionary.compactMapValues { decoded($0) }
+        case let array as [Any]:
+            return array.compactMap { decoded($0) }
+        default:
+            return value
+        }
+    }
+
+    // MARK: Import
+
+    /// Applies the recognised, type-compatible entries of `data` to `store`.
+    /// - Returns: the keys that were applied and the keys that were ignored.
+    @discardableResult
+    static func importData(_ data: Data, into store: SettingsStoreProtocol) throws -> (applied: [String], ignored: [String]) {
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw PortabilityError.invalidFormat
+        }
+        let allowed = allowedKeys
+        var applied: [String] = []
+        var ignored: [String] = []
+
+        for (key, raw) in object.sorted(by: { $0.key < $1.key }) {
+            guard allowed.contains(key), let value = decoded(raw), isCompatible(value, with: store.value(forKey: key)) else {
+                ignored.append(key)
+                continue
+            }
+            store.setValue(value, forKey: key)
+            applied.append(key)
+        }
+        return (applied, ignored)
+    }
+
+    /// A key with no current value accepts any property-list type; otherwise the kind must match.
+    private static func isCompatible(_ new: Any, with current: Any?) -> Bool {
+        guard let current else { return true }
+        switch (new, current) {
+        case (is Data, is Data), (is String, is String), (is NSNumber, is NSNumber),
+             (is [Any], is [Any]), (is [String: Any], is [String: Any]):
+            return true
+        default:
+            return false
+        }
     }
 }

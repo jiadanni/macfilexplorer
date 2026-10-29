@@ -29,8 +29,21 @@ class TerminalViewController: NSViewController {
     private var masterHandle: FileHandle?
     private var outputTask: Task<Void, Never>?
     private var outputContinuation: AsyncStream<Data>.Continuation?
-    private let sentinelEcho = "MFE_SENTINEL_12345"
+    /// Per-session secret carried by every OSC 133 marker the shell integration emits.
+    /// Output from `cat`, a build log or a remote host cannot know it, so it cannot forge
+    /// prompt/idle markers. `nil` accepts the legacy un-nonced form (used by tests and by
+    /// shells running an old integration script).
+    var markerNonce: String? = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+    private var sentinelEcho: String { "MFE_SENTINEL_" + (markerNonce ?? "12345") }
+    /// Tail of an escape sequence cut off by a PTY read boundary, completed by the next read.
+    private var pendingEscape = ""
+    /// Text typed while a password-style prompt is active; never displayed or recorded.
+    private var secretInput = ""
+    private static let maxScrollbackUTF16 = 400_000
+    private static let maxCommandHistory = 1000
     private(set) var lastSyncedDirectory: String?
+    /// Everything currently shown in the terminal view (for tests).
+    var textViewStringForTesting: String { textView?.string ?? "" }
     private var inputBuffer = ""
     private(set) var suppressOutputUntilSentinel = false
 
@@ -135,7 +148,9 @@ class TerminalViewController: NSViewController {
         view.addSubview(scrollView)
 
         // Create text view for terminal output
-        textView = NSTextView()
+        let terminalTextView = TerminalTextView()
+        terminalTextView.onControlByte = { [weak self] byte in self?.sendControlByte(byte) }
+        textView = terminalTextView
         textView.isEditable = true
         textView.isSelectable = true
         textView.backgroundColor = AppDesignSystem.Terminal.background
@@ -233,6 +248,11 @@ class TerminalViewController: NSViewController {
         environment["PWD"] = currentDirectory
         // Disable zsh's partial line indicator (the % symbol)
         environment["PROMPT_EOL_MARK"] = ""
+        if let nonce = markerNonce {
+            // Un-exported by the integration script right after zsh starts, so child
+            // processes do not inherit it.
+            environment["MFE_NONCE"] = nonce
+        }
         // Use app-specific terminal config directory instead of user's ~/.zshrc
         if let terminalConfigDir = getOrCreateTerminalConfigDir() {
             environment["ZDOTDIR"] = terminalConfigDir
@@ -263,7 +283,8 @@ class TerminalViewController: NSViewController {
             lastSyncedDirectory = currentDirectory
             // PTY echo is already disabled via termios, just send sentinel
             beginSuppressingOutput()
-            writeToShell("printf \"\(sentinelEcho)\\n\"\n")
+            // Leading space keeps it out of history (HIST_IGNORE_SPACE in the integration script).
+            writeToShell(" printf \"\(sentinelEcho)\\n\"\n")
 
         } catch {
             appendOutput("Failed to start shell: \(error.localizedDescription)\n", color: AppDesignSystem.Colors.error)
@@ -353,8 +374,14 @@ class TerminalViewController: NSViewController {
     }
 
     func processOutput(_ output: String) {
+        // A PTY read can end in the middle of an escape sequence; hold the tail back and
+        // finish it with the next read instead of printing or mis-parsing the fragments.
+        let split = Self.splitIncompleteEscape(pendingEscape + output)
+        pendingEscape = split.pending
+        var text = split.complete
+        if text.isEmpty { return }
+
         // Drop any programmatic echoes until the sentinel is seen so the UI stays clean
-        var text = output
         
         if suppressOutputUntilSentinel {
             if let sentinelRange = text.range(of: sentinelEcho) {
@@ -410,6 +437,7 @@ class TerminalViewController: NSViewController {
         let attributed = parseANSI(filtered)
         if attributed.length > 0 {
             textView.textStorage?.append(attributed)
+            trimScrollbackIfNeeded()
             textView.scrollToEndOfDocument(nil)
             updateScrollVisibility()
         }
@@ -505,16 +533,21 @@ class TerminalViewController: NSViewController {
                     j = text.index(after: j)
                 }
 
-                // Parse color code if the final character is 'm'
-                if finalChar == "m" && !code.isEmpty {
-                    let codes = code.split(separator: ";").compactMap { Int($0) }
-                    for c in codes {
+                // Parse color code if the final character is 'm' (an empty list means reset)
+                if finalChar == "m" {
+                    let codes = code.isEmpty
+                        ? [0]
+                        : code.split(separator: ";", omittingEmptySubsequences: false).map { Int($0) ?? 0 }
+                    var index = 0
+                    while index < codes.count {
+                        let c = codes[index]
                         switch c {
                         case 0:  // Reset
                             currentColor = AppDesignSystem.Terminal.foreground
                             currentBold = false
                         case 1:  // Bold
                             currentBold = true
+                        case 22: currentBold = false
                         case 30: currentColor = AppDesignSystem.Terminal.ANSI.black
                         case 31: currentColor = AppDesignSystem.Terminal.ANSI.red
                         case 32: currentColor = AppDesignSystem.Terminal.ANSI.green
@@ -523,6 +556,7 @@ class TerminalViewController: NSViewController {
                         case 35: currentColor = AppDesignSystem.Terminal.ANSI.magenta
                         case 36: currentColor = AppDesignSystem.Terminal.ANSI.cyan
                         case 37: currentColor = AppDesignSystem.Terminal.ANSI.white
+                        case 39: currentColor = AppDesignSystem.Terminal.foreground
                         case 90: currentColor = AppDesignSystem.Terminal.ANSI.brightBlack
                         case 91: currentColor = AppDesignSystem.Terminal.ANSI.brightRed
                         case 92: currentColor = AppDesignSystem.Terminal.ANSI.brightGreen
@@ -531,8 +565,28 @@ class TerminalViewController: NSViewController {
                         case 95: currentColor = AppDesignSystem.Terminal.ANSI.brightMagenta
                         case 96: currentColor = AppDesignSystem.Terminal.ANSI.brightCyan
                         case 97: currentColor = AppDesignSystem.Terminal.ANSI.brightWhite
+                        case 38, 48:
+                            // Extended colour: 38;5;<n> / 38;2;<r>;<g>;<b> (48 = background, which
+                            // this view does not draw). Consume the parameters so they are not
+                            // misread as standalone SGR codes (e.g. the 31 in 38;5;31).
+                            if index + 1 < codes.count, codes[index + 1] == 5 {
+                                if c == 38, index + 2 < codes.count {
+                                    currentColor = Self.xterm256Color(codes[index + 2])
+                                }
+                                index += 2
+                            } else if index + 1 < codes.count, codes[index + 1] == 2 {
+                                if c == 38, index + 4 < codes.count {
+                                    currentColor = NSColor(
+                                        srgbRed: CGFloat(min(max(codes[index + 2], 0), 255)) / 255,
+                                        green: CGFloat(min(max(codes[index + 3], 0), 255)) / 255,
+                                        blue: CGFloat(min(max(codes[index + 4], 0), 255)) / 255,
+                                        alpha: 1)
+                                }
+                                index += 4
+                            }
                         default: break
                         }
+                        index += 1
                     }
                 }
 
@@ -606,7 +660,7 @@ class TerminalViewController: NSViewController {
                         body.append(text[j])
                         j = text.index(after: j)
                     }
-                    if terminated, let marker = Self.parseOSC133(body) {
+                    if terminated, let marker = parseOSC133(body) {
                         markers.append(marker)
                     }
                     i = j
@@ -620,16 +674,22 @@ class TerminalViewController: NSViewController {
     }
 
     /// Parse the body of an OSC sequence (everything between `ESC ]` and the
-    /// terminator) into a `SemanticMarker` if it is an OSC 133 sequence.
-    private static func parseOSC133(_ body: String) -> SemanticMarker? {
-        let parts = body.split(separator: ";", omittingEmptySubsequences: false)
+    /// terminator) into a `SemanticMarker` if it is an authentic OSC 133 sequence.
+    /// With a session nonce set, the nonce must be the final field; markers without
+    /// it are ignored as untrusted output.
+    private func parseOSC133(_ body: String) -> SemanticMarker? {
+        var parts = body.split(separator: ";", omittingEmptySubsequences: false)
         guard parts.first == "133", parts.count >= 2 else { return nil }
+        if let nonce = markerNonce {
+            guard parts.count >= 3, parts.last == Substring(nonce) else { return nil }
+            parts.removeLast()
+        }
         switch parts[1] {
         case "A": return .promptStart
         case "B": return .promptEnd
         case "C": return .commandStart
         case "D":
-            // 133;D or 133;D;<exit-code>
+            // 133;D or 133;D;<exit-code> (nonce already removed)
             let code = parts.count >= 3 ? Int(parts[2]) : nil
             return .commandEnd(code)
         default:
@@ -637,13 +697,131 @@ class TerminalViewController: NSViewController {
         }
     }
 
-    private func writeToShell(_ text: String) {
-        guard masterFD >= 0 else { return }
-        if let data = text.data(using: .utf8) {
-            data.withUnsafeBytes { ptr in
-                _ = write(masterFD, ptr.baseAddress, data.count)
+    /// Splits `text` into the part that ends on a complete escape-sequence boundary and a
+    /// trailing fragment of an unfinished CSI/OSC sequence (to be completed by the next read).
+    nonisolated static func splitIncompleteEscape(_ text: String) -> (complete: String, pending: String) {
+        var i = text.startIndex
+        var incompleteStart: String.Index?
+        while i < text.endIndex {
+            guard text[i] == "\u{1B}" else { i = text.index(after: i); continue }
+            let next = text.index(after: i)
+            if next == text.endIndex { incompleteStart = i; break }
+
+            if text[next] == "[" {
+                var j = text.index(after: next)
+                var finished = false
+                while j < text.endIndex {
+                    let value = text[j].unicodeScalars.first?.value ?? 0
+                    if value >= 0x40 && value <= 0x7E { finished = true; break }
+                    j = text.index(after: j)
+                }
+                if !finished { incompleteStart = i; break }
+                i = text.index(after: j)
+            } else if text[next] == "]" {
+                var j = text.index(after: next)
+                var finished = false
+                while j < text.endIndex {
+                    if text[j] == "\u{07}" { j = text.index(after: j); finished = true; break }
+                    if text[j] == "\u{1B}" {
+                        let after = text.index(after: j)
+                        if after == text.endIndex { break } // possibly the start of ST (ESC \)
+                        if text[after] == "\\" { j = text.index(after: after); finished = true; break }
+                    }
+                    j = text.index(after: j)
+                }
+                if !finished { incompleteStart = i; break }
+                i = j
+            } else {
+                i = next
             }
         }
+        guard let start = incompleteStart else { return (text, "") }
+        let pending = String(text[start...])
+        // Never hold back more than a sane sequence length (runaway/unterminated input).
+        if pending.utf16.count > 4096 { return (text, "") }
+        return (String(text[..<start]), pending)
+    }
+
+    private static func xterm256Color(_ n: Int) -> NSColor {
+        let ansi = AppDesignSystem.Terminal.ANSI.self
+        let base: [NSColor] = [ansi.black, ansi.red, ansi.green, ansi.yellow, ansi.blue, ansi.magenta, ansi.cyan, ansi.white,
+                               ansi.brightBlack, ansi.brightRed, ansi.brightGreen, ansi.brightYellow,
+                               ansi.brightBlue, ansi.brightMagenta, ansi.brightCyan, ansi.brightWhite]
+        switch n {
+        case 0..<16:
+            return base[n]
+        case 16..<232:
+            let v = n - 16
+            func component(_ c: Int) -> CGFloat { c == 0 ? 0 : CGFloat(55 + 40 * c) / 255 }
+            return NSColor(srgbRed: component(v / 36), green: component((v / 6) % 6), blue: component(v % 6), alpha: 1)
+        case 232..<256:
+            let gray = CGFloat(8 + 10 * (n - 232)) / 255
+            return NSColor(srgbRed: gray, green: gray, blue: gray, alpha: 1)
+        default:
+            return AppDesignSystem.Terminal.foreground
+        }
+    }
+
+    private func trimScrollbackIfNeeded() {
+        guard let storage = textView.textStorage, storage.length > Self.maxScrollbackUTF16 else { return }
+        // Drop an extra quarter so trimming is not repeated on every chunk.
+        let excess = storage.length - Self.maxScrollbackUTF16 + Self.maxScrollbackUTF16 / 4
+        storage.deleteCharacters(in: NSRange(location: 0, length: excess))
+        promptLocation = max(0, promptLocation - excess)
+    }
+
+    private func writeToShell(_ text: String) {
+        guard masterFD >= 0, let data = text.data(using: .utf8) else { return }
+        let fd = masterFD
+        data.withUnsafeBytes { raw in
+            guard let base = raw.baseAddress else { return }
+            var offset = 0
+            var retries = 0
+            // The master is non-blocking: handle partial writes and a full PTY buffer
+            // instead of silently dropping the rest of the input.
+            while offset < raw.count {
+                let written = write(fd, base.advanced(by: offset), raw.count - offset)
+                if written > 0 {
+                    offset += written
+                    retries = 0
+                } else if written < 0, errno == EINTR || errno == EAGAIN, retries < 200 {
+                    retries += 1
+                    usleep(1000)
+                } else {
+                    debugLog("[Terminal] write to PTY failed: \(String(cString: strerror(errno)))")
+                    break
+                }
+            }
+        }
+    }
+
+    /// True while a program (not the shell prompt) is waiting on a password-style prompt.
+    private var isSecretInputActive: Bool {
+        guard !isAtPrompt, let textView else { return false }
+        let text = textView.string as NSString
+        let end = min(promptLocation, text.length)
+        guard end > 0 else { return false }
+        let head = text.substring(to: end)
+        return Self.looksLikeSecretPrompt(head.components(separatedBy: "\n").last ?? head)
+    }
+
+    /// Heuristic for lines such as `[sudo] password for me:` or `Enter passphrase:`.
+    nonisolated static func looksLikeSecretPrompt(_ line: String) -> Bool {
+        let lower = line.lowercased().trimmingCharacters(in: .whitespaces)
+        guard lower.hasSuffix(":") else { return false }
+        return ["password", "passphrase", "passcode"].contains { lower.contains($0) }
+    }
+
+    /// Sends a raw control byte (Ctrl-C = 0x03, Ctrl-D = 0x04, Ctrl-Z = 0x1A) to the shell.
+    func sendControlByte(_ byte: UInt8) {
+        guard masterFD >= 0 else { return }
+        secretInput = ""
+        let nsText = textView.string as NSString
+        let pendingInput = promptLocation <= nsText.length ? nsText.substring(from: promptLocation) : ""
+        if byte == 0x04, isAtPrompt, !pendingInput.isEmpty { return } // Ctrl-D only ends an empty line
+        if byte == 0x03, isAtPrompt, !pendingInput.isEmpty { replaceCurrentInput(with: "") }
+        var value = byte
+        _ = write(masterFD, &value, 1)
     }
 
     private func terminateShellSession() {
@@ -656,7 +834,12 @@ class TerminalViewController: NSViewController {
         masterHandle?.readabilityHandler = nil
         masterHandle = nil
 
-        shellTask?.terminate()
+        if let task = shellTask, task.isRunning {
+            // Closing a terminal hangs up the shell (interactive shells ignore SIGTERM);
+            // zsh forwards SIGHUP to its jobs.
+            kill(task.processIdentifier, SIGHUP)
+            task.terminate()
+        }
         shellTask = nil
 
         if slaveFD >= 0 {
@@ -679,17 +862,33 @@ class TerminalViewController: NSViewController {
     }
 
     private func getShellPath() -> String {
-        if let shell = ProcessInfo.processInfo.environment["SHELL"] {
+        // Only launch a shell the system lists in /etc/shells; $SHELL is just an
+        // environment variable and may be stale or attacker-influenced.
+        let allowed = Self.registeredShells()
+        func usable(_ path: String) -> Bool {
+            allowed.contains(path) && FileManager.default.isExecutableFile(atPath: path)
+        }
+
+        if let shell = ProcessInfo.processInfo.environment["SHELL"], usable(shell) {
             return shell
         }
 
         let userName = NSUserName()
         if let passwdEntry = getpwnam(userName),
            let shellCStr = passwdEntry.pointee.pw_shell {
-            return String(cString: shellCStr)
+            let shell = String(cString: shellCStr)
+            if usable(shell) { return shell }
         }
 
         return "/bin/zsh"
+    }
+
+    private static func registeredShells() -> Set<String> {
+        guard let contents = try? String(contentsOfFile: "/etc/shells", encoding: .utf8) else { return [] }
+        return Set(contents
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { $0.hasPrefix("/") })
     }
 
     /// Returns the path to the app's custom terminal config directory.
@@ -733,7 +932,62 @@ class TerminalViewController: NSViewController {
             }
         }
 
+        installShellIntegration(in: terminalConfigDir)
         return terminalConfigDir.path
+    }
+
+    /// Source line appended to a `.zshrc` that predates the managed integration script.
+    private static let integrationSourceLine = #"[[ -r "${ZDOTDIR:-$HOME}/mfe-integration.zsh" ]] && source "${ZDOTDIR:-$HOME}/mfe-integration.zsh""#
+
+    /// OSC 133 shell integration. Rewritten on every launch (so it always matches this app
+    /// version) and kept separate from the user-editable `.zshrc`.
+    static let shellIntegrationScript = #"""
+# MacFileExplorer shell integration for the built-in terminal.
+# Managed by the app and rewritten on every launch - put your own settings in .zshrc.
+[[ -n "$MFE_NONCE" ]] || return 0
+typeset +x MFE_NONCE        # keep the marker secret from child processes
+setopt HIST_IGNORE_SPACE    # commands injected by the app start with a space
+autoload -Uz add-zsh-hook
+
+function mfe_precmd() {
+    local exit_code=$?
+    if [[ -n "$MFE_CMD_ACTIVE" ]]; then
+        printf '\033]133;D;%s;%s\007' "$exit_code" "$MFE_NONCE"
+        unset MFE_CMD_ACTIVE
+    fi
+    printf '\033]133;A;%s\007' "$MFE_NONCE"
+    # End every prompt with a zero-width 133;B marker: where typed input begins.
+    if [[ "$PROMPT" != *'133;B;'* ]]; then
+        PROMPT="${PROMPT}%{"$'\033]133;B;'"${MFE_NONCE}"$'\007'"%}"
+    fi
+}
+function mfe_preexec() {
+    printf '\033]133;C;%s\007' "$MFE_NONCE"
+    MFE_CMD_ACTIVE=1
+}
+add-zsh-hook precmd mfe_precmd
+add-zsh-hook preexec mfe_preexec
+
+"""#
+
+    private func installShellIntegration(in directory: URL) {
+        let scriptURL = directory.appendingPathComponent("mfe-integration.zsh")
+        do {
+            try Self.shellIntegrationScript.write(to: scriptURL, atomically: true, encoding: .utf8)
+        } catch {
+            debugLog("TerminalViewController: Failed to write shell integration: \(error)")
+        }
+
+        let zshrcURL = directory.appendingPathComponent(".zshrc")
+        let existing = (try? String(contentsOf: zshrcURL, encoding: .utf8)) ?? ""
+        if !existing.contains("mfe-integration.zsh") {
+            let addition = "\n# Added by MacFileExplorer: shell integration for the built-in terminal\n\(Self.integrationSourceLine)\n"
+            do {
+                try (existing + addition).write(to: zshrcURL, atomically: true, encoding: .utf8)
+            } catch {
+                debugLog("TerminalViewController: Failed to update .zshrc: \(error)")
+            }
+        }
     }
 
     /// Returns the path to the terminal config file for external editing.
@@ -805,7 +1059,8 @@ class TerminalViewController: NSViewController {
         // Properly escape path for shell execution
         let escapedPath = Self.escapeShellArgument(path)
         // "--" stops option parsing so a hyphen-leading path can't be read as a flag
-        let command = "cd -- \(escapedPath) 2>/dev/null; printf \"\(sentinelEcho)\\n\"\n"
+        // Leading space keeps it out of the user's real shell history (HIST_IGNORE_SPACE).
+        let command = " cd -- \(escapedPath) 2>/dev/null; printf \"\(sentinelEcho)\\n\"\n"
         writeToShell(command)
     }
 
@@ -915,6 +1170,17 @@ class TerminalViewController: NSViewController {
 
 extension TerminalViewController: NSTextViewDelegate {
     func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
+        // A password-style prompt is active: collect keystrokes privately instead of
+        // displaying them (the PTY's own echo is off), and never record them.
+        if isSecretInputActive {
+            if let replacement = replacementString, !replacement.isEmpty {
+                secretInput += replacement.filter { !$0.isNewline }
+            } else if !secretInput.isEmpty {
+                secretInput.removeLast()
+            }
+            return false
+        }
+
         // Prevent editing before the prompt; only allow insert/replace within the current input line.
         let promptStart = promptLocation
         let currentLength = textView.string.utf16.count
@@ -926,14 +1192,40 @@ extension TerminalViewController: NSTextViewDelegate {
         if replacementString == "\n" || replacementString == "\r" {
             return false
         }
+        // Pasted multi-line text would run line by line on a single Return; flatten it so
+        // what is shown is exactly what will be executed, as one line.
+        if let replacement = replacementString,
+           replacement.unicodeScalars.count > 1,
+           replacement.unicodeScalars.contains(where: { $0 == "\n" || $0 == "\r" }) {
+            let flattened = replacement
+                .replacingOccurrences(of: "\r\n", with: " ")
+                .replacingOccurrences(of: "\n", with: " ")
+                .replacingOccurrences(of: "\r", with: " ")
+            textView.insertText(flattened, replacementRange: affectedCharRange)
+            return false
+        }
         return true
     }
 
     func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
         if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            if isSecretInputActive || !secretInput.isEmpty {
+                let secret = secretInput
+                secretInput = ""
+                isAtPrompt = false
+                writeToShell(secret + "\n")
+                return true
+            }
             let fullText = textView.string as NSString
             let input = fullText.substring(from: promptLocation)
-            commandHistory.append(input)
+            // Input typed while a command is running belongs to that program (answers,
+            // passwords, REPL lines), not to the shell: keep it out of recallable history.
+            if !isCommandRunning {
+                commandHistory.append(input)
+                if commandHistory.count > Self.maxCommandHistory {
+                    commandHistory.removeFirst(commandHistory.count - Self.maxCommandHistory)
+                }
+            }
             historyIndex = commandHistory.count
             // The shell is about to run a command; treat it as busy immediately
             // so a directory sync in the gap before the 133;C marker is deferred
@@ -972,5 +1264,25 @@ extension TerminalViewController: NSTextViewDelegate {
         let range = NSRange(location: promptLocation, length: nsString.length - promptLocation)
         textView.replaceCharacters(in: range, with: text)
         textView.setSelectedRange(NSRange(location: promptLocation + (text as NSString).length, length: 0))
+    }
+}
+
+// MARK: - Terminal text view
+
+/// Forwards Ctrl-C / Ctrl-D / Ctrl-Z to the shell instead of treating them as text-view commands.
+final class TerminalTextView: NSTextView {
+    var onControlByte: ((UInt8) -> Void)?
+
+    override func keyDown(with event: NSEvent) {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if flags == .control, let key = event.charactersIgnoringModifiers?.lowercased() {
+            switch key {
+            case "c": onControlByte?(0x03); return
+            case "d": onControlByte?(0x04); return
+            case "z": onControlByte?(0x1A); return
+            default: break
+            }
+        }
+        super.keyDown(with: event)
     }
 }

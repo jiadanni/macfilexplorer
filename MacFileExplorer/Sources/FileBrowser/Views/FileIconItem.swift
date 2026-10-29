@@ -294,8 +294,8 @@ class FileIconItem: NSCollectionViewItem, SelectableItemViewDelegate {
     // Helper method to check if a file is in the cut state
     private func isFileCut(_ url: URL) -> Bool {
         let pasteboard = NSPasteboard.general
-        guard pasteboard.string(forType: NSPasteboard.PasteboardType("com.macfileexplorer.cutOperation")) == "cut",
-              let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL] else {
+        guard pasteboard.string(forType: NSPasteboard.PasteboardType(AppConfig.Pasteboard.cutMarkerType)) == "cut",
+              let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] else {
             return false
         }
         return urls.contains(url)

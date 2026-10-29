@@ -24,8 +24,15 @@ private actor StorageAnalyzerCache {
         cache[url]
     }
 
+    /// Results are large trees; keep only the few most recent scans.
+    private static let maxEntries = 4
+
     func store(item: StorageItem, for url: URL) {
         cache[url] = (item, Date())
+        while cache.count > Self.maxEntries,
+              let oldest = cache.min(by: { $0.value.timestamp < $1.value.timestamp })?.key {
+            cache.removeValue(forKey: oldest)
+        }
     }
 
     func clear() {
@@ -39,24 +46,31 @@ private actor StorageAnalyzerCache {
 
 private actor ScanControl {
     private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var isPaused = false
 
     func reset() {
+        isPaused = false
         resumeAll()
     }
 
     func pause() {
-        // No-op here, state managed by class
+        isPaused = true
     }
 
     func resume() {
+        isPaused = false
         resumeAll()
     }
 
     func cancel() {
+        isPaused = false
         resumeAll()
     }
 
+    /// Suspends only while paused. Because the paused state lives here, a `resume()` or
+    /// `cancel()` that runs before the scanner reaches `wait()` can no longer be lost.
     func wait() async {
+        guard isPaused else { return }
         await withCheckedContinuation { continuation in
             waiters.append(continuation)
         }
@@ -80,6 +94,14 @@ class StorageAnalyzerEngine {
 
     @Atomic private var isCancelled = false
     @Atomic private var isPaused = false
+    /// Identifies the current scan. A new scan (or cancel) bumps it, which stops any older
+    /// scan still running, instead of sharing one resettable flag between them.
+    @Atomic private var scanGeneration = 0
+    @Atomic private var lastProgressTime: CFAbsoluteTime = 0
+
+    /// Mount points that are never descended into unless the scan root is inside them:
+    /// firmlink duplicates, other/network volumes and device nodes.
+    private static let excludedMountPoints = ["/dev", "/System/Volumes", "/Volumes", "/Network", "/private/var/vm", "/.Spotlight-V100", "/.fseventsd"]
 
     /// Root URL being scanned
     private(set) var rootURL: URL?
@@ -113,28 +135,41 @@ class StorageAnalyzerEngine {
         self.delegate = delegate
         scanTask?.cancel()
 
+        // Supersede any running scan synchronously, before the new task exists.
+        let generation = $scanGeneration.update { value -> Int in
+            value += 1
+            return value
+        }
+        isCancelled = false
+        isPaused = false
+
         scanTask = Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
-            self.isCancelled = false
-            self.isPaused = false
             await self.control.reset()
 
             // Check cache first
             if let cached = await Self.cachedResult(for: url),
                Date().timeIntervalSince(cached.timestamp) < Self.cacheValidityDuration {
+                guard !self.isStale(generation) else { return }
                 await MainActor.run {
                     self.delegate?.analyzerDidComplete(rootItem: cached.item, duration: 0)
                 }
                 return
             }
 
-            await self.performScan(url: url)
+            await self.performScan(url: url, generation: generation)
         }
+    }
+
+    /// True once this scan was cancelled or replaced by a newer one.
+    private func isStale(_ generation: Int) -> Bool {
+        isCancelled || scanGeneration != generation
     }
 
     /// Cancels the current scan
     func cancel() {
         isCancelled = true
+        $scanGeneration.update { $0 += 1 }
         scanTask?.cancel()
         Task { await control.cancel() }
     }
@@ -142,6 +177,7 @@ class StorageAnalyzerEngine {
     /// Pauses the current scan
     func pause() {
         isPaused = true
+        Task { await control.pause() }
     }
 
     /// Resumes a paused scan
@@ -174,7 +210,7 @@ class StorageAnalyzerEngine {
         await cacheStore.store(item: item, for: url)
     }
 
-    private func performScan(url: URL) async {
+    private func performScan(url: URL, generation: Int) async {
         let startTime = Date()
 
         await MainActor.run {
@@ -191,7 +227,10 @@ class StorageAnalyzerEngine {
             var visitedPaths = Set<String>()
 
             // Scan recursively with cycle detection
-            try await scanDirectory(item: root, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: 0, visitedPaths: &visitedPaths)
+            try await scanDirectory(item: root, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: 0, visitedPaths: &visitedPaths, generation: generation)
+
+            // Superseded by a newer scan: that scan owns the delegate now.
+            if scanGeneration != generation { return }
 
             // Check if cancelled
             if isCancelled {
@@ -223,15 +262,15 @@ class StorageAnalyzerEngine {
         }
     }
 
-    private func scanDirectory(item: StorageItem, itemsScanned: inout Int, totalSize: inout Int64, currentDepth: Int = 0, visitedPaths: inout Set<String>) async throws {
+    private func scanDirectory(item: StorageItem, itemsScanned: inout Int, totalSize: inout Int64, currentDepth: Int = 0, visitedPaths: inout Set<String>, generation: Int) async throws {
         // Check for cancellation
-        if isCancelled { return }
+        if isStale(generation) { return }
 
         // Handle pause
         if isPaused {
             await control.wait()
         }
-        if isCancelled { return }
+        if isStale(generation) { return }
 
         // Depth limit to prevent unbounded recursion
         guard currentDepth < options.maxDepth else {
@@ -247,13 +286,27 @@ class StorageAnalyzerEngine {
             return
         }
 
-        // Cycle detection using canonical paths
+        // Don't wander into firmlink duplicates, other volumes or device nodes unless the
+        // user explicitly chose a root inside them.
         let canonicalPath = item.url.standardizedFileURL.path
-        guard !visitedPaths.contains(canonicalPath) else {
+        let rootPath = rootURL?.standardizedFileURL.path ?? ""
+        if Self.excludedMountPoints.contains(canonicalPath), !rootPath.hasPrefix(canonicalPath) {
+            return
+        }
+
+        // Cycle detection by file identity (device + inode): symlink and bind-mount loops
+        // present as ever-new paths, so comparing path strings cannot catch them.
+        let visitKey: String
+        if let identity = FileSystemHelpers.fileID(for: item.url) {
+            visitKey = "\(identity.dev):\(identity.ino)"
+        } else {
+            visitKey = canonicalPath
+        }
+        guard !visitedPaths.contains(visitKey) else {
             debugLog("Cycle detected at \(canonicalPath), skipping")
             return
         }
-        visitedPaths.insert(canonicalPath)
+        visitedPaths.insert(visitKey)
 
         // Directory - enumerate contents
         let fileManager = FileManager.default
@@ -285,13 +338,13 @@ class StorageAnalyzerEngine {
 
         while let fileURL = enumerator.nextObject() as? URL {
             // Check for cancellation
-            if isCancelled { return }
+            if isStale(generation) { return }
 
             // Handle pause
             if isPaused {
                 await control.wait()
             }
-            if isCancelled { return }
+            if isStale(generation) { return }
 
             do {
                 let resourceValues = try fileURL.resourceValues(forKeys: Set(keys))
@@ -317,7 +370,7 @@ class StorageAnalyzerEngine {
 
                 // Recurse if directory (with depth check and cycle detection)
                 if childStorageItem.isDirectory {
-                    try await scanDirectory(item: childStorageItem, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: currentDepth + 1, visitedPaths: &visitedPaths)
+                    try await scanDirectory(item: childStorageItem, itemsScanned: &itemsScanned, totalSize: &totalSize, currentDepth: currentDepth + 1, visitedPaths: &visitedPaths, generation: generation)
                 } else {
                     itemsScanned += 1
                     totalSize += childStorageItem.totalSize
@@ -330,8 +383,9 @@ class StorageAnalyzerEngine {
 
                 childItems.append(childStorageItem)
 
-                // Report progress every 100 items
-                if itemsScanned % AppConfig.Storage.progressBatchSize == 0 {
+                // Report progress at most every 100 ms (a count-based check re-fired for
+                // every directory entry while the file count sat on a multiple of 100).
+                if shouldReportProgress() {
                     await reportProgress(path: fileURL.path, itemsScanned: itemsScanned, totalSize: totalSize)
                 }
 
@@ -347,6 +401,15 @@ class StorageAnalyzerEngine {
         }
 
         item.isScanned = true
+    }
+
+    private func shouldReportProgress() -> Bool {
+        let now = CFAbsoluteTimeGetCurrent()
+        return $lastProgressTime.update { last -> Bool in
+            guard now - last >= 0.1 else { return false }
+            last = now
+            return true
+        }
     }
 
     private func reportProgress(path: String, itemsScanned: Int, totalSize: Int64) async {

@@ -319,34 +319,19 @@ extension LocationsViewController: NSTableViewDataSource, NSTableViewDelegate {
     }
     
     func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int, proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation {
-        if info.draggingPasteboard.types?.contains(.fileURL) == true {
-             if dropOperation == .on && row >= 0 { return .copy }
-        }
-        return []
+        guard dropOperation == .on, row >= 0, row < driveItems.count else { return [] }
+        return FileDropTransfer.operation(for: FileDropTransfer.fileURLs(from: info),
+                                          destination: driveItems[row].url,
+                                          optionKeyHeld: NSEvent.modifierFlags.contains(.option), sourceMask: info.draggingSourceOperationMask)
     }
     
     func tableView(_ tableView: NSTableView, acceptDrop info: NSDraggingInfo, row: Int, dropOperation: NSTableView.DropOperation) -> Bool {
-         if dropOperation == .on, let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] {
-              guard row < driveItems.count else { return false }
-              let destination = driveItems[row].url
-              
-             let fileManager = FileManager.default
-             var allSucceeded = true
-             
-             for sourceURL in urls {
-                 let fileName = sourceURL.lastPathComponent
-                 let targetURL = destination.appendingPathComponent(fileName)
-                 if sourceURL == targetURL { continue }
-                 do {
-                     try fileManager.moveItem(at: sourceURL, to: targetURL)
-                 } catch {
-                     debugLog("Failed to move \(sourceURL) to \(targetURL): \(error)")
-                     allSucceeded = false
-                 }
-             }
-             return allSucceeded
-         }
-         return false
+        guard dropOperation == .on, row >= 0, row < driveItems.count else { return false }
+        let urls = FileDropTransfer.fileURLs(from: info)
+        let destination = driveItems[row].url
+        let operation = FileDropTransfer.operation(for: urls, destination: destination, optionKeyHeld: NSEvent.modifierFlags.contains(.option), sourceMask: info.draggingSourceOperationMask)
+        guard operation != [] else { return false }
+        return FileDropTransfer.perform(operation, urls: urls, into: destination, window: view.window)
     }
 }
 

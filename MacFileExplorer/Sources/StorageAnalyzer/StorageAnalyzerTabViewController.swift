@@ -448,13 +448,8 @@ extension StorageAnalyzerTabViewController: StorageListViewDelegate {
         if let window = view.window {
             alert.beginSheetModal(for: window) { response in
                 if response == .alertFirstButtonReturn {
-                    for item in items {
-                        do {
-                            try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
-                        } catch {
-                            debugLog("Failed to trash item: \(error)")
-                        }
-                    }
+                    let failures = StorageTrash.moveToTrash(items)
+                    StorageTrash.presentFailures(failures, in: window)
 
                     // Rescan after deletion
                     if let url = self.rootURL {
@@ -481,6 +476,38 @@ extension StorageAnalyzerTabViewController: NSWindowDelegate {
                     tabController.closeCurrentTab()
                 }
             }
+        }
+    }
+}
+
+/// Shared "move to Trash" step for the storage analyzer, which previously swallowed failures.
+enum StorageTrash {
+    /// Moves each item to the Trash and returns a description of every failure.
+    static func moveToTrash(_ items: [StorageItem]) -> [String] {
+        var failures: [String] = []
+        for item in items {
+            do {
+                try FileManager.default.trashItem(at: item.url, resultingItemURL: nil)
+            } catch {
+                failures.append("'\(item.url.lastPathComponent)': \(error.localizedDescription)")
+            }
+        }
+        return failures
+    }
+
+    @MainActor
+    static func presentFailures(_ failures: [String], in window: NSWindow?) {
+        guard !failures.isEmpty else { return }
+        let alert = NSAlert()
+        alert.messageText = "Some items could not be moved to the Trash"
+        alert.informativeText = failures.prefix(8).joined(separator: "\n")
+            + (failures.count > 8 ? "\n… and \(failures.count - 8) more." : "")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "OK")
+        if let window {
+            alert.beginSheetModal(for: window)
+        } else {
+            alert.runModal()
         }
     }
 }

@@ -263,7 +263,10 @@ extension FavoritesViewController: NSTableViewDataSource, NSTableViewDelegate {
     
     func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int, proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation {
         if info.draggingPasteboard.types?.contains(.fileURL) == true {
-             if dropOperation == .on && row >= 0 { return .copy }
+            guard dropOperation == .on, row >= 0, row < favoriteItems.count else { return [] }
+            return FileDropTransfer.operation(for: FileDropTransfer.fileURLs(from: info),
+                                              destination: favoriteItems[row].url,
+                                              optionKeyHeld: NSEvent.modifierFlags.contains(.option), sourceMask: info.draggingSourceOperationMask)
         }
         if dropOperation == .above { return .move }
         return []
@@ -274,7 +277,8 @@ extension FavoritesViewController: NSTableViewDataSource, NSTableViewDelegate {
          if dropOperation == .above {
              guard let data = info.draggingPasteboard.data(forType: .string),
                    let rowIndexes = try? NSKeyedUnarchiver.unarchivedObject(ofClasses: [NSIndexSet.self], from: data) as? IndexSet,
-                   let draggedRow = rowIndexes.first else { return false }
+                   let draggedRow = rowIndexes.first,
+                   favoriteItems.indices.contains(draggedRow) else { return false }
              
              let item = favoriteItems[draggedRow]
              favoriteItems.remove(at: draggedRow)
@@ -287,26 +291,12 @@ extension FavoritesViewController: NSTableViewDataSource, NSTableViewDelegate {
          }
          
          // File drop
-         if dropOperation == .on, let urls = info.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] {
-              guard row < favoriteItems.count else { return false }
-              let destinationInfo = favoriteItems[row]
-              let destination = destinationInfo.url
-              
-             let fileManager = FileManager.default
-             var allSucceeded = true
-             
-             for sourceURL in urls {
-                 let fileName = sourceURL.lastPathComponent
-                 let targetURL = destination.appendingPathComponent(fileName)
-                 if sourceURL == targetURL { continue }
-                 do {
-                     try fileManager.moveItem(at: sourceURL, to: targetURL)
-                 } catch {
-                     debugLog("Failed to move \(sourceURL) to \(targetURL): \(error)")
-                     allSucceeded = false
-                 }
-             }
-             return allSucceeded
+         if dropOperation == .on, row >= 0, row < favoriteItems.count {
+              let urls = FileDropTransfer.fileURLs(from: info)
+              let destination = favoriteItems[row].url
+              let operation = FileDropTransfer.operation(for: urls, destination: destination, optionKeyHeld: NSEvent.modifierFlags.contains(.option), sourceMask: info.draggingSourceOperationMask)
+              guard operation != [] else { return false }
+              return FileDropTransfer.perform(operation, urls: urls, into: destination, window: view.window)
          }
          
          return false
